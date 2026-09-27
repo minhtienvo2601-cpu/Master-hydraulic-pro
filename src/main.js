@@ -124,7 +124,11 @@ async function viewSettings(v) {
       <button data-theme-opt="auto" class="${th === 'auto' ? 'on' : ''}">${ic('auto')}Theo máy</button></div></div>
     <div class="sec-h"><h2>Cá nhân</h2></div>
     <div class="set-group"><div class="set-row"><div class="ic">${ic('user')}</div><div class="grow"><div class="tt">Tên hiển thị</div><div class="ds">Hiện ở lời chào trang Tổng quan</div></div>
-      <input id="sName" value="${esc(st.name)}" placeholder="Tên của bạn" style="width:130px"></div></div>
+      <input id="sName" value="${esc(st.name)}" placeholder="Tên của bạn" style="width:130px"></div>
+      <div class="set-row" style="flex-wrap:wrap"><div class="ic">${ic('home')}</div><div class="grow"><div class="tt">Tên đơn vị</div><div class="ds">In ở đầu biên bản, báo cáo</div></div>
+        <input id="sOrg" value="${esc(st.org || 'CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT')}" style="width:100%;margin-left:48px"></div>
+      <div class="set-row" style="flex-wrap:wrap"><div class="ic">${ic('user')}</div><div class="grow"><div class="tt">Bộ phận</div><div class="ds">Dòng thứ hai dưới tên đơn vị (tùy chọn)</div></div>
+        <input id="sDept" value="${esc(st.dept || '')}" placeholder="VD: Xưởng HSM – Tổ bảo trì thủy lực" style="width:100%;margin-left:48px"></div></div>
     <div class="sec-h"><h2>Nhắc việc</h2></div>
     <div class="set-group">
       <div class="set-row"><div class="ic">${ic('bell')}</div><div class="grow"><div class="tt">Nhắc trước hạn</div><div class="ds">Thông báo trước ngày đến hạn</div></div>
@@ -147,6 +151,8 @@ async function viewSettings(v) {
   const q = s => v.querySelector(s);
   $$('[data-theme-opt]', v).forEach(b => b.onclick = () => { st.theme = b.dataset.themeOpt; save(); applyTheme(); render(); });
   q('#sName').onchange = e => { st.name = e.target.value.trim(); save(); };
+  q('#sOrg').onchange = e => { st.org = e.target.value.trim(); save(); toast('Đã lưu tên đơn vị'); };
+  q('#sDept').onchange = e => { st.dept = e.target.value.trim(); save(); };
   q('#sDays').onchange = e => { st.remindDays = +e.target.value; save(); toast('Đã cập nhật lịch nhắc'); };
   q('#sTime').onchange = e => { st.remindTime = e.target.value || '07:00'; save(); toast('Đã cập nhật giờ nhắc'); };
   q('#sDue').onchange = e => { st.dueDay = e.target.checked; save(); };

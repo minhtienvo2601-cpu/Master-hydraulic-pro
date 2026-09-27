@@ -2,8 +2,8 @@ import { S, save, task, newTask, completeTask, uncompleteTask, openTasks, sortTa
 import { nav, push } from './nav.js';
 import { ic } from './icons.js';
 import { esc, uid, today, addDays, addMonths, daysTo, dueLabel, fmtD, fmtShort, repeatLabel, $$ } from './util.js';
-import { openSheet, confirmBox, toast, viewPhoto } from './ui.js';
-import { takePhoto, saveB64, deletePath, fileSrc } from './platform.js';
+import { openSheet, confirmBox, toast, viewPhoto, addPhotos } from './ui.js';
+import { deletePath, fileSrc } from './platform.js';
 
 const PR = { 1: 'Khẩn', 2: 'Quan trọng', 3: 'Bình thường' };
 
@@ -97,8 +97,7 @@ export function taskForm(t, preset = {}) {
       const srcs = await Promise.all(d.photos.map(p => fileSrc(p)));
       box.innerHTML = d.photos.map((p, i) => `<div class="ph"><img src="${srcs[i]}" data-view="${i}"><button data-rm="${i}">${ic('x', 2.4)}</button></div>`).join('') + `<button class="add" data-add>${ic('camera')}</button>`;
       box.querySelector('[data-add]').onclick = async () => {
-        try { const b64 = await takePhoto(); if (!b64) return; const p = `photos/${uid()}.jpg`; await saveB64(p, b64); d.photos.push(p); drawPh(); }
-        catch (e) { if (!String(e).match(/cancel/i)) toast('Không lấy được ảnh'); }
+        await addPhotos(p => { d.photos.push(p); drawPh(); });
       };
       $$('[data-rm]', box).forEach(x => x.onclick = () => { d.photos.splice(+x.dataset.rm, 1); drawPh(); });
       $$('[data-view]', box).forEach(x => x.onclick = () => viewPhoto(x.src));

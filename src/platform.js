@@ -2,7 +2,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { LocalNotifications } from '@capacitor/local-notifications';
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Camera } from '@capacitor/camera';
 import { Share } from '@capacitor/share';
 import { AppLauncher } from '@capacitor/app-launcher';
 import { App } from '@capacitor/app';
@@ -94,14 +94,34 @@ export async function openUrl(url) {
 }
 
 // ---------- camera ----------
-export async function takePhoto() {
-  if (native) {
-    const p = await Camera.getPhoto({ resultType: CameraResultType.Base64, source: CameraSource.Prompt, quality: 72, width: 1600, correctOrientation: true,
-      promptLabelHeader: 'Thêm ảnh', promptLabelPhoto: 'Chọn từ thư viện', promptLabelPicture: 'Chụp ảnh mới', promptLabelCancel: 'Hủy' });
-    return p.base64String;
+// Lưu 1 ảnh (Blob) vào bộ nhớ app, trả về đường dẫn
+async function storePhoto(blob, uid) { const p = `photos/${uid}.jpg`; await saveBlob(p, blob); return p; }
+const rid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+// Chụp ảnh liên tục: sau mỗi tấm tự mở lại camera, bấm Quay lại để dừng. onEach(path) gọi sau mỗi tấm.
+export async function capturePhotos(onEach) {
+  const out = [];
+  if (!native) { const fs = await pickFiles('image/*', true); for (const f of fs) { const p = await storePhoto(f, rid()); out.push(p); onEach && onEach(p); } return out; }
+  for (let i = 0; i < 30; i++) {
+    let r;
+    try { r = await Camera.takePhoto({ quality: 72, targetWidth: 1600, targetHeight: 1600, correctOrientation: true, saveToGallery: false }); }
+    catch (e) { break; } // người dùng bấm Quay lại / hủy
+    if (!r || !r.webPath) break;
+    const blob = await (await fetch(r.webPath)).blob();
+    const p = await storePhoto(blob, rid()); out.push(p); onEach && onEach(p);
   }
-  const f = await pickFiles('image/*', false); if (!f[0]) return null;
-  return blobToB64(f[0]);
+  return out;
+}
+// Chọn nhiều ảnh từ thư viện cùng lúc
+export async function pickPhotos(onEach) {
+  const out = [];
+  if (!native) { const fs = await pickFiles('image/*', true); for (const f of fs) { const p = await storePhoto(f, rid()); out.push(p); onEach && onEach(p); } return out; }
+  let res;
+  try { res = await Camera.chooseFromGallery({ allowMultipleSelection: true, limit: 0, quality: 72, targetWidth: 1600, targetHeight: 1600, correctOrientation: true }); }
+  catch (e) { return out; }
+  for (const r of (res && res.results) || []) {
+    try { const blob = await (await fetch(r.webPath)).blob(); const p = await storePhoto(blob, rid()); out.push(p); onEach && onEach(p); } catch (e) { console.warn(e); }
+  }
+  return out;
 }
 
 // ---------- file picker ----------

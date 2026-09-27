@@ -3,10 +3,10 @@ import { S, save, task, newTask, completeTask, uncompleteTask, device, bl, newBa
 import { nav, push } from './nav.js';
 import { ic } from './icons.js';
 import { esc, uid, today, addDays, parseD, daysTo, fmtD, fmtShort, $$ } from './util.js';
-import { openSheet, confirmBox, menu, toast, busy, viewPhoto } from './ui.js';
-import { takePhoto, saveB64, deletePath, fileSrc, shareFile } from './platform.js';
+import { openSheet, confirmBox, menu, toast, busy, viewPhoto, addPhotos } from './ui.js';
+import { deletePath, fileSrc, shareFile } from './platform.js';
 import { taskForm } from './tasks.js';
-import { exportPdf, exportDocx } from './exporter.js';
+import { exportPdf, exportDocx, exportXlsx } from './exporter.js';
 
 const WD = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const wdOf = s => WD[parseD(s).getDay()];
@@ -143,7 +143,7 @@ export function backlogForm(b0, preset = {}) {
     const drawPh = async () => {
       const box = q('#bPh'); const srcs = await Promise.all(d.photos.map(p => fileSrc(p)));
       box.innerHTML = d.photos.map((p, i) => `<div class="ph"><img src="${srcs[i]}" data-view="${i}"><button data-rm="${i}">${ic('x', 2.4)}</button></div>`).join('') + `<button class="add" data-add>${ic('camera')}</button>`;
-      box.querySelector('[data-add]').onclick = async () => { try { const b64 = await takePhoto(); if (!b64) return; const p = `photos/${uid()}.jpg`; await saveB64(p, b64); d.photos.push(p); drawPh(); } catch (e) { if (!String(e).match(/cancel/i)) toast('Không lấy được ảnh'); } };
+      box.querySelector('[data-add]').onclick = async () => { await addPhotos(p => { d.photos.push(p); drawPh(); }); };
       $$('[data-rm]', box).forEach(y => y.onclick = () => { d.photos.splice(+y.dataset.rm, 1); drawPh(); });
       $$('[data-view]', box).forEach(y => y.onclick = () => viewPhoto(y.src));
     };
@@ -167,26 +167,44 @@ export function backlogForm(b0, preset = {}) {
 
 // ---------------- xuất báo cáo tuần ----------------
 function exportWeekMenu(ws) {
-  menu(`Báo cáo tuần ${weekNo(ws)}`, [{ icon: 'file', label: 'Xuất PDF', run: () => exportWeek(ws, 'pdf') }, { icon: 'file', label: 'Xuất Word (.docx)', run: () => exportWeek(ws, 'docx') }]);
+  menu(`Báo cáo tuần ${weekNo(ws)}`, [{ icon: 'file', label: 'Xuất PDF', run: () => exportWeek(ws, 'pdf') }, { icon: 'file', label: 'Xuất Word (.docx)', run: () => exportWeek(ws, 'docx') }, { icon: 'file', label: 'Xuất Excel (.xlsx)', run: () => exportWeek(ws, 'xlsx') }]);
 }
+const dmy = s => s ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}` : '';
+const SEVRES = { 1: 'ng', 2: 'chk', 3: 'doing' };
 async function exportWeek(ws, kind) {
-  const W = weekData(ws); const name = S.state.settings.name;
-  const rows = [...W.carried, ...W.plan].sort((a, b) => areaOf(a).localeCompare(areaOf(b), 'vi') || (a.due || '').localeCompare(b.due || ''))
-    .map((t, i) => { const dev = device(t.deviceId); const st = t.done ? 'done' : t.status || 'todo';
-      return [i + 1, [areaOf(t), dev?.name].filter(Boolean).join('\n'), t.title + (t.note ? '\n' + t.note : ''), t.due ? `${wdOf(t.due)} ${fmtShort(t.due)}` : '', t.assignee || '', STATUS[st] + (t.done && t.doneAt ? '\n' + fmtShort(t.doneAt) : ''), t.result || '']; });
-  const brows = W.backs.map((b, i) => { const dev = device(b.deviceId);
-    return [i + 1, dev?.name || '', b.desc + (b.parts ? '\nVật tư: ' + b.parts : ''), fmtShort(b.found), openDays(b), SEVER[b.severity], b.reason === 'khac' && b.reasonText ? b.reasonText : REASONS[b.reason], b.action || '', b.resolved ? `Đã xử lý ${fmtShort(b.resolvedAt)}${b.resolveNote ? '\n' + b.resolveNote : ''}` : 'Đang tồn']; });
-  const doc = { title: `Nhật ký bảo trì tuần ${weekNo(ws)}`, subtitle: `Từ ${fmtD(ws)} đến ${fmtD(W.we)}${name ? ' · Người lập: ' + name : ''} · Xuất ngày ${fmtD(today())}`,
-    items: [
-      { kv: [['Kế hoạch', `${W.total} việc · hoàn thành ${W.done} (${W.total ? Math.round(W.done / W.total * 100) : 0}%)`], ['Chưa xong từ tuần trước', String(W.carried.length)],
-        ['Tồn đọng', `còn ${W.openB} · mới ${W.newB} · đã xử lý ${W.fixedB}`]] },
-      { h: '1. Kế hoạch công việc' },
-      rows.length ? { table: { cols: ['#', 'Khu vực / Thiết bị', 'Công việc', 'Ngày', 'Người làm', 'Trạng thái', 'Kết quả'], rows, colStyles: { 0: { cellWidth: 7 }, 3: { cellWidth: 16 }, 5: { cellWidth: 20 } } } } : { p: 'Không có kế hoạch.' },
-      { h: '2. Tồn đọng thiết bị' },
-      brows.length ? { table: { cols: ['#', 'Thiết bị', 'Mô tả', 'Phát hiện', 'Số ngày', 'Mức độ', 'Lý do', 'Hướng xử lý', 'Trạng thái'], rows: brows, colStyles: { 0: { cellWidth: 7 }, 3: { cellWidth: 16 }, 4: { cellWidth: 15 }, 5: { cellWidth: 17 } } } } : { p: 'Không có tồn đọng.' },
-    ] };
+  const W = weekData(ws); const st = S.state.settings; const name = st.name; const yr = ws.slice(0, 4); const no = weekNo(ws);
+  const org = st.org || 'CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT';
+  const plan = [...W.carried, ...W.plan].sort((a, b) => areaOf(a).localeCompare(areaOf(b), 'vi') || (a.due || '').localeCompare(b.due || ''));
+  const prow = plan.map((t, i) => { const dev = device(t.deviceId); const s2 = t.done ? 'done' : t.status || 'todo';
+    return [String(i + 1), areaOf(t), dev?.name || '', t.title + (t.note ? '\n' + t.note : ''), t.due ? `${wdOf(t.due)} ${fmtShort(t.due)}` : '', t.assignee || '',
+      { t: STATUS[s2] + (t.done && t.doneAt ? ' ' + fmtShort(t.doneAt) : '') + (W.carried.includes(t) ? '\n(tuần trước)' : ''), result: s2 }, t.result || '']; });
+  const brow = W.backs.map((b, i) => { const dev = device(b.deviceId);
+    return [String(i + 1), dev?.name || '', b.desc, b.parts || '', dmy(b.found), String(openDays(b)), { t: SEVER[b.severity], result: SEVRES[b.severity] },
+      b.reason === 'khac' && b.reasonText ? b.reasonText : REASONS[b.reason], b.action || '', b.resolved ? { t: `Đã xử lý ${fmtShort(b.resolvedAt)}${b.resolveNote ? '\n' + b.resolveNote : ''}`, result: 'fixed' } : { t: 'Đang tồn', result: 'open' }]; });
+  const pct = W.total ? Math.round(W.done / W.total * 100) : 0;
+  const info = [['Tuần', `Tuần ${no}/${yr} · ${dmy(ws)} – ${dmy(W.we)}`], ['Người lập', name || '—'],
+    ['Kế hoạch', `${W.total} việc · hoàn thành ${W.done} (${pct}%)`], ['Chưa xong từ tuần trước', `${W.carried.length} việc`],
+    ['Tồn đọng', `Còn ${W.openB} · mới ${W.newB} · đã xử lý ${W.fixedB}`], ['Vật tư đang chờ', `${openBacklog().filter(b => b.reason === 'vattu').length} mục`]];
+  const doc = { landscape: true, org, dept: st.dept || '', label: 'BÁO CÁO BẢO TRÌ HÀNG TUẦN', title: `NHẬT KÝ BẢO TRÌ TUẦN ${no}/${yr}`, subtitle: `Từ ${fmtD(ws)} đến ${fmtD(W.we)}`,
+    docNo: `NK-${yr}-T${String(no).padStart(2, '0')}`, dateText: 'Ngày lập ' + dmy(today()), fileBase: `NhatKy_Tuan${no}_${yr}`, info,
+    sections: [
+      { heading: 'I. KẾ HOẠCH CÔNG VIỆC', items: [prow.length ? { table: { cols: ['STT', 'Khu vực', 'Thiết bị', 'Công việc', 'Ngày', 'Người thực hiện', 'Trạng thái', 'Kết quả / ghi chú'], widths: [4, 11, 14, 27, 7, 11, 10, 18], rows: prow } } : { p: 'Không có kế hoạch trong tuần.' }] },
+      { heading: 'II. TỒN ĐỌNG THIẾT BỊ', items: [brow.length ? { table: { cols: ['STT', 'Thiết bị', 'Mô tả tồn đọng', 'Vật tư cần', 'Phát hiện', 'Số ngày', 'Mức độ', 'Lý do', 'Hướng xử lý', 'Trạng thái'], widths: [4, 12, 21, 12, 9, 6, 8, 10, 12, 10], rows: brow } } : { p: 'Không có tồn đọng.' }] },
+    ],
+    signers: [{ title: 'Người lập', name }, { title: 'Trưởng bộ phận' }] };
+  const sheets = [
+    { name: 'Tong hop', title: doc.title, info, cols: [{ h: 'Chỉ tiêu', w: 34 }, { h: 'Giá trị', w: 22, center: true }, { h: 'Ghi chú', w: 40 }],
+      rows: [['Tổng việc kế hoạch', String(W.total), ''], ['Hoàn thành', String(W.done), `${pct}%`], ['Đang làm', String(W.plan.filter(t => !t.done && t.status === 'doing').length), ''],
+        ['Hoãn', String(W.plan.filter(t => !t.done && t.status === 'hold').length), ''], ['Chưa xong từ tuần trước', String(W.carried.length), ''],
+        ['Tồn đọng còn lại', String(W.openB), ''], ['Tồn đọng mới trong tuần', String(W.newB), ''], ['Tồn đọng đã xử lý', String(W.fixedB), '']], landscape: false },
+    { name: 'Ke hoach', title: 'KẾ HOẠCH CÔNG VIỆC – TUẦN ' + no, info: [['Tuần', info[0][1]], ['Người lập', name || '—']],
+      cols: [{ h: 'STT', w: 6, center: true, num: true }, { h: 'Khu vực', w: 18 }, { h: 'Thiết bị', w: 24 }, { h: 'Công việc', w: 42 }, { h: 'Ngày', w: 11, center: true }, { h: 'Người thực hiện', w: 18 }, { h: 'Trạng thái', w: 16, center: true }, { h: 'Kết quả / ghi chú', w: 34 }], rows: prow, landscape: true },
+    { name: 'Ton dong', title: 'TỒN ĐỌNG THIẾT BỊ – TUẦN ' + no, info: [['Tuần', info[0][1]], ['Tồn đọng', info[4][1]]],
+      cols: [{ h: 'STT', w: 6, center: true, num: true }, { h: 'Thiết bị', w: 22 }, { h: 'Mô tả tồn đọng', w: 40 }, { h: 'Vật tư cần', w: 22 }, { h: 'Phát hiện', w: 12, center: true }, { h: 'Số ngày', w: 9, center: true, num: true }, { h: 'Mức độ', w: 12, center: true }, { h: 'Lý do', w: 16 }, { h: 'Hướng xử lý', w: 28 }, { h: 'Trạng thái', w: 18, center: true }], rows: brow, landscape: true },
+  ];
   const bz = busy('Đang tạo báo cáo…');
-  try { await (kind === 'pdf' ? exportPdf : exportDocx)(doc); } catch (e) { if (!String(e).match(/cancel/i)) toast('Lỗi xuất file: ' + (e.message || e)); console.error(e); } finally { bz.done(); }
+  try { if (kind === 'pdf') await exportPdf(doc); else if (kind === 'docx') await exportDocx(doc); else await exportXlsx(doc, sheets); }
+  catch (e) { if (!String(e).match(/cancel/i)) toast('Lỗi xuất file: ' + (e.message || e)); console.error(e); } finally { bz.done(); }
 }
 
 // ---------------- danh sách vật tư cần mua ----------------

@@ -2,9 +2,9 @@ import { S, save, device, newBacklog, pathInUse, COLORS } from './store.js';
 import { nav, push, pop } from './nav.js';
 import { ic } from './icons.js';
 import { esc, uid, today, fmtD, fmtShort, matcher, highlight, $$ } from './util.js';
-import { openSheet, confirmBox, promptBox, menu, toast, busy, viewPhoto } from './ui.js';
-import { takePhoto, saveB64, deletePath, fileSrc } from './platform.js';
-import { exportPdf, exportDocx } from './exporter.js';
+import { openSheet, confirmBox, promptBox, menu, toast, busy, viewPhoto, addPhotos } from './ui.js';
+import { deletePath, fileSrc } from './platform.js';
+import { exportPdf, exportDocx, exportXlsx } from './exporter.js';
 
 export const note = id => S.state.notes.find(n => n.id === id);
 const cat = id => S.state.noteCats.find(c => c.id === id);
@@ -196,8 +196,7 @@ function bindImg(v, n, b, el) {
   };
 }
 async function addPhoto(v, n, b) {
-  try { const b64 = await takePhoto(); if (!b64) return; const p = `photos/${uid()}.jpg`; await saveB64(p, b64); b.photos.push(p); touch(n); renderBlocks(v, n); }
-  catch (e) { if (!String(e).match(/cancel/i)) toast('Không lấy được ảnh'); }
+  await addPhotos(p => { b.photos.push(p); touch(n); renderBlocks(v, n); });
 }
 function blockMenu(v, n, b) {
   const i = n.blocks.indexOf(b);
@@ -225,12 +224,13 @@ function qaForm(n) {
   const isNewQa = !n.qa; const q0 = n.qa || { po: '', supplier: '', inspector: S.state.settings.name || '', date: today() };
   const sups = [...new Set(S.state.notes.map(x => x.qa?.supplier).filter(Boolean))];
   openSheet('Thông tin phiếu QA', `
+    <div class="field"><label class="lb">Số biên bản</label><input class="inp" id="qNo" value="${esc(q0.no || '')}" placeholder="Để trống – app tự đánh số khi xuất (QA-${today().slice(0, 4)}-…)"></div>
     <div class="field"><label class="lb">Số PO / phiếu nhập</label><input class="inp" id="qPo" value="${esc(q0.po)}" placeholder="VD: PO-2026-0915"></div>
     <div class="field"><label class="lb">Nhà cung cấp</label><input class="inp" id="qSu" list="qSuL" value="${esc(q0.supplier)}"><datalist id="qSuL">${sups.map(s => `<option value="${esc(s)}">`).join('')}</datalist></div>
     <div class="field"><label class="lb">Người kiểm tra</label><input class="inp" id="qIn" value="${esc(q0.inspector)}"></div>
     <div class="field"><label class="lb">Ngày kiểm tra</label><input type="date" class="inp" id="qDa" value="${q0.date}"></div>
     <button class="btn pri" id="qS">${ic('check')} Lưu</button>${n.qa ? `<button class="btn dan" id="qD">${ic('trash')} Bỏ thông tin QA</button>` : ''}`, (b, close) => {
-    b.querySelector('#qS').onclick = () => { n.qa = { po: b.querySelector('#qPo').value.trim(), supplier: b.querySelector('#qSu').value.trim(), inspector: b.querySelector('#qIn').value.trim(), date: b.querySelector('#qDa').value };
+    b.querySelector('#qS').onclick = () => { n.qa = { no: b.querySelector('#qNo').value.trim(), po: b.querySelector('#qPo').value.trim(), supplier: b.querySelector('#qSu').value.trim(), inspector: b.querySelector('#qIn').value.trim(), date: b.querySelector('#qDa').value };
       if (isNewQa && S.state.noteCats.some(c => c.id === 'qa')) n.cat = 'qa'; touch(n); close(); nav.render(); };
     const d = b.querySelector('#qD'); if (d) d.onclick = () => { n.qa = null; touch(n); close(); nav.render(); };
   });
@@ -238,8 +238,9 @@ function qaForm(n) {
 export function noteMenu(id) {
   const n = note(id); if (!n) return;
   menu(n.title || 'Ghi chú', [
-    { icon: 'file', label: 'Xuất PDF', run: () => runExport([n], 'pdf') },
+    { icon: 'file', label: isQA(n) ? 'Xuất biên bản PDF' : 'Xuất PDF', run: () => runExport([n], 'pdf') },
     { icon: 'file', label: 'Xuất Word (.docx)', run: () => runExport([n], 'docx') },
+    { icon: 'file', label: 'Xuất Excel (.xlsx)', run: () => runExport([n], 'xlsx') },
     { icon: 'trash', label: 'Xóa ghi chú', danger: true, run: async () => {
       if (!await confirmBox('Xóa ghi chú?', `“${esc(n.title || 'Ghi chú không tên')}” và ảnh trong đó sẽ bị xóa.`, 'Xóa', true)) return;
       S.state.notes = S.state.notes.filter(x => x !== n);
@@ -247,39 +248,88 @@ export function noteMenu(id) {
     } },
   ]);
 }
-function exportMenu(list, name) { menu(`Xuất ${list.length} ghi chú`, [{ icon: 'file', label: 'Xuất PDF', run: () => runExport(list, 'pdf', name) }, { icon: 'file', label: 'Xuất Word (.docx)', run: () => runExport(list, 'docx', name) }]); }
+function exportMenu(list, name) { menu(`Xuất ${list.length} ghi chú`, [{ icon: 'file', label: 'Xuất PDF', run: () => runExport(list, 'pdf', name) }, { icon: 'file', label: 'Xuất Word (.docx)', run: () => runExport(list, 'docx', name) }, { icon: 'file', label: 'Xuất Excel (.xlsx)', run: () => runExport(list, 'xlsx', name) }]); }
 
-function noteItems(n, items, multi) {
-  const c = cat(n.cat); const dev = device(n.deviceId); let no = 0;
-  if (multi) items.push({ h: n.title || 'Ghi chú không tên' });
-  const kv = [];
-  if (multi) kv.push(['Cập nhật', fmtD(n.updated.slice(0, 10))]);
-  if (dev) kv.push(['Thiết bị', dev.name]);
-  if (n.qa) { if (n.qa.po) kv.push(['Số PO / phiếu nhập', n.qa.po]); if (n.qa.supplier) kv.push(['Nhà cung cấp', n.qa.supplier]); if (n.qa.inspector) kv.push(['Người kiểm tra', n.qa.inspector]); if (n.qa.date) kv.push(['Ngày kiểm tra', fmtD(n.qa.date)]); }
-  const imgs = n.blocks.filter(b => b.t === 'img'); const ok = imgs.filter(b => b.qa === 'ok').length, ng = imgs.filter(b => b.qa === 'ng').length, ck = imgs.filter(b => b.qa === 'chk').length;
-  if (ok + ng + ck) kv.push(['Kết quả QA', `${ok} đạt · ${ng} không đạt · ${ck} cần xem lại`]);
-  if (kv.length) items.push({ kv });
-  for (const b of n.blocks) {
-    if (b.t === 'img') {
-      no++; const badge = [b.qa ? 'Kết quả: ' + QA[b.qa][0] : '', b.qty ? 'Số lượng: ' + b.qty : ''].filter(Boolean).join('   ·   ');
-      const colr = b.qa === 'ok' ? [20, 150, 95] : b.qa === 'ng' ? [210, 50, 45] : b.qa === 'chk' ? [200, 120, 10] : undefined;
-      items.push({ imgs: { paths: b.photos || [], codes: b.codes || [], caption: b.caption, no, badge, badgeColor: colr, badgeHex: colr ? colr.map(x => x.toString(16).padStart(2, '0')).join('') : undefined } });
-    } else if (!b.text?.trim()) continue;
-    else if (b.t === 'h') items.push(multi ? { p: '▸ ' + b.text } : { h: b.text });
-    else if (b.t === 'p') items.push({ p: b.text });
-    else if (b.t === 'li') items.push({ li: b.text });
-    else if (b.t === 'chk') items.push({ chk: b.text, done: b.done });
+// ---------------- dựng biên bản / báo cáo để xuất file ----------------
+const RESULT_TXT = { ok: 'Đạt', ng: 'Không đạt', chk: 'Cần xem lại' };
+const dmy = s => s ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}` : '';
+const isQA = n => !!n.qa || n.blocks.some(b => b.t === 'img' && b.qa);
+function qaNo(n) {
+  if (!n.qa) n.qa = { po: '', supplier: '', inspector: S.state.settings.name || '', date: n.updated.slice(0, 10) };
+  if (!n.qa.no) {
+    const y = (n.qa.date || today()).slice(0, 4); const st = S.state.settings; st.qaSeq = st.qaSeq || {};
+    st.qaSeq[y] = (st.qaSeq[y] || 0) + 1; n.qa.no = `QA-${y}-${String(st.qaSeq[y]).padStart(3, '0')}`; save();
   }
+  return n.qa.no;
+}
+function textItems(n, multi) {
+  const out = [];
+  for (const b of n.blocks) {
+    if (b.t === 'img' || !(b.text || '').trim()) continue;
+    if (b.t === 'h') out.push({ subh: b.text }); else if (b.t === 'p') out.push({ p: b.text });
+    else if (b.t === 'li') out.push({ li: b.text }); else if (b.t === 'chk') out.push({ chk: b.text, done: b.done });
+  }
+  return out;
+}
+function cardsOf(n) { let no = 0; return n.blocks.filter(b => b.t === 'img').map(b => ({ no: ++no, title: `Mục ${no}`, codes: b.codes || [], qty: b.qty, result: b.qa, caption: b.caption, paths: b.photos || [] })); }
+function buildDocs(list, groupName) {
+  const st = S.state.settings; const org = st.org || 'CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT'; const dept = st.dept || '';
+  if (list.length === 1 && isQA(list[0])) {
+    const n = list[0]; const no = qaNo(n); const q = n.qa; const dev = device(n.deviceId);
+    const imgs = n.blocks.filter(b => b.t === 'img'); const cnt = k => imgs.filter(b => b.qa === k).length;
+    const verdict = cnt('ng') ? 'KHÔNG ĐẠT (có mục không đạt)' : cnt('chk') ? 'CẦN XEM LẠI' : imgs.length ? 'ĐẠT' : '—';
+    const info = [['Số PO / phiếu nhập', q.po || '—'], ['Nhà cung cấp', q.supplier || '—'], ['Ngày kiểm tra', q.date ? fmtD(q.date) : '—'], ['Người kiểm tra', q.inspector || '—'],
+      ['Thiết bị / khu vực', dev ? dev.name + (dev.location ? ' · ' + dev.location : '') : '—'], ['Kết quả chung', `${verdict} · ${imgs.length} mục: ${cnt('ok')} đạt, ${cnt('ng')} không đạt, ${cnt('chk')} cần xem lại`]];
+    const rows = imgs.map((b, i) => [String(i + 1), (b.codes || []).join('\n') || '—', b.caption || '', b.qty || '', String((b.photos || []).length), b.qa ? { t: RESULT_TXT[b.qa], result: b.qa } : '—']);
+    const texts = textItems(n);
+    const doc = { org, dept, label: 'BIÊN BẢN KIỂM TRA VẬT TƯ', title: 'BIÊN BẢN KIỂM TRA VẬT TƯ NHẬP KHO', subtitle: n.title || '', docNo: no, dateText: 'Ngày ' + dmy(q.date || today()),
+      fileBase: `BienBanQA_${no}_${dmy(q.date || today()).replace(/\//g, '-')}`, info,
+      sections: [
+        { heading: 'I. TỔNG HỢP KẾT QUẢ KIỂM TRA', items: [imgs.length ? { table: { cols: ['STT', 'Mã vật tư', 'Mô tả / chú thích', 'SL', 'Số ảnh', 'Kết quả'], widths: [6, 20, 44, 6, 8, 15], rows } } : { p: 'Chưa có mục vật tư nào.' }] },
+        ...(imgs.length ? [{ heading: 'II. HÌNH ẢNH CHI TIẾT', items: cardsOf(n).map(c => ({ card: c })) }] : []),
+        ...(texts.length ? [{ heading: (imgs.length ? 'III' : 'II') + '. GHI CHÚ – KẾT LUẬN', items: texts }] : []),
+      ],
+      signers: [{ title: 'Người kiểm tra', name: q.inspector }, { title: 'Thủ kho' }, { title: 'Đại diện nhà cung cấp' }, { title: 'Quản lý bộ phận' }] };
+    const sheets = [{ name: 'Bien ban QA', title: 'BIÊN BẢN KIỂM TRA VẬT TƯ NHẬP KHO', info,
+      cols: [{ h: 'STT', w: 6, center: true, num: true }, { h: 'Mã vật tư', w: 20 }, { h: 'Mô tả / chú thích', w: 38 }, { h: 'SL', w: 8, center: true }, { h: 'Kết quả', w: 14, center: true }],
+      rows: imgs.map((b, i) => [String(i + 1), (b.codes || []).join('\n'), b.caption || '', b.qty || '', b.qa ? { t: RESULT_TXT[b.qa], result: b.qa } : '']), photos: imgs.map(b => b.photos || []), landscape: true }];
+    return { doc, sheets };
+  }
+  // ghi chú thường (1 hoặc nhiều)
+  const multi = list.length > 1; const one = list[0]; const c = cat(one.cat);
+  const sections = list.map((n, i) => {
+    const dev = device(n.deviceId); const items = [];
+    if (multi) items.push({ p: [`Cập nhật ${fmtD(n.updated.slice(0, 10))}`, dev ? 'Thiết bị: ' + dev.name : '', n.qa?.po ? 'PO: ' + n.qa.po : ''].filter(Boolean).join('  ·  ') });
+    let no = 0;
+    for (const b of n.blocks) {
+      if (b.t === 'img') { no++; items.push({ card: { no: multi ? `${i + 1}.${no}` : no, title: `Hình ${multi ? `${i + 1}.${no}` : no}`, codes: b.codes || [], qty: b.qty, result: b.qa, caption: b.caption, paths: b.photos || [] } }); }
+      else if ((b.text || '').trim()) items.push(b.t === 'h' ? { subh: b.text } : b.t === 'p' ? { p: b.text } : b.t === 'li' ? { li: b.text } : { chk: b.text, done: b.done });
+    }
+    return { heading: multi ? `${i + 1}. ${(n.title || 'Ghi chú không tên').toUpperCase()}` : '', items };
+  });
+  const dev = device(one.deviceId);
+  const doc = { org, dept, label: multi ? 'TỔNG HỢP GHI CHÚ' : ((c?.name || 'Ghi chú') + '').toUpperCase(), title: multi ? `GHI CHÚ – ${(groupName || 'TỔNG HỢP').toUpperCase()}` : (one.title || 'Ghi chú'),
+    subtitle: multi ? `${list.length} ghi chú` : '', docNo: '', dateText: 'Ngày ' + dmy(today()),
+    fileBase: multi ? `GhiChu_${groupName || 'TongHop'}_${dmy(today()).replace(/\//g, '-')}` : `GhiChu_${one.title || 'ghi-chu'}`,
+    info: multi ? [['Mục', groupName || '—'], ['Số ghi chú', String(list.length)], ['Người lập', st.name || '—'], ['Ngày xuất', fmtD(today())]]
+      : [['Mục', c?.name || '—'], ['Thiết bị', dev ? dev.name : '—'], ['Người lập', st.name || '—'], ['Cập nhật', fmtD(one.updated.slice(0, 10))]],
+    sections, signers: [{ title: 'Người lập', name: st.name }] };
+  const rows = [], photos = [];
+  list.forEach((n, i) => { let no = 0; n.blocks.forEach(b => {
+    if (b.t === 'img') { no++; rows.push([String(rows.length + 1), multi ? n.title || '' : '', 'Ảnh ' + no, [(b.codes || []).join(', '), b.caption].filter(Boolean).join(' – '), b.qty || '', b.qa ? { t: RESULT_TXT[b.qa], result: b.qa } : '']); photos.push(b.photos || []); }
+    else if ((b.text || '').trim()) { rows.push([String(rows.length + 1), multi ? n.title || '' : '', { h: 'Tiêu đề', p: 'Đoạn', li: 'Gạch đầu dòng', chk: b.done ? 'Việc – đã xong' : 'Việc' }[b.t], b.text, '', '']); photos.push([]); }
+  }); });
+  const cols = [{ h: 'STT', w: 6, center: true, num: true }, { h: 'Ghi chú', w: multi ? 26 : 4 }, { h: 'Loại', w: 13 }, { h: 'Nội dung / mã vật tư', w: 48 }, { h: 'SL', w: 7, center: true }, { h: 'Kết quả', w: 13, center: true }];
+  const sheets = [{ name: 'Ghi chu', title: doc.title, info: doc.info, cols, rows, photos, landscape: true }];
+  return { doc, sheets };
 }
 async function runExport(list, kind, groupName) {
-  const multi = list.length > 1; const items = [];
-  list.forEach(n => noteItems(n, items, multi));
-  const one = list[0]; const c = cat(one.cat);
-  const doc = { title: multi ? `Ghi chú – ${groupName || 'tổng hợp'}` : (one.title || 'Ghi chú'),
-    subtitle: multi ? `${list.length} ghi chú · xuất ngày ${fmtD(today())}` : `${c ? c.name + ' · ' : ''}Cập nhật ${fmtD(one.updated.slice(0, 10))}${S.state.settings.name ? ' · ' + S.state.settings.name : ''}`, items };
+  const { doc, sheets } = buildDocs(list, groupName);
   const bz = busy('Đang tạo file…');
-  try { await (kind === 'pdf' ? exportPdf : exportDocx)(doc, (i, t) => bz.set(`Đang xử lý ảnh ${i}/${t}…`)); }
-  catch (e) { if (!String(e).match(/cancel/i)) toast('Lỗi xuất file: ' + (e.message || e)); console.error(e); }
+  try {
+    const step = (i, t) => bz.set(`Đang xử lý ảnh ${i}/${t}…`);
+    if (kind === 'pdf') await exportPdf(doc, step); else if (kind === 'docx') await exportDocx(doc, step); else await exportXlsx(doc, sheets, step);
+  } catch (e) { if (!String(e).match(/cancel/i)) toast('Lỗi xuất file: ' + (e.message || e)); console.error(e); }
   finally { bz.done(); }
 }
 export { runExport as exportNotes };

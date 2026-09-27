@@ -1,5 +1,6 @@
 import { $, esc } from './util.js';
 import { ic } from './icons.js';
+import { capturePhotos, pickPhotos } from './platform.js';
 
 const stack = [];
 export function openSheet(title, html, mount, opts = {}) {
@@ -72,3 +73,22 @@ export function viewPhoto(src) {
   pv.onclick = closePhoto; document.body.appendChild(pv);
 }
 export function closePhoto() { if (pv) { pv.remove(); pv = null; return true; } return false; }
+
+// Hỏi nguồn ảnh: chụp liên tục hoặc chọn nhiều ảnh. onEach(path) để cập nhật giao diện ngay khi có ảnh.
+export function addPhotos(onEach) {
+  return new Promise(res => {
+    let done = false;
+    openSheet('Thêm ảnh', `
+      <button class="menu-item" data-src="cam">${ic('camera')}<span><b>Chụp ảnh</b><br><small class="muted">Chụp liên tục nhiều tấm · bấm Quay lại khi chụp xong</small></span></button>
+      <button class="menu-item" data-src="lib">${ic('grid')}<span><b>Chọn nhiều ảnh từ thư viện</b><br><small class="muted">Chạm chọn nhiều ảnh một lúc</small></span></button>`, (b, close) => {
+      b.querySelectorAll('[data-src]').forEach(x => x.onclick = async () => {
+        done = true; close();
+        try {
+          const paths = x.dataset.src === 'cam' ? await capturePhotos(onEach) : await pickPhotos(onEach);
+          if (paths.length > 1) toast(`Đã thêm ${paths.length} ảnh`);
+          res(paths);
+        } catch (e) { toast('Không lấy được ảnh'); res([]); }
+      });
+    }, { onClose: () => { if (!done) res([]); } });
+  });
+}
