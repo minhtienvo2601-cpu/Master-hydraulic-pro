@@ -1,0 +1,59 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Cai thu vien
+        run: npm ci
+
+      - name: Dong goi giao dien
+        run: npm run build
+
+      - name: Tao du an Android
+        run: |
+          if [ ! -d android ]; then npx cap add android; fi
+          node scripts/patch-android.js
+          npx cap sync android
+
+      - name: Build APK
+        run: |
+          mkdir -p ~/.android
+          cp resources/debug.keystore ~/.android/debug.keystore
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+          cp app/build/outputs/apk/debug/app-debug.apk ../BaoTriThuyLuc.apk
+
+      - name: Luu file APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: BaoTriThuyLuc-apk
+          path: BaoTriThuyLuc.apk
+
+      - name: Tao ban phat hanh
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Bao Tri Thuy Luc 1.0.${{ github.run_number }}
+          body: Tai file BaoTriThuyLuc.apk ben duoi ve dien thoai va cai dat.
+          files: BaoTriThuyLuc.apk
