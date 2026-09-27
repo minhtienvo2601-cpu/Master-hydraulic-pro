@@ -7,16 +7,18 @@ import { toast, busy, confirmBox, sheetOpen, closeTopSheet, closePhoto, openShee
 import { viewHome, viewTasks, taskForm } from './tasks.js';
 import { viewDevices, viewDevice, deviceForm } from './devices.js';
 import { viewParts, openF } from './parts.js';
+import { viewRef, viewRefSec, refTitle, clearRefQ } from './ref.js';
+import { SystemBars, SystemBarsStyle } from '@capacitor/core';
 import { native, notifInit, onBack, readB64, saveB64, shareFile, pickFiles, testNotif, exactAlarmStatus, openExactAlarmSetting } from './platform.js';
 
-const TABS = { home: ['home', 'Tổng quan'], tasks: ['tasks', 'Công việc'], devices: ['device', 'Thiết bị'], parts: ['parts', 'Vật tư'] };
+const TABS = { home: ['home', 'Tổng quan'], tasks: ['tasks', 'Công việc'], devices: ['device', 'Thiết bị'], parts: ['parts', 'Vật tư'], ref: ['ref', 'Tra cứu'] };
 
 function render() {
   const r = cur(); const v = $('#view');
   $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === nav.tab));
   const sub = nav.stack.length > 0 || (nav.tab === 'parts' && nav.partsNode !== 'root');
   $('#btnBack').hidden = !sub;
-  $('#fab').hidden = ['search', 'settings'].includes(r.v);
+  $('#fab').hidden = ['search', 'settings', 'ref', 'refsec'].includes(r.v);
   let title = TABS[nav.tab]?.[1] || '', eyebrow = 'BẢO TRÌ THỦY LỰC';
   if (r.v === 'home') viewHome(v);
   else if (r.v === 'tasks') viewTasks(v);
@@ -25,6 +27,8 @@ function render() {
   else if (r.v === 'device') { const d = device(r.id); title = 'Hồ sơ thiết bị'; eyebrow = 'THIẾT BỊ'; viewDevice(v, r.id); }
   else if (r.v === 'search') { title = 'Tìm kiếm'; eyebrow = 'TÌM NHANH'; viewSearch(v); }
   else if (r.v === 'settings') { title = 'Cài đặt'; eyebrow = 'ỨNG DỤNG'; viewSettings(v); }
+  else if (r.v === 'ref') { eyebrow = 'KỸ THUẬT THỦY LỰC'; viewRef(v); }
+  else if (r.v === 'refsec') { title = refTitle(r.k); eyebrow = 'TRA CỨU'; viewRefSec(v, r.k); }
   $('#tbTitle').textContent = title; $('#tbEyebrow').textContent = eyebrow;
 }
 nav.render = render;
@@ -72,8 +76,14 @@ function doSearch(box, q) {
 async function viewSettings(v) {
   const st = S.state.settings;
   const nFiles = S.state.nodes.reduce((s, n) => s + n.files.length, 0);
+  const th = st.theme || 'dark';
   v.innerHTML = `<div class="fade-in">
-    <div class="sec-h" style="margin-top:6px"><h2>Cá nhân</h2></div>
+    <div class="sec-h" style="margin-top:6px"><h2>Giao diện</h2></div>
+    <div class="set-group"><div class="themeseg">
+      <button data-theme-opt="dark" class="${th === 'dark' ? 'on' : ''}">${ic('moon')}Tối</button>
+      <button data-theme-opt="light" class="${th === 'light' ? 'on' : ''}">${ic('sun')}Sáng</button>
+      <button data-theme-opt="auto" class="${th === 'auto' ? 'on' : ''}">${ic('auto')}Theo máy</button></div></div>
+    <div class="sec-h"><h2>Cá nhân</h2></div>
     <div class="set-group"><div class="set-row"><div class="ic">${ic('user')}</div><div class="grow"><div class="tt">Tên hiển thị</div><div class="ds">Hiện ở lời chào trang Tổng quan</div></div>
       <input id="sName" value="${esc(st.name)}" placeholder="Tên của bạn" style="width:130px"></div></div>
     <div class="sec-h"><h2>Nhắc việc</h2></div>
@@ -94,6 +104,7 @@ async function viewSettings(v) {
     </div>
     <div class="muted" style="text-align:center;font-size:12px;margin-top:18px">Bảo Trì Thủy Lực · phiên bản 1.0<br>Dữ liệu lưu trên điện thoại, không cần mạng</div></div>`;
   const q = s => v.querySelector(s);
+  $$('[data-theme-opt]', v).forEach(b => b.onclick = () => { st.theme = b.dataset.themeOpt; save(); applyTheme(); render(); });
   q('#sName').onchange = e => { st.name = e.target.value.trim(); save(); };
   q('#sDays').onchange = e => { st.remindDays = +e.target.value; save(); toast('Đã cập nhật lịch nhắc'); };
   q('#sTime').onchange = e => { st.remindTime = e.target.value || '07:00'; save(); toast('Đã cập nhật giờ nhắc'); };
@@ -138,15 +149,27 @@ async function restore() {
   } catch (e) { b.done(); toast('Lỗi khôi phục: ' + (e.message || e)); }
 }
 
+// ---------- giao diện sáng / tối ----------
+const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+function applyTheme() {
+  const pref = S.state.settings.theme || 'dark';
+  const t = pref === 'auto' ? (mq && mq.matches ? 'light' : 'dark') : pref;
+  document.documentElement.dataset.theme = t;
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', t === 'light' ? '#F3F0E8' : '#0B111A');
+  if (native) SystemBars.setStyle({ style: t === 'light' ? SystemBarsStyle.Light : SystemBarsStyle.Dark }).catch(() => {});
+}
+mq && mq.addEventListener && mq.addEventListener('change', () => { if ((S.state.settings.theme || 'dark') === 'auto') applyTheme(); });
+
 // ---------- khởi động ----------
 async function init() {
   $('#btnBack').innerHTML = ic('back'); $('#btnSearch').innerHTML = ic('search'); $('#btnSettings').innerHTML = ic('settings'); $('#fab').innerHTML = ic('plus', 2.4);
-  $$('#tabbar button').forEach(b => { const [i, l] = TABS[b.dataset.tab]; b.innerHTML = ic(i) + `<span>${l}</span>`; b.onclick = () => { if (b.dataset.tab === 'parts' && nav.tab === 'parts' && !nav.stack.length) nav.partsNode = 'root'; go(b.dataset.tab); }; });
+  $$('#tabbar button').forEach(b => { const [i, l] = TABS[b.dataset.tab]; b.innerHTML = ic(i) + `<span>${l}</span>`; b.onclick = () => { if (b.dataset.tab === 'ref') clearRefQ(); if (b.dataset.tab === 'parts' && nav.tab === 'parts' && !nav.stack.length) nav.partsNode = 'root'; go(b.dataset.tab); }; });
   $('#btnBack').onclick = () => { if (pop()) return; if (nav.tab === 'parts' && nav.partsNode !== 'root') { nav.partsNode = node(nav.partsNode)?.parentId || 'root'; render(); } };
   $('#btnSearch').onclick = () => { if (cur().v !== 'search') push({ v: 'search' }); };
   $('#btnSettings').onclick = () => { if (cur().v !== 'settings') push({ v: 'settings' }); };
   $('#fab').onclick = fabAction;
   await load();
+  applyTheme();
   render();
   onBack(() => {
     if (closePhoto()) return true;

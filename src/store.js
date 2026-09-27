@@ -13,7 +13,7 @@ function blank() {
       { id: uid(), parentId: 'root', name: 'Trạm thủy lực', color: '#3CC48C', codes: '', files: [], links: [] },
       { id: uid(), parentId: 'root', name: 'Vật tư tiêu hao', color: '#F2A33A', codes: '', files: [], links: [] },
     ],
-    settings: { name: '', remindDays: 2, remindTime: '07:00', dueDay: true },
+    settings: { name: '', remindDays: 2, remindTime: '07:00', dueDay: true, theme: 'dark' },
   };
 }
 

@@ -41,14 +41,14 @@ function buildMap(c) {
       const ga = p.a + (j - (show.length - 1) / 2) * 0.2; const gr = p.R + 72;
       const gx = Math.cos(ga) * gr, gy = Math.sin(ga) * gr;
       links += `<line x1="${p.x}" y1="${p.y}" x2="${gx}" y2="${gy}" stroke="${col}" stroke-opacity=".3" stroke-width="1.3"/>`;
-      gnodes += `<circle cx="${gx}" cy="${gy}" r="7" fill="${g.color || col}" fill-opacity=".85" stroke="#0E1520" stroke-width="2"/>`;
+      gnodes += `<circle cx="${gx}" cy="${gy}" r="7" fill="${g.color || col}" fill-opacity=".85" style="stroke:var(--nodeStroke)" stroke-width="2"/>`;
       minX = Math.min(minX, gx - 12); maxX = Math.max(maxX, gx + 12); minY = Math.min(minY, gy - 12); maxY = Math.max(maxY, gy + 12);
     });
     if (gk.length > 5) { const gx = Math.cos(p.a) * (p.R + 100), gy = Math.sin(p.a) * (p.R + 100); gnodes += `<text x="${gx}" y="${gy + 4}" text-anchor="middle" class="node-sub">+${gk.length - 5}</text>`; }
     const lines = wrap(p.k.name); const w = 128, h = lines.length > 1 ? 62 : 50;
     const sub = `${countFiles(p.k)} file · ${gk.length} nhánh`;
     cnodes += `<g class="mm-node" data-nid="${p.k.id}" transform="translate(${p.x} ${p.y})">
-      <rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="16" fill="#172232" stroke="${col}" stroke-width="1.6"/>
+      <rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="16" style="fill:var(--node)" stroke="${col}" stroke-width="1.6"/>
       <rect x="${-w / 2}" y="${-h / 2}" width="5" height="${h}" rx="2.5" fill="${col}"/>
       ${lines.map((l, i) => `<text x="3" y="${-h / 2 + 20 + i * 16}" text-anchor="middle" class="node-lbl">${esc(l)}</text>`).join('')}
       <text x="3" y="${h / 2 - 9}" text-anchor="middle" class="node-sub">${sub}</text></g>`;
