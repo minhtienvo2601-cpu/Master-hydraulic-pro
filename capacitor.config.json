@@ -1,0 +1,10 @@
+{
+  "appId": "vn.tien.baotri",
+  "appName": "Bảo Trì Thủy Lực",
+  "webDir": "www",
+  "backgroundColor": "#0B111A",
+  "plugins": {
+    "SystemBars": { "style": "DARK", "insetsHandling": "css" },
+    "LocalNotifications": { "smallIcon": "ic_stat_notify", "iconColor": "#D4B06A" }
+  }
+}

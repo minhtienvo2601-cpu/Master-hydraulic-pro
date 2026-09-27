@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0B111A">
+<title>Bảo Trì Thủy Lực</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="tb-left">
+      <button class="icon-btn" id="btnBack" hidden aria-label="Quay lại"></button>
+      <div>
+        <div class="tb-eyebrow" id="tbEyebrow">BẢO TRÌ THỦY LỰC</div>
+        <h1 id="tbTitle">Tổng quan</h1>
+      </div>
+    </div>
+    <div class="tb-right">
+      <button class="icon-btn" id="btnSearch" aria-label="Tìm kiếm"></button>
+      <button class="icon-btn" id="btnSettings" aria-label="Cài đặt"></button>
+    </div>
+  </header>
+  <main id="view"></main>
+  <button id="fab" aria-label="Thêm"></button>
+  <nav id="tabbar">
+    <button data-tab="home"></button>
+    <button data-tab="tasks"></button>
+    <button data-tab="devices"></button>
+    <button data-tab="parts"></button>
+  </nav>
+</div>
+<div id="sheetRoot"></div>
+<div id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>

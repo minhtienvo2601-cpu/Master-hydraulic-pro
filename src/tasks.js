@@ -1,0 +1,182 @@
+import { S, save, task, newTask, completeTask, uncompleteTask, openTasks, sortTasks, device } from './store.js';
+import { nav, push } from './nav.js';
+import { ic } from './icons.js';
+import { esc, uid, today, addDays, addMonths, daysTo, dueLabel, fmtD, fmtShort, repeatLabel, $$ } from './util.js';
+import { openSheet, confirmBox, toast, viewPhoto } from './ui.js';
+import { takePhoto, saveB64, deletePath, fileSrc } from './platform.js';
+
+const PR = { 1: 'Khẩn', 2: 'Quan trọng', 3: 'Bình thường' };
+
+// ---------- thẻ công việc ----------
+export function taskCard(t, opts = {}) {
+  const dl = dueLabel(t.due); const dev = device(t.deviceId);
+  return `<div class="task p${t.priority} ${t.done ? 'done' : ''}" data-task="${t.id}">
+    <button class="check" data-chk="${t.id}" aria-label="Hoàn thành">${ic('check', 3)}</button>
+    <div class="grow">
+      <div class="row" style="gap:8px"><div class="t-title grow">${esc(t.title)}</div><span class="pill p${t.priority}">P${t.priority}</span></div>
+      <div class="t-meta">
+        ${t.done ? `<span>${ic('done')} Xong ${fmtShort(t.doneAt)}</span>` : `<span class="${dl.c}">${ic('cal')} ${dl.t}</span>`}
+        ${dev && !opts.noDev ? `<span>${ic('device')} ${esc(dev.name)}</span>` : ''}
+        ${t.repeat ? `<span>${ic('repeat')} ${repeatLabel(t.repeat)}</span>` : ''}
+        ${t.photos?.length ? `<span>${ic('camera')} ${t.photos.length}</span>` : ''}
+      </div>
+      ${t.note && opts.showNote ? `<div class="muted" style="font-size:13px;margin-top:6px">${esc(t.note)}</div>` : ''}
+    </div></div>`;
+}
+export function bindTaskCards(root) {
+  $$('[data-chk]', root).forEach(b => b.onclick = e => { e.stopPropagation(); toggleDone(b.dataset.chk); });
+  $$('[data-task]', root).forEach(el => el.onclick = () => taskForm(task(el.dataset.task)));
+}
+export function toggleDone(id) {
+  const t = task(id); if (!t) return;
+  if (t.done) { uncompleteTask(t); toast('Đã mở lại công việc'); }
+  else {
+    const n = completeTask(t);
+    toast(n ? `✔ Hoàn thành · lần kế tiếp: ${fmtShort(n.due)}` : '✔ Đã hoàn thành');
+  }
+  save(); nav.render();
+}
+
+// ---------- form thêm / sửa ----------
+const REPEATS = [
+  { k: 'none', l: 'Không lặp', r: null }, { k: 'w1', l: 'Hàng tuần', r: { n: 1, unit: 'week' } },
+  { k: 'm1', l: 'Hàng tháng', r: { n: 1, unit: 'month' } }, { k: 'm3', l: '3 tháng', r: { n: 3, unit: 'month' } },
+  { k: 'm6', l: '6 tháng', r: { n: 6, unit: 'month' } }, { k: 'm12', l: 'Hàng năm', r: { n: 12, unit: 'month' } },
+  { k: 'cus', l: 'Tùy chỉnh…', r: 'custom' },
+];
+export function taskForm(t, preset = {}) {
+  const isNew = !t;
+  const d = t ? JSON.parse(JSON.stringify(t)) : Object.assign({ title: '', note: '', priority: 2, due: addDays(today(), 7), deviceId: '', repeat: null, photos: [] }, preset);
+  const repKey = r => !r ? 'none' : (REPEATS.find(x => x.r && x.r !== 'custom' && x.r.n === r.n && x.r.unit === r.unit)?.k || 'cus');
+  const devOpts = `<option value="">— Không gắn thiết bị —</option>` + S.state.devices.map(v => `<option value="${v.id}" ${v.id === d.deviceId ? 'selected' : ''}>${esc(v.name)}</option>`).join('');
+  const html = `
+    <div class="field"><label class="lb">Công việc</label><input class="inp" id="fTitle" placeholder="VD: Thay lọc dầu trạm thủy lực chính" value="${esc(d.title)}"></div>
+    <div class="field"><label class="lb">Mức ưu tiên</label><div class="seg" id="fPr">
+      ${[1, 2, 3].map(p => `<button class="p${p} ${d.priority === p ? 'on' : ''}" data-p="${p}"><b>${p}</b><small>${PR[p]}</small></button>`).join('')}</div></div>
+    <div class="field"><label class="lb">Hạn hoàn thành</label><input type="date" class="inp" id="fDue" value="${d.due}">
+      <div class="qchips" id="fQd">
+        <button data-q="0">Hôm nay</button><button data-q="1">Ngày mai</button><button data-q="3">+3 ngày</button>
+        <button data-q="7">+1 tuần</button><button data-q="m1">+1 tháng</button><button data-q="none">Không hạn</button></div>
+      <div class="muted" style="font-size:12.5px;margin:8px 2px 0">${ic('bell').replace('<svg', '<svg style="width:13px;height:13px;display:inline;vertical-align:-2px"')} Nhắc trước ${S.state.settings.remindDays} ngày lúc ${S.state.settings.remindTime}</div></div>
+    <div class="field"><label class="lb">Thiết bị</label><select class="inp" id="fDev">${devOpts}</select></div>
+    <div class="field"><label class="lb">Lặp lại (bảo trì định kỳ)</label>
+      <div class="qchips" id="fRep">${REPEATS.map(x => `<button data-k="${x.k}" class="${repKey(d.repeat) === x.k ? 'on' : ''}">${x.l}</button>`).join('')}</div>
+      <div class="row" id="fCus" style="margin-top:8px;${repKey(d.repeat) === 'cus' ? '' : 'display:none'}">
+        <span class="muted">Mỗi</span><input type="number" min="1" class="inp" id="fN" style="width:80px;padding:9px" value="${d.repeat?.n || 2}">
+        <select class="inp" id="fU" style="width:auto;padding:9px 34px 9px 12px">
+          ${['day', 'week', 'month'].map(u => `<option value="${u}" ${d.repeat?.unit === u ? 'selected' : ''}>${{ day: 'ngày', week: 'tuần', month: 'tháng' }[u]}</option>`).join('')}</select></div>
+      <div class="muted" style="font-size:12.5px;margin:8px 2px 0">Khi đánh dấu hoàn thành, app tự tạo lần kế tiếp tính từ ngày làm xong.</div></div>
+    <div class="field"><label class="lb">Ghi chú</label><textarea class="inp" id="fNote" placeholder="Mã vật tư, thông số, người thực hiện…">${esc(d.note)}</textarea></div>
+    <div class="field"><label class="lb">Ảnh hiện trường</label><div class="photos" id="fPh"></div></div>
+    <button class="btn pri" id="fSave">${ic('check')} ${isNew ? 'Thêm công việc' : 'Lưu thay đổi'}</button>
+    ${!isNew ? `<div class="btn-row" style="margin-top:10px">
+      <button class="btn sec" id="fDone">${ic('done')} ${t.done ? 'Mở lại' : 'Hoàn thành'}</button>
+      <button class="btn dan" id="fDel">${ic('trash')} Xóa</button></div>` : ''}`;
+  openSheet(isNew ? 'Công việc mới' : 'Chi tiết công việc', html, (b, close) => {
+    const q = s => b.querySelector(s);
+    if (isNew) setTimeout(() => q('#fTitle').focus(), 320);
+    q('#fPr').onclick = e => { const bt = e.target.closest('[data-p]'); if (!bt) return; d.priority = +bt.dataset.p; $$('[data-p]', b).forEach(x => x.classList.toggle('on', x === bt)); };
+    q('#fQd').onclick = e => {
+      const bt = e.target.closest('[data-q]'); if (!bt) return; const v = bt.dataset.q;
+      q('#fDue').value = v === 'none' ? '' : v === 'm1' ? addMonths(today(), 1) : addDays(today(), +v);
+    };
+    let rep = repKey(d.repeat);
+    q('#fRep').onclick = e => {
+      const bt = e.target.closest('[data-k]'); if (!bt) return; rep = bt.dataset.k;
+      $$('#fRep [data-k]', b).forEach(x => x.classList.toggle('on', x === bt)); q('#fCus').style.display = rep === 'cus' ? '' : 'none';
+    };
+    const drawPh = async () => {
+      const box = q('#fPh');
+      const srcs = await Promise.all(d.photos.map(p => fileSrc(p)));
+      box.innerHTML = d.photos.map((p, i) => `<div class="ph"><img src="${srcs[i]}" data-view="${i}"><button data-rm="${i}">${ic('x', 2.4)}</button></div>`).join('') + `<button class="add" data-add>${ic('camera')}</button>`;
+      box.querySelector('[data-add]').onclick = async () => {
+        try { const b64 = await takePhoto(); if (!b64) return; const p = `photos/${uid()}.jpg`; await saveB64(p, b64); d.photos.push(p); drawPh(); }
+        catch (e) { if (!String(e).match(/cancel/i)) toast('Không lấy được ảnh'); }
+      };
+      $$('[data-rm]', box).forEach(x => x.onclick = () => { d.photos.splice(+x.dataset.rm, 1); drawPh(); });
+      $$('[data-view]', box).forEach(x => x.onclick = () => viewPhoto(x.src));
+    };
+    drawPh();
+    const collect = () => {
+      d.title = q('#fTitle').value.trim(); d.note = q('#fNote').value.trim(); d.due = q('#fDue').value; d.deviceId = q('#fDev').value;
+      if (rep === 'cus') d.repeat = { n: Math.max(1, +q('#fN').value || 1), unit: q('#fU').value };
+      else d.repeat = REPEATS.find(x => x.k === rep).r;
+      if (d.repeat && !d.due) d.due = today();
+    };
+    q('#fSave').onclick = () => {
+      collect(); if (!d.title) { toast('Nhập tên công việc'); q('#fTitle').focus(); return; }
+      if (isNew) newTask(d);
+      else { const removed = t.photos.filter(p => !d.photos.includes(p)); removed.forEach(deletePath); Object.assign(t, d); }
+      save(); close(); nav.render(); toast(isNew ? 'Đã thêm công việc' : 'Đã lưu');
+    };
+    if (!isNew) {
+      q('#fDone').onclick = () => { collect(); Object.assign(t, d); close(); toggleDone(t.id); };
+      q('#fDel').onclick = async () => {
+        if (!await confirmBox('Xóa công việc?', `“${esc(t.title)}” sẽ bị xóa vĩnh viễn.`, 'Xóa', true)) return;
+        t.photos.forEach(deletePath); S.state.tasks = S.state.tasks.filter(x => x.id !== t.id); save(); close(); nav.render(); toast('Đã xóa');
+      };
+    }
+  });
+}
+
+// ---------- màn hình Tổng quan ----------
+export function viewHome(v) {
+  const st = S.state; const open = openTasks();
+  const over = open.filter(t => t.due && daysTo(t.due) < 0);
+  const week = open.filter(t => t.due && daysTo(t.due) >= 0 && daysTo(t.due) <= 7);
+  const p1 = open.filter(t => t.priority === 1);
+  const m = today().slice(0, 7); const doneM = st.tasks.filter(t => t.done && (t.doneAt || '').startsWith(m));
+  const cnt = [1, 2, 3].map(p => open.filter(t => t.priority === p).length); const tot = cnt[0] + cnt[1] + cnt[2] || 1;
+  const soon = [...over, ...week].sort(sortTasks).slice(0, 6);
+  const rec = open.filter(t => t.repeat && t.due && daysTo(t.due) > 7).sort(sortTasks).slice(0, 4);
+  const hr = new Date().getHours(); const greet = hr < 11 ? 'Chào buổi sáng' : hr < 14 ? 'Chào buổi trưa' : hr < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';
+  const name = st.settings.name ? ', ' + esc(st.settings.name) : '';
+  const headline = over.length ? `${over.length} việc đã quá hạn` : week.length ? `${week.length} việc trong 7 ngày tới` : open.length ? 'Mọi việc đều đúng tiến độ' : 'Chưa có công việc nào';
+  v.innerHTML = `<div class="fade-in">
+    <div class="hero"><div class="date">${fmtD(today())}</div><div class="big">${greet}${name}</div><div class="sub">${headline}</div></div>
+    <div class="stats">
+      <button class="stat red" data-f="over"><div class="dot">${ic('alert')}</div><div class="n">${over.length}</div><div class="l">Quá hạn</div></button>
+      <button class="stat amber" data-f="week"><div class="dot">${ic('clock')}</div><div class="n">${week.length}</div><div class="l">Trong 7 ngày tới</div></button>
+      <button class="stat gold" data-f="p1"><div class="dot">${ic('flag')}</div><div class="n">${p1.length}</div><div class="l">Ưu tiên 1 đang mở</div></button>
+      <button class="stat green" data-f="done"><div class="dot">${ic('done')}</div><div class="n">${doneM.length}</div><div class="l">Hoàn thành tháng này</div></button>
+    </div>
+    <div class="card" style="margin-top:10px"><div class="row"><div class="grow" style="font-weight:600">${open.length} việc đang mở</div><span class="muted" style="font-size:12.5px">theo ưu tiên</span></div>
+      <div class="pbar">${cnt.map((c, i) => `<i style="width:${c / tot * 100}%;background:var(--p${i + 1})"></i>`).join('')}</div>
+      <div class="legend">${cnt.map((c, i) => `<span><b style="background:var(--p${i + 1})"></b>${PR[i + 1]}: <b style="background:none;width:auto;height:auto;color:var(--tx)">${c}</b></span>`).join('')}</div></div>
+    <div class="sec-h"><h2>Cần làm sớm</h2><a data-go="tasks">Xem tất cả</a></div>
+    <div id="hSoon">${soon.length ? soon.map(t => taskCard(t)).join('') : `<div class="card empty" style="padding:22px">${ic('done')}Không có việc quá hạn hay sắp đến hạn</div>`}</div>
+    ${rec.length ? `<div class="sec-h"><h2>Bảo trì định kỳ sắp tới</h2></div><div>${rec.map(t => taskCard(t)).join('')}</div>` : ''}
+    ${!st.tasks.length ? `<div class="card" style="margin-top:14px"><div style="font-weight:600;margin-bottom:6px">Bắt đầu nhanh</div>
+      <div class="muted" style="font-size:13.5px">① Thêm thiết bị ở tab <b>Thiết bị</b> · ② Bấm nút <b>+</b> vàng để thêm công việc · ③ Xây sơ đồ vật tư và gắn file ở tab <b>Vật tư</b>.</div></div>` : ''}
+  </div>`;
+  bindTaskCards(v);
+  $$('[data-f]', v).forEach(b => b.onclick = () => { nav.taskFilter = b.dataset.f; nav.tab = 'tasks'; nav.stack = []; nav.render(); });
+  $$('[data-go]', v).forEach(b => b.onclick = () => { nav.taskFilter = 'open'; nav.tab = 'tasks'; nav.render(); });
+}
+
+// ---------- màn hình Công việc ----------
+const FILTERS = [
+  ['open', 'Đang mở', t => !t.done], ['over', 'Quá hạn', t => !t.done && t.due && daysTo(t.due) < 0],
+  ['week', '7 ngày tới', t => !t.done && t.due && daysTo(t.due) >= 0 && daysTo(t.due) <= 7],
+  ['p1', 'Ưu tiên 1', t => !t.done && t.priority === 1], ['p2', 'Ưu tiên 2', t => !t.done && t.priority === 2],
+  ['p3', 'Ưu tiên 3', t => !t.done && t.priority === 3], ['rep', 'Định kỳ', t => !t.done && t.repeat],
+  ['done', 'Đã xong', t => t.done],
+];
+export function viewTasks(v) {
+  const f = FILTERS.find(x => x[0] === nav.taskFilter) || FILTERS[0];
+  let list = S.state.tasks.filter(f[2]);
+  let body = '';
+  if (f[0] === 'done') {
+    list.sort((a, b) => (b.doneAt || '').localeCompare(a.doneAt || ''));
+    body = list.map(t => taskCard(t)).join('');
+  } else {
+    list.sort(sortTasks);
+    const groups = [['Quá hạn', t => t.due && daysTo(t.due) < 0], ['Hôm nay', t => t.due && daysTo(t.due) === 0],
+      ['7 ngày tới', t => t.due && daysTo(t.due) > 0 && daysTo(t.due) <= 7], ['Sau đó', t => t.due && daysTo(t.due) > 7], ['Chưa đặt hạn', t => !t.due]];
+    body = groups.map(([g, fn]) => { const l = list.filter(fn); return l.length ? `<div class="sec-h"><h2>${g}</h2><span class="muted" style="font-size:12.5px">${l.length}</span></div>${l.map(t => taskCard(t)).join('')}` : ''; }).join('');
+  }
+  v.innerHTML = `<div class="fade-in"><div class="chips">${FILTERS.map(x => `<button class="chip ${x === f ? 'on' : ''}" data-fl="${x[0]}">${x[1]}<span class="c">${S.state.tasks.filter(x[2]).length}</span></button>`).join('')}</div>
+    <div style="margin-top:4px">${body || `<div class="empty">${ic('tasks')}Không có công việc nào ở mục này.<br>Bấm nút <b style="color:var(--gold)">+</b> để thêm.</div>`}</div></div>`;
+  $$('[data-fl]', v).forEach(b => b.onclick = () => { nav.taskFilter = b.dataset.fl; nav.render(); });
+  bindTaskCards(v);
+}
