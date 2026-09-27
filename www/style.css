@@ -429,3 +429,74 @@ body.editing .ed-bar{display:grid}
 .logo-prev{width:56px;height:56px;border-radius:14px;background:#fff;border:1px solid var(--line2);display:grid;place-items:center;overflow:hidden;flex:none}
 .logo-prev img{max-width:50px;max-height:50px;object-fit:contain}
 .btn[disabled]{opacity:.45}
+
+/* ===== Trình xem file trong app ===== */
+:root{--vwbg:#0B1324}
+:root[data-theme=light]{--vwbg:#DDE3EC}
+.vw{position:fixed;inset:0;z-index:45;background:var(--vwbg);display:flex;flex-direction:column;opacity:0;transform:translateY(14px);transition:opacity .2s,transform .2s}
+.vw.show{opacity:1;transform:none}
+.vw-top{display:flex;align-items:center;gap:8px;padding:calc(var(--sat) + 8px) 10px 8px;background:var(--bg2);border-bottom:1px solid var(--line);flex:none}
+.vw-top .icon-btn{width:40px;height:40px}
+.vw-ttl{flex:1;min-width:0;padding:0 2px}
+.vw-nm{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vw-sub{font-size:12px;color:var(--mut);margin-top:1px}
+.vw-find{display:flex;gap:6px;align-items:center;padding:8px 10px;background:var(--bg2);border-bottom:1px solid var(--line);flex:none}
+.vw-find[hidden]{display:none}
+.vw-find .inp{flex:1;height:42px;margin:0}
+.vw-find .icon-btn{width:40px;height:40px}
+.vw-cnt{font-size:12.5px;color:var(--tx2);min-width:44px;text-align:center;font-variant-numeric:tabular-nums}
+.vw-main{flex:1;min-height:0;position:relative;display:flex}
+.vw-body{flex:1;overflow:auto;position:relative;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;overscroll-behavior:contain}
+.vw-load,.vw-err{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:70%;padding:30px 24px;text-align:center;color:var(--tx2)}
+.vw-load .spin{width:38px;height:38px;border-radius:50%;border:3px solid var(--s3);border-top-color:var(--gold);animation:sp 1s linear infinite}
+.vw-err svg{width:40px;height:40px;color:var(--p2)}
+.vw-err small{color:var(--mut);word-break:break-word}
+.vw-err .btn{max-width:320px;margin-top:10px}
+.vw-pages{padding:8px;box-sizing:border-box}
+.vw-page{position:relative;background:#fff;margin:0 0 10px;box-shadow:0 2px 12px rgba(0,0,0,.35);border-radius:2px;overflow:hidden}
+.vw-page:last-child{margin-bottom:0}
+.vw-page canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.vw-page .pn{position:absolute;top:45%;left:0;right:0;text-align:center;color:#A0A8B8;font-size:14px;font-weight:600}
+.vw-hl{position:absolute;inset:0;pointer-events:none}
+.vw-hl i{position:absolute;background:rgba(255,196,0,.4);border-radius:2px;mix-blend-mode:multiply}
+.vw-hl i.on{background:rgba(255,120,0,.55);box-shadow:0 0 0 2px #FF7A00}
+.vw-pill{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);padding:7px 14px;border-radius:999px;background:rgba(8,18,37,.82);color:#fff;font-size:13px;font-weight:600;
+  font-variant-numeric:tabular-nums;opacity:.35;transition:opacity .25s;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12)}
+.vw-pill.show{opacity:1}
+.vw-pill[hidden]{display:none}
+.vw-tabs{display:flex;gap:6px;overflow-x:auto;padding:8px 10px;background:var(--bg2);border-top:1px solid var(--line);flex:none;scrollbar-width:none}
+.vw-tabs[hidden]{display:none}
+.vw-tabs button{flex:none;padding:7px 14px;border-radius:10px;background:var(--s1);border:1px solid var(--line);color:var(--tx2);font-size:13px;font-weight:500;white-space:nowrap}
+.vw-tabs button.on{background:var(--goldDim);border-color:rgba(30,111,255,.5);color:var(--gold2)}
+.vw-act{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 12px calc(var(--sab) + 10px);background:var(--bg2);border-top:1px solid var(--line);flex:none}
+.vw-act .btn{height:48px;margin:0}
+.vw-main:last-child .vw-body,.vw-tabs:last-child{padding-bottom:var(--sab)}
+/* Word */
+.vw-doc{box-sizing:border-box}
+.vw .docx-wrapper{background:transparent!important;padding:8px!important;align-items:center}
+.vw .docx-wrapper>section.docx{margin-bottom:10px!important;box-shadow:0 2px 12px rgba(0,0,0,.35)!important}
+/* Excel */
+.vw-sheet{display:inline-block;min-width:100%;background:#fff;color:#1b1f27}
+.vw-sheet table{border-collapse:collapse;table-layout:fixed;font-size:13px;font-family:Calibri,Arial,sans-serif}
+.vw-sheet td,.vw-sheet th{border:1px solid #D5DAE2;padding:3px 6px;overflow:hidden;vertical-align:bottom;white-space:nowrap;text-overflow:ellipsis;line-height:1.3}
+.vw-sheet td{white-space:nowrap}
+.vw-sheet td.w{white-space:pre-wrap;word-break:break-word}
+.vw-sheet td.n{text-align:right}
+.vw-sheet th{background:#EEF1F6;color:#5B6576;font-weight:500;font-size:11.5px;text-align:center;position:sticky;z-index:1}
+.vw-sheet thead th{top:0;z-index:2}
+.vw-sheet tbody th{left:0}
+.vw-sheet thead th.cn{left:0;z-index:3}
+.vw-note{padding:12px;color:#6B7486;font-size:12.5px}
+/* Ảnh / văn bản */
+.vw-img{margin:0 auto}
+.vw-img img{display:block}
+.vw-txt{margin:0;padding:14px;white-space:pre-wrap;word-break:break-word;font:13px/1.5 ui-monospace,Consolas,monospace;color:var(--tx)}
+/* Danh sách trang */
+.vw-thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.vw-th{display:flex;flex-direction:column;align-items:center;gap:5px;padding:0;color:var(--tx2);font-size:12px;font-weight:600}
+.vw-th .im{width:100%;background:#fff;border-radius:4px;overflow:hidden;border:2px solid transparent;box-shadow:0 1px 6px rgba(0,0,0,.25)}
+.vw-th.on .im{border-color:var(--gold)}
+.vw-th.on{color:var(--gold2)}
+.vw-th canvas{width:100%;height:100%;display:block}
+.vw-ol{font-size:14.5px;padding-top:12px;padding-bottom:12px}
+.vw-ol svg{width:16px;height:16px;flex:none;color:var(--gold)}

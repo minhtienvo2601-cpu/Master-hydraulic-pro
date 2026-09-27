@@ -16,7 +16,8 @@ import { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableC
   Header, Footer, PageNumber, PageOrientation, VerticalAlign, TabStopType, TableLayoutType } from 'docx';
 import ExcelJS from 'exceljs';
 import { FONT_REGULAR, FONT_BOLD, FONT_ITALIC } from './fontdata.js';
-import { readB64, shareFile } from './platform.js';
+import { readB64 } from './platform.js';
+import { deliver } from './viewer.js';
 import { S } from './store.js';
 
 // ---------------- màu & nhãn ----------------
@@ -152,7 +153,7 @@ export async function exportPdf(doc, onStep) {
     font(7.8, 'normal', GREY); pdf.text(footerText(doc), M, H - 7);
     pdf.text(`Trang ${i}/${pages}`, W - M, H - 7, { align: 'right' });
   }
-  await shareFile(safeName(doc.fileBase || doc.title) + '.pdf', pdf.output('datauristring').split(',')[1], 'application/pdf');
+  await deliver(safeName(doc.fileBase || doc.title) + '.pdf', pdf.output('datauristring').split(',')[1], 'application/pdf');
 
   // ---- khung ảnh vật tư ----
   function measureCard(c) {
@@ -275,7 +276,7 @@ export async function exportDocx(doc, onStep) {
   const d = new Document({ creator: 'Bảo Trì Thủy Lực', title: doc.title, styles: { default: { document: { run: { font: 'Arial' } } } },
     sections: [{ properties: { titlePage: true, page: { size: { width: pageW, height: pageH, orientation: doc.landscape ? PageOrientation.LANDSCAPE : PageOrientation.PORTRAIT }, margin: { top: mar, bottom: mar, left: mar, right: mar, header: 400, footer: 400 } } },
       headers: { default: header, first: new Header({ children: [new Paragraph({ children: [] })] }) }, footers: { default: footer, first: footer }, children: kids }] });
-  await shareFile(safeName(doc.fileBase || doc.title) + '.docx', await Packer.toBase64String(d), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  await deliver(safeName(doc.fileBase || doc.title) + '.docx', await Packer.toBase64String(d), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 }
 function docxTable(t, CWt) {
   const W0 = t.widths || t.cols.map(() => 1); const tot = W0.reduce((a, b) => a + b, 0); const tw = W0.map(w => Math.round(CWt * w / tot));
@@ -388,5 +389,5 @@ export async function exportXlsx(doc, sheets, onStep) {
     ws.pageSetup.printTitlesRow = `${hr}:${hr}`;
   }
   const buf = await wb.xlsx.writeBuffer();
-  await shareFile(safeName(doc.fileBase || doc.title) + '.xlsx', bufToB64(buf), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  await deliver(safeName(doc.fileBase || doc.title) + '.xlsx', bufToB64(buf), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 }

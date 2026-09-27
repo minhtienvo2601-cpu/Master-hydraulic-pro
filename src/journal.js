@@ -4,7 +4,8 @@ import { nav, push } from './nav.js';
 import { ic } from './icons.js';
 import { esc, uid, today, addDays, parseD, daysTo, fmtD, fmtShort, $$ } from './util.js';
 import { openSheet, confirmBox, menu, toast, busy, viewPhoto, addPhotos } from './ui.js';
-import { deletePath, fileSrc, shareFile } from './platform.js';
+import { deletePath, fileSrc } from './platform.js';
+import { deliver } from './viewer.js';
 import { taskForm } from './tasks.js';
 import { exportPdf, exportDocx, exportXlsx } from './exporter.js';
 
@@ -224,7 +225,7 @@ export function viewBuy(v) {
     const ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = [{ wch: 5 }, { wch: 34 }, { wch: 26 }, { wch: 18 }, { wch: 44 }, { wch: 11 }, { wch: 13 }, { wch: 11 }, { wch: 12 }];
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Vat tu can mua');
     const b64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-    try { await shareFile(`VatTuCanMua_${today()}.xlsx`, b64, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); } catch (e) { if (!String(e).match(/cancel/i)) toast('Lỗi xuất file'); }
+    try { await deliver(`VatTuCanMua_${today()}.xlsx`, b64, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); } catch (e) { if (!String(e).match(/cancel/i)) toast('Lỗi xuất file'); }
   };
 }
 

@@ -136,13 +136,56 @@ export function pickFiles(accept = '*/*', multiple = true) {
 }
 
 // ---------- share / export ----------
+// Chia sẻ (Zalo, Drive, Gmail…) từ dữ liệu base64
 export async function shareFile(name, b64, mime) {
-  if (!native) {
-    const a = document.createElement('a'); a.href = 'data:' + mime + ';base64,' + b64; a.download = name; a.click(); return;
-  }
+  if (!native) { downloadB64(name, b64, mime); return; }
   await Filesystem.writeFile({ path: name, directory: Directory.Cache, data: b64 });
   const { uri } = await Filesystem.getUri({ path: name, directory: Directory.Cache });
-  await Share.share({ title: name, files: [uri], dialogTitle: 'Lưu / gửi file sao lưu' });
+  await Share.share({ title: name, files: [uri], dialogTitle: 'Chia sẻ / gửi file' });
+}
+function downloadB64(name, b64, mime) {
+  const a = document.createElement('a'); a.href = 'data:' + (mime || 'application/octet-stream') + ';base64,' + b64; a.download = name; a.click();
+}
+// Lưu thẳng vào bộ nhớ máy: Documents/BaoTriThuyLuc/<tên file>. Trả về đường dẫn để báo cho người dùng.
+export const SAVE_DIR = 'BaoTriThuyLuc';
+export async function saveToDevice(name, b64, mime) {
+  if (!native) { downloadB64(name, b64, mime); return 'Thư mục Tải về'; }
+  let nm = name, err;
+  for (let k = 2; k < 30; k++) {
+    try {
+      await Filesystem.writeFile({ path: `${SAVE_DIR}/${nm}`, directory: Directory.Documents, data: b64, recursive: true });
+      return `Documents/${SAVE_DIR}/${nm}`;
+    } catch (e) {
+      err = e;
+      if (/permission|denied/i.test(String(e && e.message)) && k > 3) break;
+      nm = name.replace(/(\.[^.]*)?$/, m => ` (${k})` + m); // trùng tên với file cũ không ghi đè được → đặt tên mới
+    }
+  }
+  throw err;
+}
+// File xuất tạm để xem trước (xóa khi mở app lần sau)
+export async function writeExport(name, b64) {
+  const path = `exports/${name}`;
+  if (!native) { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); webFiles.set(path, URL.createObjectURL(new Blob([u]))); return path; }
+  await Filesystem.writeFile({ path, directory: Directory.Data, data: b64, recursive: true });
+  return path;
+}
+export async function clearExports() {
+  if (!native) return;
+  try { await Filesystem.rmdir({ path: 'exports', directory: Directory.Data, recursive: true }); } catch (e) {}
+}
+// Đọc file trong bộ nhớ app thành ArrayBuffer (dùng cho trình xem)
+export async function readBytes(path) {
+  const src = await fileSrc(path);
+  if (src) { try { const r = await fetch(src); if (r.ok) return await r.arrayBuffer(); } catch (e) {} }
+  const b64 = await readB64(path); if (b64 == null) throw new Error('Không đọc được file');
+  return b64ToBytes(b64).buffer;
+}
+export function b64ToBytes(b64) { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
+export async function sharePath(path, name, mime) {
+  if (!native) { const u = webFiles.get(path); if (u) { const a = document.createElement('a'); a.href = u; a.download = name; a.click(); } return; }
+  const { uri } = await Filesystem.getUri({ path, directory: Directory.Data });
+  await Share.share({ title: name, files: [uri], dialogTitle: 'Chia sẻ / gửi file' });
 }
 
 // ---------- notifications ----------

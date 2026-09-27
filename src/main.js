@@ -10,8 +10,9 @@ import { viewParts, openF } from './parts.js';
 import { viewRef, viewRefSec, refTitle, clearRefQ } from './ref.js';
 import { viewNotes, viewNote, noteMenu, newNoteAndOpen, cleanupNote, note } from './notes.js';
 import { viewJournal, viewBuy, backlogForm } from './journal.js';
+import { closeViewer } from './viewer.js';
 import { SystemBars, SystemBarsStyle } from '@capacitor/core';
-import { native, notifInit, onBack, readB64, saveB64, shareFile, pickFiles, testNotif, exactAlarmStatus, openExactAlarmSetting, fileSrc, deletePath } from './platform.js';
+import { native, notifInit, onBack, readB64, saveB64, pickFiles, clearExports, testNotif, exactAlarmStatus, openExactAlarmSetting, fileSrc, deletePath } from './platform.js';
 
 const TABS = { home: ['home', 'Tổng quan'], journal: ['journal', 'Nhật ký'], notes: ['note', 'Ghi chú'], parts: ['folder', 'Tài liệu'], more: ['grid', 'Thêm'], tasks: ['tasks', 'Công việc'], devices: ['device', 'Thiết bị'], ref: ['ref', 'Tra cứu'] };
 const TABHL = { tasks: 'more', devices: 'more', ref: 'more' };
@@ -230,7 +231,7 @@ async function backup() {
     b.set('Đang nén…');
     const out = await zip.generateAsync({ type: 'base64', compression: 'DEFLATE', compressionOptions: { level: 5 } });
     b.done();
-    await shareFile(`BaoTri_saoluu_${today()}.zip`, out, 'application/zip');
+    await deliver(`BaoTri_saoluu_${today()}.zip`, out, 'application/zip');
   } catch (e) { b.done(); if (!String(e).match(/cancel/i)) toast('Lỗi sao lưu: ' + (e.message || e)); }
 }
 async function restore() {
@@ -270,11 +271,13 @@ async function init() {
   $('#btnMenu').innerHTML = ic('dots'); $('#btnMenu').onclick = () => { const r = cur(); if (r.v === 'note') noteMenu(r.id); };
   $('#fab').onclick = fabAction;
   await load();
+  clearExports();
   applyTheme();
   render();
   onBack(() => {
     if (closePhoto()) return true;
     if (sheetOpen()) { closeTopSheet(); return true; }
+    if (closeViewer()) return true;
     leaving();
     if (pop()) return true;
     if (nav.tab === 'parts' && nav.partsNode !== 'root') { nav.partsNode = node(nav.partsNode)?.parentId || 'root'; render(); return true; }

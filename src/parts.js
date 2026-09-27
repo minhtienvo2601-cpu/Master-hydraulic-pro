@@ -5,6 +5,7 @@ import { ic } from './icons.js';
 import { esc, uid, fmtSize, fileKind, extOf, MIME, today, $$ } from './util.js';
 import { openSheet, confirmBox, promptBox, menu, toast, busy } from './ui.js';
 import { pickFiles, saveBlob, deletePath, openFile, openUrl } from './platform.js';
+import { viewFile, canView } from './viewer.js';
 
 const view = { s: 1, tx: 0, ty: 0 };
 let lastNode = null;
@@ -148,7 +149,8 @@ export function viewParts(v) {
     { icon: 'trash', label: 'Xóa liên kết', danger: true, run: () => { c.links = c.links.filter(x => x !== l); save(); nav.render(); } }]); });
 }
 
-export async function openF(f) {
+export async function openF(f, find) {
+  if (canView(f.name, f.mime)) { viewFile({ name: f.name, mime: f.mime, path: f.path, key: f.id, find }); return; }
   try { await openFile(f.path, f.mime, f.name); }
   catch (e) { toast('Không có ứng dụng nào mở được loại file này'); }
 }

@@ -72,6 +72,9 @@ let m = fs.readFileSync(man, 'utf8');
 for (const p of ['POST_NOTIFICATIONS', 'SCHEDULE_EXACT_ALARM', 'RECEIVE_BOOT_COMPLETED', 'WAKE_LOCK', 'VIBRATE']) {
   if (!m.includes(`android.permission.${p}"`)) m = m.replace('</manifest>', `    <uses-permission android:name="android.permission.${p}" />\n</manifest>`);
 }
+// lưu file ra thư mục Documents (Android 10 trở xuống cần quyền này)
+if (!m.includes('WRITE_EXTERNAL_STORAGE')) m = m.replace('</manifest>', '    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n</manifest>');
+if (!m.includes('requestLegacyExternalStorage')) m = m.replace('<application', '<application\n        android:requestLegacyExternalStorage="true"');
 fs.writeFileSync(man, m);
 
 // số phiên bản tăng theo mỗi lần build để cài đè bản cũ

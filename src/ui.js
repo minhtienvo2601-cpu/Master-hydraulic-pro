@@ -61,7 +61,7 @@ export function menu(title, items) {
   });
 }
 let tt = null;
-export function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 2400); }
+export function toast(msg, ms = 2400) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), ms); }
 export function busy(msg) {
   const d = document.createElement('div'); d.className = 'busy'; d.innerHTML = `<div style="text-align:center"><div class="spin"></div><div data-m>${esc(msg)}</div></div>`;
   document.body.appendChild(d);
