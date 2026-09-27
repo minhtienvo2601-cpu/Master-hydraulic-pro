@@ -1,9 +1,9 @@
 import JSZip from 'jszip';
-import { S, load, save, saveNow, reschedule, task, device, node } from './store.js';
+import { S, load, save, saveNow, reschedule, task, device, node, tpl, TPL_DEFAULT } from './store.js';
 import { nav, go, push, pop, cur } from './nav.js';
 import { ic } from './icons.js';
 import { $, $$, esc, today, matcher, highlight, snippet, fileKind, dueLabel } from './util.js';
-import { toast, busy, confirmBox, sheetOpen, closeTopSheet, closePhoto, openSheet } from './ui.js';
+import { toast, busy, confirmBox, sheetOpen, closeTopSheet, closePhoto, openSheet, promptBox } from './ui.js';
 import { viewHome, viewTasks, taskForm } from './tasks.js';
 import { viewDevices, viewDevice, deviceForm } from './devices.js';
 import { viewParts, openF } from './parts.js';
@@ -11,7 +11,7 @@ import { viewRef, viewRefSec, refTitle, clearRefQ } from './ref.js';
 import { viewNotes, viewNote, noteMenu, newNoteAndOpen, cleanupNote, note } from './notes.js';
 import { viewJournal, viewBuy, backlogForm } from './journal.js';
 import { SystemBars, SystemBarsStyle } from '@capacitor/core';
-import { native, notifInit, onBack, readB64, saveB64, shareFile, pickFiles, testNotif, exactAlarmStatus, openExactAlarmSetting } from './platform.js';
+import { native, notifInit, onBack, readB64, saveB64, shareFile, pickFiles, testNotif, exactAlarmStatus, openExactAlarmSetting, fileSrc, deletePath } from './platform.js';
 
 const TABS = { home: ['home', 'Tổng quan'], journal: ['journal', 'Nhật ký'], notes: ['note', 'Ghi chú'], parts: ['folder', 'Tài liệu'], more: ['grid', 'Thêm'], tasks: ['tasks', 'Công việc'], devices: ['device', 'Thiết bị'], ref: ['ref', 'Tra cứu'] };
 const TABHL = { tasks: 'more', devices: 'more', ref: 'more' };
@@ -23,7 +23,7 @@ function render() {
   $('#btnMenu').hidden = r.v !== 'note'; $('#btnSearch').hidden = r.v === 'note'; $('#btnSettings').hidden = r.v === 'note';
   const sub = nav.stack.length > 0 || (nav.tab === 'parts' && nav.partsNode !== 'root');
   $('#btnBack').hidden = !sub;
-  $('#fab').hidden = ['search', 'settings', 'ref', 'refsec', 'more', 'note', 'buy'].includes(r.v);
+  $('#fab').hidden = ['search', 'settings', 'tpl', 'ref', 'refsec', 'more', 'note', 'buy'].includes(r.v);
   let title = TABS[nav.tab]?.[1] || '', eyebrow = 'BẢO TRÌ THỦY LỰC';
   if (r.v === 'home') viewHome(v);
   else if (r.v === 'journal') { eyebrow = 'KẾ HOẠCH & TỒN ĐỌNG'; viewJournal(v); }
@@ -37,6 +37,7 @@ function render() {
   else if (r.v === 'device') { const d = device(r.id); title = 'Hồ sơ thiết bị'; eyebrow = 'THIẾT BỊ'; viewDevice(v, r.id); }
   else if (r.v === 'search') { title = 'Tìm kiếm'; eyebrow = 'TÌM NHANH'; viewSearch(v); }
   else if (r.v === 'settings') { title = 'Cài đặt'; eyebrow = 'ỨNG DỤNG'; viewSettings(v); }
+  else if (r.v === 'tpl') { title = 'Mẫu biên bản'; eyebrow = 'CÀI ĐẶT'; viewTpl(v); }
   else if (r.v === 'ref') { eyebrow = 'KỸ THUẬT THỦY LỰC'; viewRef(v); }
   else if (r.v === 'refsec') { title = refTitle(r.k); eyebrow = 'TRA CỨU'; viewRefSec(v, r.k); }
   $('#tbTitle').textContent = title; $('#tbEyebrow').textContent = eyebrow;
@@ -129,6 +130,16 @@ async function viewSettings(v) {
         <input id="sOrg" value="${esc(st.org || 'CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT')}" style="width:100%;margin-left:48px"></div>
       <div class="set-row" style="flex-wrap:wrap"><div class="ic">${ic('user')}</div><div class="grow"><div class="tt">Bộ phận</div><div class="ds">Dòng thứ hai dưới tên đơn vị (tùy chọn)</div></div>
         <input id="sDept" value="${esc(st.dept || '')}" placeholder="VD: Xưởng HSM – Tổ bảo trì thủy lực" style="width:100%;margin-left:48px"></div></div>
+    <div class="sec-h"><h2>Biên bản & báo cáo</h2></div>
+    <div class="set-group">
+      <div class="set-row" style="flex-wrap:wrap"><div class="logo-prev"><img id="sLogoImg" alt=""></div>
+        <div class="grow"><div class="tt">Logo in trên biên bản</div><div class="ds">${st.logoPath ? 'Đang dùng logo riêng của bạn' : 'Đang dùng logo mặc định của app'}</div></div>
+        <div class="btn-row" style="width:100%;margin-top:10px"><button class="btn sec" id="sLogo" style="height:44px;font-size:14px">${ic('upload')} Chọn logo</button>
+          <button class="btn sec" id="sLogoRst" style="height:44px;font-size:14px" ${st.logoPath ? '' : 'disabled'}>${ic('restore')} Logo mặc định</button></div></div>
+      <button class="set-row" id="sTpl" style="width:100%;text-align:left"><div class="ic">${ic('edit')}</div><div class="grow"><div class="tt">Mẫu biên bản</div><div class="ds">Sửa tiêu đề, tên các phần, nhãn, chức danh ký tên…</div></div>${ic('chev')}</button>
+      <div class="set-row" style="flex-wrap:wrap"><div class="ic">${ic('note')}</div><div class="grow"><div class="tt">Dòng chân trang</div><div class="ds">In cuối mỗi trang (để trống = không in)</div></div>
+        <input id="sFoot" value="${esc(st.footer == null ? 'Lập bằng ứng dụng Bảo Trì Thủy Lực' : st.footer)}" placeholder="VD: Tổ bảo trì thủy lực – HSM" style="width:100%;margin-left:48px"></div>
+    </div>
     <div class="sec-h"><h2>Nhắc việc</h2></div>
     <div class="set-group">
       <div class="set-row"><div class="ic">${ic('bell')}</div><div class="grow"><div class="tt">Nhắc trước hạn</div><div class="ds">Thông báo trước ngày đến hạn</div></div>
@@ -151,6 +162,20 @@ async function viewSettings(v) {
   const q = s => v.querySelector(s);
   $$('[data-theme-opt]', v).forEach(b => b.onclick = () => { st.theme = b.dataset.themeOpt; save(); applyTheme(); render(); });
   q('#sName').onchange = e => { st.name = e.target.value.trim(); save(); };
+  (async () => { const im = q('#sLogoImg'); im.src = st.logoPath ? await fileSrc(st.logoPath) : 'logo.png'; })();
+  q('#sTpl').onclick = () => push({ v: 'tpl' });
+  q('#sFoot').onchange = e => { st.footer = e.target.value.trim(); save(); toast(st.footer ? 'Đã lưu chân trang' : 'Đã tắt dòng chân trang'); };
+  q('#sLogo').onclick = async () => {
+    const [f] = await pickFiles('image/*', false); if (!f) return;
+    try {
+      const url = URL.createObjectURL(f); const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+      const k = Math.min(1, 600 / Math.max(img.naturalWidth, img.naturalHeight)); const c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+      const p = `brand/logo_${Date.now().toString(36)}.png`; await saveB64(p, c.toDataURL('image/png').split(',')[1]);
+      if (st.logoPath) deletePath(st.logoPath); st.logoPath = p; save(); render(); toast('Đã đổi logo biên bản');
+    } catch (e) { toast('Không đọc được ảnh logo'); }
+  };
+  q('#sLogoRst').onclick = () => { if (st.logoPath) deletePath(st.logoPath); st.logoPath = ''; save(); render(); toast('Đã dùng lại logo mặc định'); };
   q('#sOrg').onchange = e => { st.org = e.target.value.trim(); save(); toast('Đã lưu tên đơn vị'); };
   q('#sDept').onchange = e => { st.dept = e.target.value.trim(); save(); };
   q('#sDays').onchange = e => { st.remindDays = +e.target.value; save(); toast('Đã cập nhật lịch nhắc'); };
@@ -165,12 +190,39 @@ async function viewSettings(v) {
   q('#sRestore').onclick = restore;
 }
 
+// ---------- mẫu biên bản ----------
+const TPL_GROUPS = [
+  ['Biên bản kiểm tra vật tư (QA)', [
+    ['qaLabel', 'Dòng nhãn nhỏ phía trên'], ['qaTitle', 'Tiêu đề biên bản'], ['qaPrefix', 'Tiền tố số biên bản', 'VD: QA- → QA-2026-001'],
+    ['qaSec1', 'Phần I (bảng tổng hợp)'], ['qaSec2', 'Phần II (hình ảnh)'], ['qaSec3', 'Phần III (ghi chú, kết luận)'],
+    ['qaLblPo', 'Nhãn: số PO'], ['qaLblSup', 'Nhãn: nhà cung cấp'], ['qaLblDate', 'Nhãn: ngày kiểm tra'], ['qaLblIns', 'Nhãn: người kiểm tra'], ['qaLblDev', 'Nhãn: thiết bị'], ['qaLblRes', 'Nhãn: kết quả chung'],
+    ['qaSigners', 'Chức danh ký tên', 'Mỗi dòng một chức danh, theo thứ tự trái → phải. Tên người kiểm tra tự điền dưới chức danh đầu tiên.', true]]],
+  ['Báo cáo nhật ký tuần', [
+    ['wkLabel', 'Dòng nhãn nhỏ phía trên'], ['wkTitle', 'Tiêu đề báo cáo', 'Dùng {tuan} và {nam} để app tự điền số tuần, năm'], ['wkPrefix', 'Tiền tố số báo cáo', 'VD: NK- → NK-2026-T39'],
+    ['wkSec1', 'Phần I (kế hoạch)'], ['wkSec2', 'Phần II (tồn đọng)'], ['wkSigners', 'Chức danh ký tên', 'Mỗi dòng một chức danh. Tên bạn tự điền dưới chức danh đầu tiên.', true]]],
+  ['Ghi chú thường', [['noteSigners', 'Chức danh ký tên', 'Mỗi dòng một chức danh (để trống = không có phần ký)', true]]],
+];
+function viewTpl(v) {
+  const T = tpl(); const st = S.state.settings;
+  v.innerHTML = `<div class="fade-in"><div class="card" style="font-size:13.5px;color:var(--tx2)">Chạm vào một dòng để sửa. Thay đổi áp dụng cho mọi file PDF, Word, Excel xuất ra sau đó. Muốn sửa riêng một biên bản thì xuất ra Word rồi sửa trong Word.</div>
+    ${TPL_GROUPS.map(([g, rows]) => `<div class="sec-h"><h2>${g}</h2></div><div class="set-group">${rows.map(([k, l]) => `<button class="set-row" data-k="${k}" style="width:100%;text-align:left">
+      <div class="grow" style="min-width:0"><div class="ds">${l}${T[k] !== TPL_DEFAULT[k] ? ' · <span style="color:var(--gold)">đã sửa</span>' : ''}</div><div class="tt" style="white-space:pre-line">${esc(T[k]).replace(/\n/g, ' · ') || '<span class="muted">(trống)</span>'}</div></div>${ic('edit')}</button>`).join('')}</div>`).join('')}
+    <button class="btn dan" id="tRst" style="margin-top:6px">${ic('restore')} Khôi phục mẫu mặc định</button></div>`;
+  $$('[data-k]', v).forEach(b => b.onclick = async () => {
+    const k = b.dataset.k; const row = TPL_GROUPS.flatMap(g => g[1]).find(r => r[0] === k);
+    const val = await promptBox('Sửa mẫu', row[1], T[k], { multi: !!row[3], hint: row[2] || `Mặc định: ${TPL_DEFAULT[k].replace(/\n/g, ' · ')}` });
+    if (val === null) return;
+    st.tpl = Object.assign({}, st.tpl || {}, { [k]: val === '' && !row[3] ? TPL_DEFAULT[k] : val }); save(); render(); toast('Đã lưu mẫu');
+  });
+  v.querySelector('#tRst').onclick = async () => { if (!await confirmBox('Khôi phục mẫu mặc định?', 'Mọi chữ đã sửa trong mẫu biên bản sẽ quay về như ban đầu.', 'Khôi phục', true)) return; st.tpl = {}; save(); render(); toast('Đã khôi phục mẫu mặc định'); };
+}
+
 async function backup() {
   const b = busy('Đang tạo file sao lưu…');
   try {
     const zip = new JSZip();
     zip.file('data.json', JSON.stringify({ app: 'baotri', v: 1, at: new Date().toISOString(), state: S.state, index: S.index }));
-    const paths = [...new Set([...S.state.nodes.flatMap(n => n.files.map(f => f.path)), ...S.state.tasks.flatMap(t => t.photos || []), ...S.state.backlog.flatMap(b => b.photos || []), ...S.state.notes.flatMap(n => n.blocks.flatMap(b => b.photos || []))])];
+    const paths = [...new Set([...S.state.nodes.flatMap(n => n.files.map(f => f.path)), ...S.state.tasks.flatMap(t => t.photos || []), ...S.state.backlog.flatMap(b => b.photos || []), ...S.state.notes.flatMap(n => n.blocks.flatMap(b => b.photos || [])), ...(S.state.settings.logoPath ? [S.state.settings.logoPath] : [])])];
     for (let i = 0; i < paths.length; i++) {
       b.set(`Đang đóng gói ${i + 1}/${paths.length}…`);
       try { const d = await readB64(paths[i]); if (d != null) zip.file(paths[i], d, { base64: true }); } catch (e) { console.warn('skip', paths[i]); }

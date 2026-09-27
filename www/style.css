@@ -426,3 +426,6 @@ body.editing .ed-bar{display:grid}
 .ed-bar button b{height:21px;display:flex;align-items:center}.ed-bar span{color:var(--tx2)}
 .bi-grid>*{min-width:0;width:100%}
 .bi-add{box-sizing:border-box}
+.logo-prev{width:56px;height:56px;border-radius:14px;background:#fff;border:1px solid var(--line2);display:grid;place-items:center;overflow:hidden;flex:none}
+.logo-prev img{max-width:50px;max-height:50px;object-fit:contain}
+.btn[disabled]{opacity:.45}

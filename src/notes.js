@@ -1,4 +1,4 @@
-import { S, save, device, newBacklog, pathInUse, COLORS } from './store.js';
+import { S, save, device, newBacklog, pathInUse, COLORS, tpl, signersOf } from './store.js';
 import { nav, push, pop } from './nav.js';
 import { ic } from './icons.js';
 import { esc, uid, today, fmtD, fmtShort, matcher, highlight, $$ } from './util.js';
@@ -224,7 +224,7 @@ function qaForm(n) {
   const isNewQa = !n.qa; const q0 = n.qa || { po: '', supplier: '', inspector: S.state.settings.name || '', date: today() };
   const sups = [...new Set(S.state.notes.map(x => x.qa?.supplier).filter(Boolean))];
   openSheet('Thông tin phiếu QA', `
-    <div class="field"><label class="lb">Số biên bản</label><input class="inp" id="qNo" value="${esc(q0.no || '')}" placeholder="Để trống – app tự đánh số khi xuất (QA-${today().slice(0, 4)}-…)"></div>
+    <div class="field"><label class="lb">Số biên bản</label><input class="inp" id="qNo" value="${esc(q0.no || '')}" placeholder="Để trống – app tự đánh số khi xuất (${tpl().qaPrefix}${today().slice(0, 4)}-…)"></div>
     <div class="field"><label class="lb">Số PO / phiếu nhập</label><input class="inp" id="qPo" value="${esc(q0.po)}" placeholder="VD: PO-2026-0915"></div>
     <div class="field"><label class="lb">Nhà cung cấp</label><input class="inp" id="qSu" list="qSuL" value="${esc(q0.supplier)}"><datalist id="qSuL">${sups.map(s => `<option value="${esc(s)}">`).join('')}</datalist></div>
     <div class="field"><label class="lb">Người kiểm tra</label><input class="inp" id="qIn" value="${esc(q0.inspector)}"></div>
@@ -258,7 +258,7 @@ function qaNo(n) {
   if (!n.qa) n.qa = { po: '', supplier: '', inspector: S.state.settings.name || '', date: n.updated.slice(0, 10) };
   if (!n.qa.no) {
     const y = (n.qa.date || today()).slice(0, 4); const st = S.state.settings; st.qaSeq = st.qaSeq || {};
-    st.qaSeq[y] = (st.qaSeq[y] || 0) + 1; n.qa.no = `QA-${y}-${String(st.qaSeq[y]).padStart(3, '0')}`; save();
+    st.qaSeq[y] = (st.qaSeq[y] || 0) + 1; n.qa.no = `${tpl().qaPrefix}${y}-${String(st.qaSeq[y]).padStart(3, '0')}`; save();
   }
   return n.qa.no;
 }
@@ -278,19 +278,20 @@ function buildDocs(list, groupName) {
     const n = list[0]; const no = qaNo(n); const q = n.qa; const dev = device(n.deviceId);
     const imgs = n.blocks.filter(b => b.t === 'img'); const cnt = k => imgs.filter(b => b.qa === k).length;
     const verdict = cnt('ng') ? 'KHÔNG ĐẠT (có mục không đạt)' : cnt('chk') ? 'CẦN XEM LẠI' : imgs.length ? 'ĐẠT' : '—';
-    const info = [['Số PO / phiếu nhập', q.po || '—'], ['Nhà cung cấp', q.supplier || '—'], ['Ngày kiểm tra', q.date ? fmtD(q.date) : '—'], ['Người kiểm tra', q.inspector || '—'],
-      ['Thiết bị / khu vực', dev ? dev.name + (dev.location ? ' · ' + dev.location : '') : '—'], ['Kết quả chung', `${verdict} · ${imgs.length} mục: ${cnt('ok')} đạt, ${cnt('ng')} không đạt, ${cnt('chk')} cần xem lại`]];
+    const T = tpl();
+    const info = [[T.qaLblPo, q.po || '—'], [T.qaLblSup, q.supplier || '—'], [T.qaLblDate, q.date ? fmtD(q.date) : '—'], [T.qaLblIns, q.inspector || '—'],
+      [T.qaLblDev, dev ? dev.name + (dev.location ? ' · ' + dev.location : '') : '—'], [T.qaLblRes, `${verdict} · ${imgs.length} mục: ${cnt('ok')} đạt, ${cnt('ng')} không đạt, ${cnt('chk')} cần xem lại`]];
     const rows = imgs.map((b, i) => [String(i + 1), (b.codes || []).join('\n') || '—', b.caption || '', b.qty || '', String((b.photos || []).length), b.qa ? { t: RESULT_TXT[b.qa], result: b.qa } : '—']);
     const texts = textItems(n);
-    const doc = { org, dept, label: 'BIÊN BẢN KIỂM TRA VẬT TƯ', title: 'BIÊN BẢN KIỂM TRA VẬT TƯ NHẬP KHO', subtitle: n.title || '', docNo: no, dateText: 'Ngày ' + dmy(q.date || today()),
+    const doc = { org, dept, label: T.qaLabel, title: T.qaTitle, subtitle: n.title || '', docNo: no, dateText: 'Ngày ' + dmy(q.date || today()),
       fileBase: `BienBanQA_${no}_${dmy(q.date || today()).replace(/\//g, '-')}`, info,
       sections: [
-        { heading: 'I. TỔNG HỢP KẾT QUẢ KIỂM TRA', items: [imgs.length ? { table: { cols: ['STT', 'Mã vật tư', 'Mô tả / chú thích', 'SL', 'Số ảnh', 'Kết quả'], widths: [6, 20, 44, 6, 8, 15], rows } } : { p: 'Chưa có mục vật tư nào.' }] },
-        ...(imgs.length ? [{ heading: 'II. HÌNH ẢNH CHI TIẾT', items: cardsOf(n).map(c => ({ card: c })) }] : []),
-        ...(texts.length ? [{ heading: (imgs.length ? 'III' : 'II') + '. GHI CHÚ – KẾT LUẬN', items: texts }] : []),
+        { heading: T.qaSec1, items: [imgs.length ? { table: { cols: ['STT', 'Mã vật tư', 'Mô tả / chú thích', 'SL', 'Số ảnh', 'Kết quả'], widths: [6, 20, 44, 6, 8, 15], rows } } : { p: 'Chưa có mục vật tư nào.' }] },
+        ...(imgs.length ? [{ heading: T.qaSec2, items: cardsOf(n).map(c => ({ card: c })) }] : []),
+        ...(texts.length ? [{ heading: T.qaSec3, items: texts }] : []),
       ],
-      signers: [{ title: 'Người kiểm tra', name: q.inspector }, { title: 'Thủ kho' }, { title: 'Đại diện nhà cung cấp' }, { title: 'Quản lý bộ phận' }] };
-    const sheets = [{ name: 'Bien ban QA', title: 'BIÊN BẢN KIỂM TRA VẬT TƯ NHẬP KHO', info,
+      signers: signersOf(T.qaSigners, q.inspector) };
+    const sheets = [{ name: 'Bien ban QA', title: T.qaTitle, info,
       cols: [{ h: 'STT', w: 6, center: true, num: true }, { h: 'Mã vật tư', w: 20 }, { h: 'Mô tả / chú thích', w: 38 }, { h: 'SL', w: 8, center: true }, { h: 'Kết quả', w: 14, center: true }],
       rows: imgs.map((b, i) => [String(i + 1), (b.codes || []).join('\n'), b.caption || '', b.qty || '', b.qa ? { t: RESULT_TXT[b.qa], result: b.qa } : '']), photos: imgs.map(b => b.photos || []), landscape: true }];
     return { doc, sheets };
@@ -313,7 +314,7 @@ function buildDocs(list, groupName) {
     fileBase: multi ? `GhiChu_${groupName || 'TongHop'}_${dmy(today()).replace(/\//g, '-')}` : `GhiChu_${one.title || 'ghi-chu'}`,
     info: multi ? [['Mục', groupName || '—'], ['Số ghi chú', String(list.length)], ['Người lập', st.name || '—'], ['Ngày xuất', fmtD(today())]]
       : [['Mục', c?.name || '—'], ['Thiết bị', dev ? dev.name : '—'], ['Người lập', st.name || '—'], ['Cập nhật', fmtD(one.updated.slice(0, 10))]],
-    sections, signers: [{ title: 'Người lập', name: st.name }] };
+    sections, signers: signersOf(tpl().noteSigners, st.name) };
   const rows = [], photos = [];
   list.forEach((n, i) => { let no = 0; n.blocks.forEach(b => {
     if (b.t === 'img') { no++; rows.push([String(rows.length + 1), multi ? n.title || '' : '', 'Ảnh ' + no, [(b.codes || []).join(', '), b.caption].filter(Boolean).join(' – '), b.qty || '', b.qa ? { t: RESULT_TXT[b.qa], result: b.qa } : '']); photos.push(b.photos || []); }

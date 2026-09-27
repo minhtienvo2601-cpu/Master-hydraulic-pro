@@ -5,6 +5,16 @@ export const COLORS = ['#1E6FFF', '#4C9BF5', '#3CC48C', '#F2A33A', '#F0564F', '#
 export const REASONS = { vattu: 'Chờ vật tư', dungmay: 'Chờ dừng máy', nhathau: 'Chờ nhà thầu', khac: 'Khác' };
 export const SEVER = { 1: 'Nặng', 2: 'Trung bình', 3: 'Nhẹ' };
 export const STATUS = { todo: 'Chưa làm', doing: 'Đang làm', done: 'Hoàn thành', hold: 'Hoãn' };
+export const TPL_DEFAULT = {
+  qaLabel: 'BIÊN BẢN KIỂM TRA VẬT TƯ', qaTitle: 'BIÊN BẢN KIỂM TRA VẬT TƯ NHẬP KHO',
+  qaSec1: 'I. TỔNG HỢP KẾT QUẢ KIỂM TRA', qaSec2: 'II. HÌNH ẢNH CHI TIẾT', qaSec3: 'III. GHI CHÚ – KẾT LUẬN',
+  qaLblPo: 'Số PO / phiếu nhập', qaLblSup: 'Nhà cung cấp', qaLblDate: 'Ngày kiểm tra', qaLblIns: 'Người kiểm tra', qaLblDev: 'Thiết bị / khu vực', qaLblRes: 'Kết quả chung',
+  qaSigners: 'Người kiểm tra\nThủ kho\nĐại diện nhà cung cấp\nQuản lý bộ phận', qaPrefix: 'QA-',
+  wkLabel: 'BÁO CÁO BẢO TRÌ HÀNG TUẦN', wkTitle: 'NHẬT KÝ BẢO TRÌ TUẦN {tuan}/{nam}', wkSec1: 'I. KẾ HOẠCH CÔNG VIỆC', wkSec2: 'II. TỒN ĐỌNG THIẾT BỊ',
+  wkSigners: 'Người lập\nTrưởng bộ phận', wkPrefix: 'NK-', noteSigners: 'Người lập',
+};
+export const tpl = () => Object.assign({}, TPL_DEFAULT, S.state.settings.tpl || {});
+export const signersOf = (txt, firstName) => String(txt || '').split('\n').map(x => x.trim()).filter(Boolean).map((t, i) => ({ title: t, name: i === 0 ? firstName : '' }));
 
 function blank() {
   return {

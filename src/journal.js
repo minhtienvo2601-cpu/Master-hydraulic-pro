@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { S, save, task, newTask, completeTask, uncompleteTask, device, bl, newBacklog, openBacklog, pathInUse, weekStart, weekNo, inWeek, REASONS, SEVER, STATUS } from './store.js';
+import { S, save, task, newTask, completeTask, uncompleteTask, device, bl, newBacklog, openBacklog, pathInUse, weekStart, weekNo, inWeek, REASONS, SEVER, STATUS, tpl, signersOf } from './store.js';
 import { nav, push } from './nav.js';
 import { ic } from './icons.js';
 import { esc, uid, today, addDays, parseD, daysTo, fmtD, fmtShort, $$ } from './util.js';
@@ -185,13 +185,14 @@ async function exportWeek(ws, kind) {
   const info = [['Tuần', `Tuần ${no}/${yr} · ${dmy(ws)} – ${dmy(W.we)}`], ['Người lập', name || '—'],
     ['Kế hoạch', `${W.total} việc · hoàn thành ${W.done} (${pct}%)`], ['Chưa xong từ tuần trước', `${W.carried.length} việc`],
     ['Tồn đọng', `Còn ${W.openB} · mới ${W.newB} · đã xử lý ${W.fixedB}`], ['Vật tư đang chờ', `${openBacklog().filter(b => b.reason === 'vattu').length} mục`]];
-  const doc = { landscape: true, org, dept: st.dept || '', label: 'BÁO CÁO BẢO TRÌ HÀNG TUẦN', title: `NHẬT KÝ BẢO TRÌ TUẦN ${no}/${yr}`, subtitle: `Từ ${fmtD(ws)} đến ${fmtD(W.we)}`,
-    docNo: `NK-${yr}-T${String(no).padStart(2, '0')}`, dateText: 'Ngày lập ' + dmy(today()), fileBase: `NhatKy_Tuan${no}_${yr}`, info,
+  const T = tpl(); const wkTitle = T.wkTitle.replace(/\{tuan\}/g, no).replace(/\{nam\}/g, yr);
+  const doc = { landscape: true, org, dept: st.dept || '', label: T.wkLabel, title: wkTitle, subtitle: `Từ ${fmtD(ws)} đến ${fmtD(W.we)}`,
+    docNo: `${T.wkPrefix}${yr}-T${String(no).padStart(2, '0')}`, dateText: 'Ngày lập ' + dmy(today()), fileBase: `NhatKy_Tuan${no}_${yr}`, info,
     sections: [
-      { heading: 'I. KẾ HOẠCH CÔNG VIỆC', items: [prow.length ? { table: { cols: ['STT', 'Khu vực', 'Thiết bị', 'Công việc', 'Ngày', 'Người thực hiện', 'Trạng thái', 'Kết quả / ghi chú'], widths: [4, 11, 14, 27, 7, 11, 10, 18], rows: prow } } : { p: 'Không có kế hoạch trong tuần.' }] },
-      { heading: 'II. TỒN ĐỌNG THIẾT BỊ', items: [brow.length ? { table: { cols: ['STT', 'Thiết bị', 'Mô tả tồn đọng', 'Vật tư cần', 'Phát hiện', 'Số ngày', 'Mức độ', 'Lý do', 'Hướng xử lý', 'Trạng thái'], widths: [4, 12, 21, 12, 9, 6, 8, 10, 12, 10], rows: brow } } : { p: 'Không có tồn đọng.' }] },
+      { heading: T.wkSec1, items: [prow.length ? { table: { cols: ['STT', 'Khu vực', 'Thiết bị', 'Công việc', 'Ngày', 'Người thực hiện', 'Trạng thái', 'Kết quả / ghi chú'], widths: [4, 11, 14, 27, 7, 11, 10, 18], rows: prow } } : { p: 'Không có kế hoạch trong tuần.' }] },
+      { heading: T.wkSec2, items: [brow.length ? { table: { cols: ['STT', 'Thiết bị', 'Mô tả tồn đọng', 'Vật tư cần', 'Phát hiện', 'Số ngày', 'Mức độ', 'Lý do', 'Hướng xử lý', 'Trạng thái'], widths: [4, 12, 21, 12, 9, 6, 8, 10, 12, 10], rows: brow } } : { p: 'Không có tồn đọng.' }] },
     ],
-    signers: [{ title: 'Người lập', name }, { title: 'Trưởng bộ phận' }] };
+    signers: signersOf(T.wkSigners, name) };
   const sheets = [
     { name: 'Tong hop', title: doc.title, info, cols: [{ h: 'Chỉ tiêu', w: 34 }, { h: 'Giá trị', w: 22, center: true }, { h: 'Ghi chú', w: 40 }],
       rows: [['Tổng việc kế hoạch', String(W.total), ''], ['Hoàn thành', String(W.done), `${pct}%`], ['Đang làm', String(W.plan.filter(t => !t.done && t.status === 'doing').length), ''],

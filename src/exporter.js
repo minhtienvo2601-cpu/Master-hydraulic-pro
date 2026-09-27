@@ -17,6 +17,7 @@ import { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableC
 import ExcelJS from 'exceljs';
 import { FONT_REGULAR, FONT_BOLD, FONT_ITALIC } from './fontdata.js';
 import { readB64, shareFile } from './platform.js';
+import { S } from './store.js';
 
 // ---------------- màu & nhãn ----------------
 const NAVY = [11, 42, 102], BLUE = [30, 111, 255], GREY = [105, 116, 136], LIGHT = [238, 244, 255], TILE = [242, 245, 250], LINE = [206, 217, 235];
@@ -41,12 +42,15 @@ async function loadImg(path, max = 1400, q = 0.82) {
   const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
   return { b64: c.toDataURL('image/jpeg', q).split(',')[1], w, h };
 }
-let logoCache = null;
+// Logo in trên biên bản: logo riêng (Cài đặt) hoặc logo mặc định của app. Trả về {b64, w, h}
 async function logo() {
-  if (logoCache) return logoCache;
-  try { const b = await (await fetch('logo.png')).blob(); const b64 = await new Promise(r => { const f = new FileReader(); f.onload = () => r(String(f.result).split(',')[1]); f.readAsDataURL(b); }); logoCache = b64; } catch (e) { logoCache = ''; }
-  return logoCache;
+  const st = S.state.settings;
+  if (st.logoPath) { try { const b64 = await readB64(st.logoPath); if (b64) { const d = await dims(b64); return { b64, ...d }; } } catch (e) { console.warn(e); } }
+  try { const b = await (await fetch('logo.png')).blob(); const b64 = await new Promise(r => { const f = new FileReader(); f.onload = () => r(String(f.result).split(',')[1]); f.readAsDataURL(b); }); return { b64, w: 256, h: 256 }; }
+  catch (e) { return null; }
 }
+function dims(b64) { return new Promise(res => { const i = new Image(); i.onload = () => res({ w: i.naturalWidth, h: i.naturalHeight }); i.onerror = () => res({ w: 1, h: 1 }); i.src = 'data:image/png;base64,' + b64; }); }
+const footerText = doc => { const f = S.state.settings.footer; const t = f == null ? 'Lập bằng ứng dụng Bảo Trì Thủy Lực' : f; return [doc.docNo, t].filter(Boolean).join(' · '); };
 async function prepare(doc, onStep) {
   const cards = doc.sections.flatMap(s => s.items.filter(i => i.card).map(i => i.card));
   const total = cards.reduce((s, c) => s + (c.paths || []).length, 0); let n = 0;
@@ -80,9 +84,9 @@ export async function exportPdf(doc, onStep) {
   };
 
   // ---- khối đầu trang 1 ----
-  if (lg) pdf.addImage(lg, 'PNG', M, y, 15, 15);
-  font(10.5, 'bold', NAVY); pdf.text(doc.org.toUpperCase(), M + 19, y + 5.5, { maxWidth: CW * 0.62 });
-  if (doc.dept) { font(8.8, 'normal', GREY); pdf.text(doc.dept, M + 19, y + 10.5); }
+  let lx = M; if (lg) { const [w, h] = fit(lg.w, lg.h, 30, 15); pdf.addImage(lg.b64, 'PNG', M, y + (15 - h) / 2, w, h); lx = M + w + 4; }
+  font(10.5, 'bold', NAVY); pdf.text(doc.org.toUpperCase(), lx, y + 5.5, { maxWidth: CW * 0.62 });
+  if (doc.dept) { font(8.8, 'normal', GREY); pdf.text(doc.dept, lx, y + 10.5); }
   font(9, 'normal', GREY);
   if (doc.docNo) { font(9, 'bold', NAVY); const nw = pdf.getTextWidth(doc.docNo); pdf.text(doc.docNo, W - M, y + 5.5, { align: 'right' }); font(9, 'normal', GREY); pdf.text('Số:', W - M - nw - 1.5, y + 5.5, { align: 'right' }); }
   font(9, 'normal', GREY); pdf.text(doc.dateText, W - M, y + 10.5, { align: 'right' });
@@ -145,7 +149,7 @@ export async function exportPdf(doc, onStep) {
     pdf.setPage(i);
     if (i > 1) { font(7.8, 'bold', NAVY); pdf.text(doc.org.toUpperCase(), M, M + 3); font(7.8, 'normal', GREY); pdf.text(`${doc.title}${doc.docNo ? ' · ' + doc.docNo : ''}`, W - M, M + 3, { align: 'right' }); pdf.setDrawColor(...LINE); pdf.line(M, M + 5, W - M, M + 5); }
     pdf.setDrawColor(...LINE); pdf.line(M, H - 11, W - M, H - 11);
-    font(7.8, 'normal', GREY); pdf.text(`${doc.docNo ? doc.docNo + ' · ' : ''}Lập bằng ứng dụng Bảo Trì Thủy Lực`, M, H - 7);
+    font(7.8, 'normal', GREY); pdf.text(footerText(doc), M, H - 7);
     pdf.text(`Trang ${i}/${pages}`, W - M, H - 7, { align: 'right' });
   }
   await shareFile(safeName(doc.fileBase || doc.title) + '.pdf', pdf.output('datauristring').split(',')[1], 'application/pdf');
@@ -223,9 +227,9 @@ export async function exportDocx(doc, onStep) {
   const cols = arr => { const tot = arr.reduce((a, b) => a + b, 0); return arr.map(w => Math.round(CWt * w / tot)); };
   const kids = [];
   // ---- khối đầu ----
-  kids.push(new Table({ width: pct(100), columnWidths: cols([9, 59, 32]), layout: TableLayoutType.FIXED, borders: { ...noB, insideHorizontal: NONE, insideVertical: NONE }, rows: [new TableRow({ children: [
-    new TableCell({ borders: noB, width: pct(9), verticalAlign: VerticalAlign.CENTER, children: [P(lg ? [new ImageRun({ type: 'png', data: b64ToBytes(lg), transformation: { width: 54, height: 54 } })] : [])] }),
-    new TableCell({ borders: noB, width: pct(59), verticalAlign: VerticalAlign.CENTER, children: [P(R(doc.org.toUpperCase(), { bold: true, size: 21, color: hex(NAVY) }), { after: 20 }), ...(doc.dept ? [P(R(doc.dept, { size: 17, color: hex(GREY) }))] : [])] }),
+  kids.push(new Table({ width: pct(100), columnWidths: cols(lg && lg.w / lg.h > 1.4 ? [16, 52, 32] : [9, 59, 32]), layout: TableLayoutType.FIXED, borders: { ...noB, insideHorizontal: NONE, insideVertical: NONE }, rows: [new TableRow({ children: [
+    new TableCell({ borders: noB, width: pct(lg && lg.w / lg.h > 1.4 ? 16 : 9), verticalAlign: VerticalAlign.CENTER, children: [P(lg ? [(() => { const [w, h] = fit(lg.w, lg.h, 110, 54); return new ImageRun({ type: 'png', data: b64ToBytes(lg.b64), transformation: { width: Math.round(w), height: Math.round(h) } }); })()] : [])] }),
+    new TableCell({ borders: noB, width: pct(lg && lg.w / lg.h > 1.4 ? 52 : 59), verticalAlign: VerticalAlign.CENTER, children: [P(R(doc.org.toUpperCase(), { bold: true, size: 21, color: hex(NAVY) }), { after: 20 }), ...(doc.dept ? [P(R(doc.dept, { size: 17, color: hex(GREY) }))] : [])] }),
     new TableCell({ borders: noB, width: pct(32), verticalAlign: VerticalAlign.CENTER, children: [
       ...(doc.docNo ? [P([R('Số: ', { size: 18, color: hex(GREY) }), R(doc.docNo, { bold: true, size: 18, color: hex(NAVY) })], { align: AlignmentType.RIGHT, after: 20 })] : []),
       P(R(doc.dateText, { size: 18, color: hex(GREY) }), { align: AlignmentType.RIGHT })] }),
@@ -266,7 +270,7 @@ export async function exportDocx(doc, onStep) {
   const header = new Header({ children: [new Paragraph({ tabStops: [{ type: TabStopType.RIGHT, position: pageW - 2 * mar }], border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: 'CED9EB', space: 2 } },
     children: [R(doc.org.toUpperCase(), { bold: true, size: 15, color: hex(NAVY) }), R(`\t${doc.title}${doc.docNo ? ' · ' + doc.docNo : ''}`, { size: 15, color: hex(GREY) })] })] });
   const footer = new Footer({ children: [new Paragraph({ tabStops: [{ type: TabStopType.RIGHT, position: pageW - 2 * mar }], border: { top: { style: BorderStyle.SINGLE, size: 4, color: 'CED9EB', space: 2 } },
-    children: [R(`${doc.docNo ? doc.docNo + ' · ' : ''}Lập bằng ứng dụng Bảo Trì Thủy Lực`, { size: 15, color: hex(GREY) }),
+    children: [R(footerText(doc), { size: 15, color: hex(GREY) }),
       new TextRun({ children: ['\tTrang ', PageNumber.CURRENT, '/', PageNumber.TOTAL_PAGES], font: 'Arial', size: 15, color: hex(GREY) })] })] });
   const d = new Document({ creator: 'Bảo Trì Thủy Lực', title: doc.title, styles: { default: { document: { run: { font: 'Arial' } } } },
     sections: [{ properties: { titlePage: true, page: { size: { width: pageW, height: pageH, orientation: doc.landscape ? PageOrientation.LANDSCAPE : PageOrientation.PORTRAIT }, margin: { top: mar, bottom: mar, left: mar, right: mar, header: 400, footer: 400 } } },
@@ -325,7 +329,7 @@ export async function exportXlsx(doc, sheets, onStep) {
     // đầu trang: logo · tên đơn vị · bộ phận · số & ngày
     const colW = i => ws.getColumn(i).width || 10;
     ws.getRow(1).height = 20; ws.getRow(2).height = 16; ws.getRow(3).height = 16;
-    if (lg) { const id = wb.addImage({ base64: lg, extension: 'png' }); ws.addImage(id, { tl: { col: 0.1, row: 0.1 }, ext: { width: 46, height: 46 } }); }
+    if (lg) { const id = wb.addImage({ base64: lg.b64, extension: 'png' }); const [w, h] = fit(lg.w, lg.h, Math.max(40, (ws.getColumn(1).width || 8) * 7 - 6), 46); ws.addImage(id, { tl: { col: 0.05, row: 0.1 }, ext: { width: w, height: h } }); }
     const c0 = colW(1) < 9 ? 2 : 1; // chừa cột đầu cho logo nếu cột hẹp
     const hdr = (row, text, font, align = 'left') => { ws.mergeCells(row, c0 + (c0 === 1 ? 1 : 0), row, nCols); const c = ws.getCell(row, c0 + (c0 === 1 ? 1 : 0)); c.value = text; c.font = font; c.alignment = { horizontal: align, vertical: 'middle' }; };
     hdr(1, doc.org.toUpperCase(), { name: 'Arial', bold: true, size: 12, color: { argb: 'FF0B2A66' } });
@@ -380,7 +384,7 @@ export async function exportXlsx(doc, sheets, onStep) {
     }
     ws.views = [{ state: 'frozen', ySplit: hr, showGridLines: false }];
     ws.autoFilter = { from: { row: hr, column: 1 }, to: { row: hr, column: sh.cols.length } };
-    ws.headerFooter.oddFooter = `&L&8${doc.docNo || ''}&R&8Trang &P/&N`;
+    ws.headerFooter.oddFooter = `&L&8${footerText(doc).replace(/&/g, '&&')}&R&8Trang &P/&N`;
     ws.pageSetup.printTitlesRow = `${hr}:${hr}`;
   }
   const buf = await wb.xlsx.writeBuffer();
