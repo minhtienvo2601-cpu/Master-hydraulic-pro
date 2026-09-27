@@ -1,4 +1,4 @@
-import { S, save, task, newTask, completeTask, uncompleteTask, openTasks, sortTasks, device } from './store.js';
+import { S, save, task, newTask, completeTask, uncompleteTask, openTasks, sortTasks, device, newBacklog, pathInUse, STATUS, openBacklog, weekStart, weekNo, inWeek } from './store.js';
 import { nav, push } from './nav.js';
 import { ic } from './icons.js';
 import { esc, uid, today, addDays, addMonths, daysTo, dueLabel, fmtD, fmtShort, repeatLabel, $$ } from './util.js';
@@ -19,6 +19,8 @@ export function taskCard(t, opts = {}) {
         ${dev && !opts.noDev ? `<span>${ic('device')} ${esc(dev.name)}</span>` : ''}
         ${t.repeat ? `<span>${ic('repeat')} ${repeatLabel(t.repeat)}</span>` : ''}
         ${t.photos?.length ? `<span>${ic('camera')} ${t.photos.length}</span>` : ''}
+        ${t.assignee ? `<span>${ic('user')} ${esc(t.assignee)}</span>` : ''}
+        ${!t.done && t.status === 'doing' ? `<span class="st st-doing">Đang làm</span>` : ''}${!t.done && t.status === 'hold' ? `<span class="st st-hold">Hoãn</span>` : ''}
       </div>
       ${t.note && opts.showNote ? `<div class="muted" style="font-size:13px;margin-top:6px">${esc(t.note)}</div>` : ''}
     </div></div>`;
@@ -46,7 +48,8 @@ const REPEATS = [
 ];
 export function taskForm(t, preset = {}) {
   const isNew = !t;
-  const d = t ? JSON.parse(JSON.stringify(t)) : Object.assign({ title: '', note: '', priority: 2, due: addDays(today(), 7), deviceId: '', repeat: null, photos: [] }, preset);
+  const d = t ? JSON.parse(JSON.stringify(t)) : Object.assign({ title: '', note: '', priority: 2, due: addDays(today(), 7), deviceId: '', repeat: null, photos: [], assignee: '', status: 'todo', result: '' }, preset);
+  const people = [...new Set(S.state.tasks.map(x => x.assignee).filter(Boolean))];
   const repKey = r => !r ? 'none' : (REPEATS.find(x => x.r && x.r !== 'custom' && x.r.n === r.n && x.r.unit === r.unit)?.k || 'cus');
   const devOpts = `<option value="">— Không gắn thiết bị —</option>` + S.state.devices.map(v => `<option value="${v.id}" ${v.id === d.deviceId ? 'selected' : ''}>${esc(v.name)}</option>`).join('');
   const html = `
@@ -59,6 +62,9 @@ export function taskForm(t, preset = {}) {
         <button data-q="7">+1 tuần</button><button data-q="m1">+1 tháng</button><button data-q="none">Không hạn</button></div>
       <div class="muted" style="font-size:12.5px;margin:8px 2px 0">${ic('bell').replace('<svg', '<svg style="width:13px;height:13px;display:inline;vertical-align:-2px"')} Nhắc trước ${S.state.settings.remindDays} ngày lúc ${S.state.settings.remindTime}</div></div>
     <div class="field"><label class="lb">Thiết bị</label><select class="inp" id="fDev">${devOpts}</select></div>
+    <div class="field"><label class="lb">Người thực hiện</label><input class="inp" id="fAs" list="fAsL" value="${esc(d.assignee || '')}" placeholder="VD: Tổ thủy lực ca A, anh Hùng…"><datalist id="fAsL">${people.map(x => `<option value="${esc(x)}">`).join('')}</datalist></div>
+    ${!isNew ? `<div class="field"><label class="lb">Trạng thái</label><div class="seg4" id="fSt">${Object.entries(STATUS).map(([k, l]) => `<button data-st="${k}" class="st-${k} ${d.status === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+    <div class="field"><label class="lb">Kết quả / lý do hoãn</label><textarea class="inp" id="fRes" placeholder="Đã làm gì, thông số đo, vật tư đã thay… hoặc lý do hoãn">${esc(d.result || '')}</textarea></div>` : ''}
     <div class="field"><label class="lb">Lặp lại (bảo trì định kỳ)</label>
       <div class="qchips" id="fRep">${REPEATS.map(x => `<button data-k="${x.k}" class="${repKey(d.repeat) === x.k ? 'on' : ''}">${x.l}</button>`).join('')}</div>
       <div class="row" id="fCus" style="margin-top:8px;${repKey(d.repeat) === 'cus' ? '' : 'display:none'}">
@@ -71,7 +77,8 @@ export function taskForm(t, preset = {}) {
     <button class="btn pri" id="fSave">${ic('check')} ${isNew ? 'Thêm công việc' : 'Lưu thay đổi'}</button>
     ${!isNew ? `<div class="btn-row" style="margin-top:10px">
       <button class="btn sec" id="fDone">${ic('done')} ${t.done ? 'Mở lại' : 'Hoàn thành'}</button>
-      <button class="btn dan" id="fDel">${ic('trash')} Xóa</button></div>` : ''}`;
+      <button class="btn dan" id="fDel">${ic('trash')} Xóa</button></div>
+    ${!t.done ? `<button class="btn sec" id="fBl" style="margin-top:10px">${ic('alert')} Chuyển thành tồn đọng</button>` : ''}` : ''}`;
   openSheet(isNew ? 'Công việc mới' : 'Chi tiết công việc', html, (b, close) => {
     const q = s => b.querySelector(s);
     if (isNew) setTimeout(() => q('#fTitle').focus(), 320);
@@ -98,25 +105,53 @@ export function taskForm(t, preset = {}) {
     };
     drawPh();
     const collect = () => {
-      d.title = q('#fTitle').value.trim(); d.note = q('#fNote').value.trim(); d.due = q('#fDue').value; d.deviceId = q('#fDev').value;
+      d.title = q('#fTitle').value.trim(); d.note = q('#fNote').value.trim(); d.due = q('#fDue').value; d.deviceId = q('#fDev').value; d.assignee = q('#fAs').value.trim();
+      if (q('#fRes')) d.result = q('#fRes').value.trim();
       if (rep === 'cus') d.repeat = { n: Math.max(1, +q('#fN').value || 1), unit: q('#fU').value };
       else d.repeat = REPEATS.find(x => x.k === rep).r;
       if (d.repeat && !d.due) d.due = today();
     };
+    let stSel = d.status;
+    if (q('#fSt')) q('#fSt').onclick = e => { const bt = e.target.closest('[data-st]'); if (!bt) return; stSel = bt.dataset.st; $$('#fSt [data-st]', b).forEach(x => x.classList.toggle('on', x === bt)); };
     q('#fSave').onclick = () => {
       collect(); if (!d.title) { toast('Nhập tên công việc'); q('#fTitle').focus(); return; }
       if (isNew) newTask(d);
-      else { const removed = t.photos.filter(p => !d.photos.includes(p)); removed.forEach(deletePath); Object.assign(t, d); }
+      else {
+        const removed = t.photos.filter(p => !d.photos.includes(p)); const wasDone = t.done;
+        Object.assign(t, d); removed.forEach(p => { if (!pathInUse(p)) deletePath(p); });
+        if (stSel === 'done' && !wasDone) { const n = completeTask(t); if (n) toast(`✔ Hoàn thành · lần kế tiếp: ${fmtShort(n.due)}`); }
+        else if (stSel !== 'done' && wasDone) { uncompleteTask(t); t.status = stSel; }
+        else t.status = stSel;
+      }
       save(); close(); nav.render(); toast(isNew ? 'Đã thêm công việc' : 'Đã lưu');
     };
     if (!isNew) {
       q('#fDone').onclick = () => { collect(); Object.assign(t, d); close(); toggleDone(t.id); };
+      if (q('#fBl')) q('#fBl').onclick = () => {
+        collect(); Object.assign(t, d);
+        const b2 = newBacklog({ deviceId: t.deviceId, desc: t.title + (t.note ? ' – ' + t.note : ''), photos: [...t.photos], action: t.result || '', fromTask: t.id });
+        t.status = 'hold'; t.result = (t.result ? t.result + ' · ' : '') + 'Đã chuyển thành tồn đọng';
+        save(); close(); nav.render(); toast('Đã chuyển thành tồn đọng – xem ở Nhật ký');
+      };
       q('#fDel').onclick = async () => {
         if (!await confirmBox('Xóa công việc?', `“${esc(t.title)}” sẽ bị xóa vĩnh viễn.`, 'Xóa', true)) return;
-        t.photos.forEach(deletePath); S.state.tasks = S.state.tasks.filter(x => x.id !== t.id); save(); close(); nav.render(); toast('Đã xóa');
+        S.state.tasks = S.state.tasks.filter(x => x.id !== t.id); t.photos.forEach(p => { if (!pathInUse(p)) deletePath(p); }); save(); close(); nav.render(); toast('Đã xóa');
       };
     }
   });
+}
+
+// ---------- thẻ Nhật ký tuần trên Tổng quan ----------
+function weekCard() {
+  const cur = weekStart(today()); const weeks = [];
+  for (let i = 7; i >= 0; i--) { const ws = addDays(cur, -7 * i); const pl = S.state.tasks.filter(t => inWeek(t.due, ws)); weeks.push({ no: weekNo(ws), total: pl.length, done: pl.filter(t => t.done).length, cur: i === 0 }); }
+  const w = weeks[7]; const pct = w.total ? Math.round(w.done / w.total * 100) : 0;
+  const ob = openBacklog(); const oldest = ob.reduce((m, b) => Math.max(m, daysTo(b.found) * -1), 0);
+  return `<button class="card wcard" data-wc><div class="row"><div class="grow"><div class="wc-h">${ic('journal')} Nhật ký tuần ${w.no}</div>
+      <div class="wc-s">${w.total ? `${w.done}/${w.total} việc kế hoạch · <b>${pct}%</b>` : 'Chưa lập kế hoạch tuần này'}</div></div>
+      <div class="wc-bl ${ob.length ? 'red' : ''}"><b>${ob.length}</b><span>tồn đọng${ob.length ? ` · lâu nhất ${oldest} ngày` : ''}</span></div></div>
+    <div class="bars">${weeks.map(x => { const r = x.total ? x.done / x.total : 0; return `<div class="bar ${x.cur ? 'cur' : ''}"><i style="height:${Math.max(4, r * 100)}%;${x.total ? '' : 'opacity:.25'}"></i><span>${x.no}</span></div>`; }).join('')}</div>
+    <div class="wc-f muted">Tỉ lệ hoàn thành kế hoạch 8 tuần gần nhất</div></button>`;
 }
 
 // ---------- màn hình Tổng quan ----------
@@ -143,13 +178,15 @@ export function viewHome(v) {
     <div class="card" style="margin-top:10px"><div class="row"><div class="grow" style="font-weight:600">${open.length} việc đang mở</div><span class="muted" style="font-size:12.5px">theo ưu tiên</span></div>
       <div class="pbar">${cnt.map((c, i) => `<i style="width:${c / tot * 100}%;background:var(--p${i + 1})"></i>`).join('')}</div>
       <div class="legend">${cnt.map((c, i) => `<span><b style="background:var(--p${i + 1})"></b>${PR[i + 1]}: <b style="background:none;width:auto;height:auto;color:var(--tx)">${c}</b></span>`).join('')}</div></div>
+    ${weekCard()}
     <div class="sec-h"><h2>Cần làm sớm</h2><a data-go="tasks">Xem tất cả</a></div>
     <div id="hSoon">${soon.length ? soon.map(t => taskCard(t)).join('') : `<div class="card empty" style="padding:22px">${ic('done')}Không có việc quá hạn hay sắp đến hạn</div>`}</div>
     ${rec.length ? `<div class="sec-h"><h2>Bảo trì định kỳ sắp tới</h2></div><div>${rec.map(t => taskCard(t)).join('')}</div>` : ''}
     ${!st.tasks.length ? `<div class="card" style="margin-top:14px"><div style="font-weight:600;margin-bottom:6px">Bắt đầu nhanh</div>
-      <div class="muted" style="font-size:13.5px">① Thêm thiết bị ở tab <b>Thiết bị</b> · ② Bấm nút <b>+</b> vàng để thêm công việc · ③ Xây sơ đồ vật tư và gắn file ở tab <b>Vật tư</b>.</div></div>` : ''}
+      <div class="muted" style="font-size:13.5px">① Thêm thiết bị ở tab <b>Thiết bị</b> · ② Bấm nút <b>+</b> xanh để thêm công việc · ③ Xây sơ đồ và gắn tài liệu ở tab <b>Tài liệu</b>.</div></div>` : ''}
   </div>`;
   bindTaskCards(v);
+  const wc = v.querySelector('[data-wc]'); if (wc) wc.onclick = () => { nav.week = weekStart(today()); nav.tab = 'journal'; nav.stack = []; nav.render(); };
   $$('[data-f]', v).forEach(b => b.onclick = () => { nav.taskFilter = b.dataset.f; nav.tab = 'tasks'; nav.stack = []; nav.render(); });
   $$('[data-go]', v).forEach(b => b.onclick = () => { nav.taskFilter = 'open'; nav.tab = 'tasks'; nav.render(); });
 }

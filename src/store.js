@@ -1,19 +1,27 @@
 import { readJSON, writeJSON, notifReschedule } from './platform.js';
 import { uid, today, addDays, parseD, fmtD } from './util.js';
 
-export const COLORS = ['#D4B06A', '#4C9BF5', '#3CC48C', '#F2A33A', '#F0564F', '#B07BF0', '#35C2C9', '#E86FB0'];
+export const COLORS = ['#1E6FFF', '#4C9BF5', '#3CC48C', '#F2A33A', '#F0564F', '#B07BF0', '#35C2C9', '#E86FB0'];
+export const REASONS = { vattu: 'Chờ vật tư', dungmay: 'Chờ dừng máy', nhathau: 'Chờ nhà thầu', khac: 'Khác' };
+export const SEVER = { 1: 'Nặng', 2: 'Trung bình', 3: 'Nhẹ' };
+export const STATUS = { todo: 'Chưa làm', doing: 'Đang làm', done: 'Hoàn thành', hold: 'Hoãn' };
 
 function blank() {
   return {
     v: 1, nid: 1,
     tasks: [], devices: [],
     nodes: [
-      { id: 'root', parentId: null, name: 'Kho vật tư', color: '#D4B06A', codes: '', files: [], links: [] },
+      { id: 'root', parentId: null, name: 'Kho tài liệu', color: '#1E6FFF', codes: '', files: [], links: [] },
       { id: uid(), parentId: 'root', name: 'Máy mài trục', color: '#4C9BF5', codes: '', files: [], links: [] },
       { id: uid(), parentId: 'root', name: 'Trạm thủy lực', color: '#3CC48C', codes: '', files: [], links: [] },
       { id: uid(), parentId: 'root', name: 'Vật tư tiêu hao', color: '#F2A33A', codes: '', files: [], links: [] },
     ],
-    settings: { name: '', remindDays: 2, remindTime: '07:00', dueDay: true, theme: 'dark' },
+    notes: [], backlog: [],
+    noteCats: [
+      { id: 'kt', name: 'Kỹ thuật', color: '#1E6FFF' }, { id: 'qa', name: 'QA vật tư', color: '#3CC48C' },
+      { id: 'sc', name: 'Sự cố', color: '#F0564F' }, { id: 'ncc', name: 'Nhà cung cấp', color: '#F2A33A' }, { id: 'cn', name: 'Cá nhân', color: '#B07BF0' },
+    ],
+    settings: { name: '', remindDays: 2, remindTime: '07:00', dueDay: true, theme: 'dark', backupRemind: true },
   };
 }
 
@@ -23,6 +31,16 @@ export async function load() {
   const st = await readJSON('db.json', null);
   if (st && st.nodes) S.state = Object.assign(blank(), st, { settings: Object.assign(blank().settings, st.settings || {}) });
   S.index = await readJSON('index.json', {}) || {};
+  migrate();
+}
+function migrate() {
+  const st = S.state;
+  const r = node('root'); if (r && r.name === 'Kho vật tư') { r.name = 'Kho tài liệu'; }
+  if (r && r.color === '#D4B06A') r.color = '#1E6FFF';
+  for (const t of st.tasks) { if (!t.status) t.status = t.done ? 'done' : 'todo'; if (t.assignee == null) t.assignee = ''; if (t.result == null) t.result = ''; }
+  st.notes = st.notes || []; st.backlog = st.backlog || [];
+  if (!st.noteCats || !st.noteCats.length) st.noteCats = blank().noteCats;
+  for (const n of st.nodes) for (const f of n.files) if (f.pinned == null) f.pinned = false;
 }
 let t1 = null;
 export function save(opts = {}) {
@@ -38,15 +56,16 @@ export async function saveNow() { clearTimeout(t1); await writeJSON('db.json', S
 // ---------- tasks ----------
 export const task = id => S.state.tasks.find(t => t.id === id);
 export function newTask(p) {
-  const t = Object.assign({ id: uid(), nid: S.state.nid++, title: '', note: '', priority: 2, due: '', deviceId: '', repeat: null, done: false, doneAt: '', photos: [], createdAt: today() }, p);
+  const t = Object.assign({ id: uid(), nid: S.state.nid++, title: '', note: '', priority: 2, due: '', deviceId: '', repeat: null, done: false, doneAt: '', photos: [], createdAt: today(), status: 'todo', assignee: '', result: '' }, p);
+  t.nid = S.state.nid - 1; t.status = t.done ? 'done' : (t.status === 'done' ? 'todo' : t.status || 'todo');
   S.state.tasks.push(t); return t;
 }
 export function completeTask(t) {
-  t.done = true; t.doneAt = today();
+  t.done = true; t.doneAt = today(); t.status = 'done';
   let next = null;
   if (t.repeat) {
     const base = t.doneAt;
-    next = newTask({ title: t.title, note: t.note, priority: t.priority, deviceId: t.deviceId, repeat: { ...t.repeat }, due: nextDueFrom(base, t.repeat) });
+    next = newTask({ title: t.title, note: t.note, priority: t.priority, deviceId: t.deviceId, assignee: t.assignee, repeat: { ...t.repeat }, due: nextDueFrom(base, t.repeat) });
     t.repeatSpawned = next.id;
   }
   return next;
@@ -60,7 +79,7 @@ function nextDueFrom(from, r) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 export function uncompleteTask(t) {
-  t.done = false; t.doneAt = '';
+  t.done = false; t.doneAt = ''; t.status = 'todo';
   if (t.repeatSpawned) {
     const n = task(t.repeatSpawned);
     if (n && !n.done) S.state.tasks = S.state.tasks.filter(x => x.id !== n.id);
@@ -72,6 +91,29 @@ export function sortTasks(a, b) {
   const da = a.due || '9999', db = b.due || '9999';
   if (da !== db) return da < db ? -1 : 1;
   return a.priority - b.priority;
+}
+
+// ---------- tuần (thứ 2 → chủ nhật) ----------
+export function weekStart(s) { const d = parseD(s); const wd = (d.getDay() + 6) % 7; d.setDate(d.getDate() - wd); const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; }
+export function weekNo(s) { const d = parseD(s); d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7); const w1 = new Date(d.getFullYear(), 0, 4); return 1 + Math.round(((d - w1) / 86400000 - 3 + (w1.getDay() + 6) % 7) / 7); }
+export const inWeek = (s, ws) => !!s && s >= ws && s <= addDays(ws, 6);
+
+// ---------- tồn đọng ----------
+export const bl = id => S.state.backlog.find(b => b.id === id);
+export function newBacklog(p) {
+  const b = Object.assign({ id: uid(), deviceId: '', desc: '', found: today(), severity: 2, reason: 'vattu', reasonText: '', action: '', parts: '', photos: [], resolved: false, resolvedAt: '', resolveNote: '' }, p);
+  S.state.backlog.push(b); return b;
+}
+export const openBacklog = () => S.state.backlog.filter(b => !b.resolved);
+
+// ---------- file dùng chung (ảnh có thể được nhiều mục tham chiếu) ----------
+export function pathInUse(path, except) {
+  const st = S.state;
+  const inArr = a => (a || []).includes(path);
+  if (st.tasks.some(t => t !== except && inArr(t.photos))) return true;
+  if (st.backlog.some(b => b !== except && inArr(b.photos))) return true;
+  if (st.notes.some(n => n !== except && n.blocks.some(k => k.t === 'img' && inArr(k.photos)))) return true;
+  return st.nodes.some(n => n.files.some(f => f.path === path));
 }
 
 // ---------- devices ----------
@@ -98,5 +140,6 @@ export async function reschedule() {
     if (st.dueDay) { const r2 = at(t.due); if (r2.getTime() > now) list.push({ id: t.nid * 2 + 1, at: r2, title: `🔔 Hôm nay đến hạn: ${t.title}`, body: `${pr}${dev ? ' · ' + dev.name : ''}`, extra: { taskId: t.id } }); }
   }
   list.sort((a, b) => a.at - b.at);
+  if (st.backupRemind !== false) list.unshift({ id: 900001, on: { weekday: 2, hour: 8, minute: 0 }, title: '💾 Nhắc sao lưu dữ liệu', body: 'Đầu tuần rồi – vào Cài đặt › Sao lưu để gửi bản sao lên OneDrive/Zalo.', extra: { go: 'backup' } });
   await notifReschedule(list);
 }

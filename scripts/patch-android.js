@@ -11,7 +11,16 @@ cp('resources/res', RES);
 const w = (f, fn) => { const p = path.join(RES, f); fs.writeFileSync(p, fn(fs.readFileSync(p, 'utf8'))); };
 
 // màu nền icon
-w('values/ic_launcher_background.xml', s => s.replace(/#[0-9A-Fa-f]{6}/, '#0E1520'));
+w('values/ic_launcher_background.xml', s => s.replace(/#[0-9A-Fa-f]{6}/, '#1E6FFF'));
+// nền biểu tượng thích ứng: gradient xanh
+fs.writeFileSync(path.join(RES, 'drawable/ic_launcher_bg.xml'), `<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+  <gradient android:angle="315" android:startColor="#4DA3FF" android:centerColor="#1E6FFF" android:endColor="#0B47C9" android:type="linear"/>
+</shape>`);
+for (const f of ['ic_launcher.xml', 'ic_launcher_round.xml']) {
+  const p = path.join(RES, 'mipmap-anydpi-v26', f);
+  if (fs.existsSync(p)) fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace('@color/ic_launcher_background', '@drawable/ic_launcher_bg'));
+}
 
 // màn hình chờ: nền tối + logo
 for (const d of fs.readdirSync(RES)) {
@@ -19,14 +28,43 @@ for (const d of fs.readdirSync(RES)) {
 }
 fs.writeFileSync(path.join(RES, 'drawable/splash.xml'), `<?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-  <item><color android:color="#0B111A"/></item>
+  <item><color android:color="#1E6FFF"/></item>
   <item><bitmap android:gravity="center" android:src="@mipmap/ic_launcher_foreground"/></item>
 </layer-list>`);
 w('values/styles.xml', s => s.replace('<item name="android:background">@drawable/splash</item>',
-  '<item name="android:background">@drawable/splash</item>\n        <item name="windowSplashScreenBackground">#0B111A</item>\n        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>'));
+  '<item name="android:background">@drawable/splash</item>\n        <item name="windowSplashScreenBackground">#1E6FFF</item>\n        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>'));
 
 // cho phép mở file lưu trong bộ nhớ app
 w('xml/file_paths.xml', s => s.includes('files-path') ? s : s.replace('</paths>', '    <files-path name="app_files" path="." />\n</paths>'));
+
+
+// Vẽ app tràn ra sau thanh trạng thái & thanh điều hướng (bỏ khoảng trắng trên/dưới trên Android ≤14)
+const ma = 'android/app/src/main/java/vn/tien/baotri/MainActivity.java';
+fs.writeFileSync(ma, `package vn.tien.baotri;
+
+import android.graphics.Color;
+import android.os.Build;
+import android.os.Bundle;
+import android.view.Window;
+import androidx.core.view.WindowCompat;
+import com.getcapacitor.BridgeActivity;
+
+public class MainActivity extends BridgeActivity {
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        Window w = getWindow();
+        WindowCompat.setDecorFitsSystemWindows(w, false);
+        w.setStatusBarColor(Color.TRANSPARENT);
+        w.setNavigationBarColor(Color.TRANSPARENT);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            w.setNavigationBarContrastEnforced(false);
+            w.setStatusBarContrastEnforced(false);
+        }
+        w.getDecorView().setBackgroundColor(Color.parseColor("#081225"));
+    }
+}
+`);
 
 // quyền
 const man = 'android/app/src/main/AndroidManifest.xml';
@@ -39,5 +77,24 @@ fs.writeFileSync(man, m);
 // số phiên bản tăng theo mỗi lần build để cài đè bản cũ
 const run = parseInt(process.env.GITHUB_RUN_NUMBER || '1', 10);
 const bg = 'android/app/build.gradle';
-fs.writeFileSync(bg, fs.readFileSync(bg, 'utf8').replace(/versionCode \d+/, `versionCode ${run}`).replace(/versionName "[^"]*"/, `versionName "1.0.${run}"`));
+let g = fs.readFileSync(bg, 'utf8').replace(/versionCode \d+/, `versionCode ${run}`).replace(/versionName "[^"]*"/, `versionName "1.0.${run}"`);
+
+// ký mọi bản build bằng CÙNG một chìa khóa (resources/debug.keystore) để cài đè không mất dữ liệu
+if (!g.includes('signingConfigs')) {
+  g = g.replace(/\n    buildTypes \{/, `
+    signingConfigs {
+        fixedKey {
+            storeFile rootProject.file('../resources/debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.fixedKey
+        }`);
+}
+if (!g.includes('signingConfig signingConfigs.fixedKey')) { console.error('patch-android: KHÔNG chèn được cấu hình ký!'); process.exit(1); }
+fs.writeFileSync(bg, g);
 console.log('patch-android: OK, version 1.0.' + run);

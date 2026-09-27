@@ -33,7 +33,7 @@ function buildMap(c) {
   let minX = -90, maxX = 90, minY = -90, maxY = 90;
   let links = '', gnodes = '', cnodes = '';
   for (const p of pos) {
-    const col = p.k.color || '#D4B06A';
+    const col = p.k.color || '#1E6FFF';
     const ca = p.a + 0.22, cr = p.R * 0.55;
     links += `<path d="M0 0 Q ${Math.cos(ca) * cr} ${Math.sin(ca) * cr} ${p.x} ${p.y}" stroke="${col}" stroke-opacity=".55" stroke-width="2.2" fill="none"/>`;
     const gk = kids(p.k.id); const show = gk.slice(0, 5);
@@ -57,14 +57,14 @@ function buildMap(c) {
   const cl = wrap(c.name, 12);
   const center = `<g class="mm-node" data-center="1">
     <circle r="74" fill="url(#halo)"/>
-    <circle r="60" fill="url(#gold)" stroke="#F6E2B0" stroke-opacity=".6" stroke-width="1.5"/>
-    ${cl.map((l, i) => `<text y="${(i - (cl.length - 1) / 2) * 17 - 4}" text-anchor="middle" style="font-size:14px;font-weight:700;fill:#1B1405">${esc(l)}</text>`).join('')}
-    <text y="${(cl.length - 1) * 8.5 + 16}" text-anchor="middle" style="font-size:10.5px;fill:#3B2E12;font-weight:500">${n} nhánh · ${countFiles(c)} file</text></g>`;
+    <circle r="60" fill="url(#gold)" stroke="#BFDBFF" stroke-opacity=".6" stroke-width="1.5"/>
+    ${cl.map((l, i) => `<text y="${(i - (cl.length - 1) / 2) * 17 - 4}" text-anchor="middle" style="font-size:14px;font-weight:700;fill:#FFFFFF">${esc(l)}</text>`).join('')}
+    <text y="${(cl.length - 1) * 8.5 + 16}" text-anchor="middle" style="font-size:10.5px;fill:#DCEBFF;font-weight:500">${n} nhánh · ${countFiles(c)} file</text></g>`;
   const empty = n ? '' : `<text y="112" text-anchor="middle" class="node-sub" style="font-size:12px">Bấm “Thêm nhánh” để tạo nhánh con</text>`;
   const pad = 16; const vb = [minX - pad, minY - pad, maxX - minX + pad * 2, maxY - minY + pad * 2 + (n ? 0 : 40)];
   return `<svg class="map" viewBox="${vb.join(' ')}" preserveAspectRatio="xMidYMid meet">
-    <defs><radialGradient id="gold" cx="35%" cy="30%"><stop offset="0" stop-color="#F6E2B0"/><stop offset=".6" stop-color="#D4B06A"/><stop offset="1" stop-color="#9C7A36"/></radialGradient>
-    <radialGradient id="halo"><stop offset=".6" stop-color="#D4B06A" stop-opacity=".25"/><stop offset="1" stop-color="#D4B06A" stop-opacity="0"/></radialGradient></defs>
+    <defs><radialGradient id="gold" cx="35%" cy="30%"><stop offset="0" stop-color="#7DB8FF"/><stop offset=".6" stop-color="#1E6FFF"/><stop offset="1" stop-color="#0B47C9"/></radialGradient>
+    <radialGradient id="halo"><stop offset=".6" stop-color="#3D8BFF" stop-opacity=".3"/><stop offset="1" stop-color="#3D8BFF" stop-opacity="0"/></radialGradient></defs>
     <g id="vp">${links}${gnodes}${center}${cnodes}${empty}</g></svg>`;
 }
 
@@ -102,7 +102,7 @@ function bindMap(wrapEl, c) {
 function fileItem(f) {
   const [k, lbl] = fileKind(f.name); const idx = S.index[f.id];
   return `<div class="item" data-file="${f.id}"><div class="fi ${k}">${lbl}</div>
-    <div class="grow"><div class="nm ellip">${esc(f.name)}</div><div class="sz">${fmtSize(f.size || 0)} · lưu offline${idx ? ` · đã lập chỉ mục ${idx.length} dòng` : ''}</div></div>
+    <div class="grow"><div class="nm ellip">${esc(f.name)}</div><div class="sz">${f.pinned ? '📌 Đã ghim · ' : ''}${fmtSize(f.size || 0)} · lưu offline${idx ? ` · đã lập chỉ mục ${idx.length} dòng` : ''}</div></div>
     <button class="more" data-fmenu="${f.id}">${ic('dots')}</button></div>`;
 }
 function linkItem(l) {
@@ -121,17 +121,17 @@ export function viewParts(v) {
     <div class="mapwrap" style="height:${h}px">${buildMap(c)}
       <div class="hint">Chạm nhánh để mở · chụm để phóng to</div>
       <div class="zoombtns"><button data-z="out">${ic('zout')}</button><button data-z="fit">${ic('fit')}</button><button data-z="in">${ic('zin')}</button></div></div>
-    <div class="row" style="margin-top:16px"><span style="width:12px;height:12px;border-radius:4px;background:${c.color || '#D4B06A'};flex:none"></span>
+    <div class="row" style="margin-top:16px"><span style="width:12px;height:12px;border-radius:4px;background:${c.color || '#1E6FFF'};flex:none"></span>
       <div class="grow ellip" style="font-size:19px;font-weight:700">${esc(c.name)}</div>
       <button class="icon-btn" data-nmenu>${ic('dots')}</button></div>
     <div class="actions">
       <button class="act" data-a="branch">${ic('branch')}Thêm nhánh</button>
       <button class="act" data-a="file">${ic('upload')}Thêm file</button>
       <button class="act" data-a="link">${ic('cloud')}Link OneDrive</button></div>
-    <div class="sec-h"><h2>Mã vật tư &amp; ghi chú</h2><a data-a="codes">${c.codes ? 'Sửa' : 'Thêm'}</a></div>
-    <div class="codes" data-a="codes">${c.codes ? esc(c.codes) : '<span class="muted">Chạm để nhập mã vật tư, thông số, ghi chú… App sẽ tìm được theo các mã này.</span>'}</div>
-    <div class="sec-h"><h2>File danh mục</h2><span class="muted" style="font-size:12.5px">${c.files.length}</span></div>
-    ${c.files.length ? c.files.map(fileItem).join('') : `<div class="card empty" style="padding:18px">Chưa có file. Bấm “Thêm file” để chọn PDF, Excel, ảnh… (chọn được trực tiếp từ OneDrive)</div>`}
+    <div class="sec-h"><h2>Mã / từ khóa &amp; ghi chú</h2><a data-a="codes">${c.codes ? 'Sửa' : 'Thêm'}</a></div>
+    <div class="codes" data-a="codes">${c.codes ? esc(c.codes) : '<span class="muted">Chạm để nhập mã vật tư, số bản vẽ, từ khóa, ghi chú… App sẽ tìm được theo các mã này.</span>'}</div>
+    <div class="sec-h"><h2>Tài liệu</h2><span class="muted" style="font-size:12.5px">${c.files.length}</span></div>
+    ${c.files.length ? [...c.files].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)).map(fileItem).join('') : `<div class="card empty" style="padding:18px">Chưa có file. Bấm “Thêm file” để chọn PDF, Excel, ảnh… (chọn được trực tiếp từ OneDrive)</div>`}
     ${c.links.length ? `<div class="sec-h"><h2>Liên kết OneDrive</h2><span class="muted" style="font-size:12.5px">${c.links.length}</span></div>${c.links.map(linkItem).join('')}` : ''}
     ${ch.length ? `<div class="sec-h"><h2>Nhánh con</h2></div><div class="chips" style="flex-wrap:wrap;margin:0;padding:0">${ch.map(k => `<button class="chip" data-crumb="${k.id}"><span style="display:inline-block;width:8px;height:8px;border-radius:3px;background:${k.color};margin-right:6px"></span>${esc(k.name)}</button>`).join('')}</div>` : ''}
   </div>`;
@@ -192,7 +192,7 @@ async function delNode(c) {
   nav.partsNode = c.parentId; save({ index: true }); nav.render(); toast('Đã xóa nhánh');
 }
 async function editCodes(c) {
-  const v = await promptBox('Mã vật tư & ghi chú', c.name, c.codes, { multi: true, ph: 'VD:\n425-251-745 Bôi trơn dẫn hướng\n300001-665-0 Van điện từ VEI-8A NC', hint: 'Mỗi mã một dòng. Ô tìm kiếm sẽ tìm theo nội dung này.' });
+  const v = await promptBox('Mã / từ khóa & ghi chú', c.name, c.codes, { multi: true, ph: 'VD:\n425-251-745 Bôi trơn dẫn hướng\n300001-665-0 Van điện từ VEI-8A NC', hint: 'Mỗi mã một dòng. Ô tìm kiếm sẽ tìm theo nội dung này.' });
   if (v === null) return; c.codes = v; save(); nav.render();
 }
 function linkForm(c, l) {
@@ -213,6 +213,7 @@ function linkForm(c, l) {
 function fileMenu(c, f) {
   menu(f.name, [
     { icon: 'open', label: 'Mở file', run: () => openF(f) },
+    { icon: 'pin', label: f.pinned ? 'Bỏ ghim' : 'Ghim lên đầu', run: () => { f.pinned = !f.pinned; save(); nav.render(); } },
     { icon: 'edit', label: 'Đổi tên', run: async () => { const n = await promptBox('Đổi tên file', 'Tên file', f.name); if (n) { f.name = n; save(); nav.render(); } } },
     { icon: 'trash', label: 'Xóa file', danger: true, run: async () => {
       if (!await confirmBox('Xóa file?', `“${esc(f.name)}” sẽ bị xóa khỏi app (file gốc trên OneDrive không bị ảnh hưởng).`, 'Xóa', true)) return;

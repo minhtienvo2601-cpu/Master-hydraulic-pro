@@ -151,8 +151,8 @@ export async function notifReschedule(list) {
     if (!list.length) return;
     await LocalNotifications.schedule({
       notifications: list.slice(0, 400).map(n => ({
-        id: n.id, title: n.title, body: n.body, channelId: 'nhacviec', smallIcon: 'ic_stat_notify', iconColor: '#D4B06A',
-        schedule: { at: n.at, allowWhileIdle: true }, extra: n.extra,
+        id: n.id, title: n.title, body: n.body, channelId: 'nhacviec', smallIcon: 'ic_stat_notify', iconColor: '#1E6FFF',
+        schedule: n.on ? { on: n.on, allowWhileIdle: true } : { at: n.at, allowWhileIdle: true }, extra: n.extra,
       })),
     });
   } catch (e) { console.warn('notif', e); }

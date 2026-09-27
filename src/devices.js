@@ -1,10 +1,11 @@
-import { S, save, device, node, flatNodes, sortTasks } from './store.js';
+import { S, save, device, node, flatNodes, sortTasks, SEVER, REASONS } from './store.js';
 import { nav, push, pop } from './nav.js';
 import { ic } from './icons.js';
 import { esc, uid, daysTo, fmtD, $$ } from './util.js';
 import { openSheet, confirmBox, toast, viewPhoto } from './ui.js';
 import { taskCard, bindTaskCards, taskForm } from './tasks.js';
 import { fileSrc } from './platform.js';
+import { backlogForm } from './journal.js';
 
 export function viewDevices(v) {
   const ds = [...S.state.devices].sort((a, b) => a.name.localeCompare(b.name, 'vi'));
@@ -35,8 +36,10 @@ export function viewDevice(v, id) {
       ${d.note ? `<dt>Ghi chú</dt><dd style="white-space:pre-wrap">${esc(d.note)}</dd>` : ''}</dl></div>
     <div class="actions">
       <button class="act" data-a="task">${ic('plus')}Thêm việc</button>
-      <button class="act" data-a="parts">${ic('parts')}${nd ? 'Vật tư' : 'Gắn vật tư'}</button>
+      <button class="act" data-a="parts">${ic('parts')}${nd ? 'Tài liệu' : 'Gắn tài liệu'}</button>
       <button class="act" data-a="edit">${ic('edit')}Sửa</button></div>
+    ${(() => { const bs = S.state.backlog.filter(x => x.deviceId === id && !x.resolved); return `<div class="sec-h"><h2>Tồn đọng</h2><a data-a="bl">+ Thêm</a></div>` + (bs.length ? bs.map(x => `<div class="blc sv${x.severity}" data-blid="${x.id}"><div class="bl-t">${esc(x.desc)}</div><div class="bl-tags"><span class="sevp sv${x.severity}">${SEVER[x.severity]}</span><span class="rsn">${esc(x.reason === 'khac' && x.reasonText ? x.reasonText : REASONS[x.reason])}</span><span class="rsn">từ ${fmtD(x.found)}</span></div></div>`).join('') : `<div class="card empty" style="padding:14px">Không có tồn đọng</div>`); })()}
+    ${(() => { const ns = S.state.notes.filter(x => x.deviceId === id); return ns.length ? `<div class="sec-h"><h2>Ghi chú</h2></div>` + ns.map(x => `<div class="item" data-nid="${x.id}"><div class="fi doc">${ic('note')}</div><div class="grow"><div class="nm ellip">${esc(x.title || 'Ghi chú không tên')}</div><div class="sz">${fmtD(x.updated.slice(0, 10))}</div></div></div>`).join('') : ''; })()}
     <div class="sec-h"><h2>Công việc đang mở</h2><span class="muted" style="font-size:12.5px">${open.length}</span></div>
     ${open.length ? open.map(t => taskCard(t, { noDev: true })).join('') : `<div class="card empty" style="padding:18px">Không có việc đang mở</div>`}
     <div class="sec-h"><h2>Lịch sử bảo trì</h2><span class="muted" style="font-size:12.5px">${hist.length}</span></div>
@@ -49,6 +52,9 @@ export function viewDevice(v, id) {
   $$('.tl[data-task]', v).forEach(el => el.onclick = e => { if (e.target.tagName === 'IMG') return; });
   $$('img[data-ph]', v).forEach(async im => { im.src = await fileSrc(im.dataset.ph); im.onclick = e => { e.stopPropagation(); viewPhoto(im.src); }; });
   v.querySelector('[data-a=task]').onclick = () => taskForm(null, { deviceId: id });
+  v.querySelector('[data-a=bl]').onclick = () => backlogForm(null, { deviceId: id });
+  $$('[data-blid]', v).forEach(el => el.onclick = () => backlogForm(S.state.backlog.find(x => x.id === el.dataset.blid)));
+  $$('[data-nid]', v).forEach(el => el.onclick = () => push({ v: 'note', id: el.dataset.nid }));
   v.querySelector('[data-a=edit]').onclick = () => deviceForm(d);
   v.querySelector('[data-a=parts]').onclick = () => {
     if (nd) { nav.partsNode = nd.id; nav.tab = 'parts'; nav.stack = []; nav.render(); }
@@ -63,7 +69,7 @@ export function deviceForm(d) {
     <div class="field"><label class="lb">Tên thiết bị</label><input class="inp" id="dN" value="${esc(x.name)}" placeholder="VD: Máy mài trục HD 403 – SN 890"></div>
     <div class="field"><label class="lb">Mã / số hiệu</label><input class="inp" id="dC" value="${esc(x.code)}" placeholder="VD: UTM-IM-00-0890"></div>
     <div class="field"><label class="lb">Vị trí / khu vực</label><input class="inp" id="dL" value="${esc(x.location)}" placeholder="VD: Xưởng cán nóng – HSM"></div>
-    <div class="field"><label class="lb">Thư mục vật tư liên kết</label><select class="inp" id="dP">${nodeOpts}</select></div>
+    <div class="field"><label class="lb">Thư mục tài liệu liên kết</label><select class="inp" id="dP">${nodeOpts}</select></div>
     <div class="field"><label class="lb">Ghi chú kỹ thuật</label><textarea class="inp" id="dT" placeholder="Loại dầu, áp suất làm việc, hãng sản xuất…">${esc(x.note)}</textarea></div>
     <button class="btn pri" id="dS">${ic('check')} ${isNew ? 'Thêm thiết bị' : 'Lưu'}</button>
     ${!isNew ? `<button class="btn dan" id="dD">${ic('trash')} Xóa thiết bị</button>` : ''}`, (b, close) => {

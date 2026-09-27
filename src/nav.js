@@ -4,6 +4,7 @@ export const nav = {
   stack: [],          // các màn hình con: {v:'device',id} | {v:'search'} | {v:'settings'}
   partsNode: 'root',  // nhánh đang xem ở sơ đồ vật tư
   taskFilter: 'open',
+  week: null,        // tuần đang xem ở Nhật ký (ngày thứ 2)
   render: () => {},
 };
 export function go(tab) { nav.tab = tab; nav.stack = []; nav.render(); document.getElementById('view').scrollTop = 0; }

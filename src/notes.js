@@ -1,0 +1,291 @@
+import { S, save, device, newBacklog, pathInUse, COLORS } from './store.js';
+import { nav, push, pop } from './nav.js';
+import { ic } from './icons.js';
+import { esc, uid, today, fmtD, fmtShort, matcher, highlight, $$ } from './util.js';
+import { openSheet, confirmBox, promptBox, menu, toast, busy, viewPhoto } from './ui.js';
+import { takePhoto, saveB64, deletePath, fileSrc } from './platform.js';
+import { exportPdf, exportDocx } from './exporter.js';
+
+export const note = id => S.state.notes.find(n => n.id === id);
+const cat = id => S.state.noteCats.find(c => c.id === id);
+const QA = { ok: ['Đạt', 'qa-ok'], ng: ['Không đạt', 'qa-ng'], chk: ['Cần xem lại', 'qa-chk'] };
+let noteCatF = 'all', noteQ = '';
+
+function newNote(p = {}) {
+  const n = Object.assign({ id: uid(), title: '', cat: noteCatF !== 'all' ? noteCatF : 'kt', pinned: false, deviceId: '', created: new Date().toISOString(), updated: new Date().toISOString(), qa: null, blocks: [{ id: uid(), t: 'p', text: '' }] }, p);
+  S.state.notes.unshift(n); return n;
+}
+const textOf = n => [n.title, ...n.blocks.map(b => b.t === 'img' ? [b.caption, (b.codes || []).join(' ')].join(' ') : b.text), n.qa ? Object.values(n.qa).join(' ') : ''].join(' ');
+function firstPhoto(n) { for (const b of n.blocks) if (b.t === 'img' && b.photos?.length) return b.photos[0]; return null; }
+function snippetOf(n) { const t = n.blocks.filter(b => b.t !== 'img' && b.text).map(b => b.text).join(' · '); return t.slice(0, 110); }
+
+// ---------------- danh sách ----------------
+export function viewNotes(v) {
+  const cats = S.state.noteCats; const m = noteQ.trim().length >= 2 ? matcher(noteQ) : null;
+  let list = S.state.notes.filter(n => (noteCatF === 'all' || n.cat === noteCatF) && (!m || m(textOf(n))));
+  list.sort((a, b) => (b.pinned - a.pinned) || b.updated.localeCompare(a.updated));
+  v.innerHTML = `<div class="fade-in">
+    <div class="searchbox">${ic('search')}<input id="nq" placeholder="Tìm ghi chú, mã vật tư, chú thích…" value="${esc(noteQ)}" autocomplete="off"></div>
+    <div class="chips" style="margin-top:12px"><button class="chip ${noteCatF === 'all' ? 'on' : ''}" data-c="all">Tất cả<span class="c">${S.state.notes.length}</span></button>
+      ${cats.map(c => `<button class="chip ${noteCatF === c.id ? 'on' : ''}" data-c="${c.id}"><span class="cdot" style="background:${c.color}"></span>${esc(c.name)}<span class="c">${S.state.notes.filter(n => n.cat === c.id).length}</span></button>`).join('')}
+      <button class="chip" data-cats>${ic('edit')}</button></div>
+    <div id="nlist" style="margin-top:6px">${list.length ? '' : `<div class="empty">${ic('note')}${S.state.notes.length ? 'Không có ghi chú phù hợp' : 'Chưa có ghi chú nào.<br>Bấm nút <b style="color:var(--gold)">+</b> để tạo ghi chú, chụp ảnh vật tư QA…'}</div>`}</div>
+    ${list.length && noteCatF !== 'all' ? `<button class="btn sec" id="nExpAll" style="margin-top:6px">${ic('upload')} Xuất cả mục “${esc(cat(noteCatF)?.name || '')}”</button>` : ''}</div>`;
+  const box = v.querySelector('#nlist');
+  box.insertAdjacentHTML('beforeend', list.map(n => {
+    const c = cat(n.cat); const imgs = n.blocks.filter(b => b.t === 'img'); const nph = imgs.reduce((s, b) => s + (b.photos?.length || 0), 0);
+    const ok = imgs.filter(b => b.qa === 'ok').length, ng = imgs.filter(b => b.qa === 'ng').length; const fp = firstPhoto(n); const dev = device(n.deviceId);
+    return `<div class="ncard" data-n="${n.id}"><div class="grow" style="min-width:0">
+      <div class="row" style="gap:6px">${n.pinned ? `<span class="pinmark">${ic('pin')}</span>` : ''}<div class="nt ellip">${esc(n.title || 'Ghi chú không tên')}</div></div>
+      <div class="ns">${esc(snippetOf(n)) || '<span class="muted">…</span>'}</div>
+      <div class="t-meta">${c ? `<span><span class="cdot" style="background:${c.color}"></span>${esc(c.name)}</span>` : ''}<span>${fmtShort(n.updated.slice(0, 10))}</span>
+        ${nph ? `<span>${ic('camera')} ${nph}</span>` : ''}${ok ? `<span class="qa-ok-t">✔ ${ok}</span>` : ''}${ng ? `<span class="qa-ng-t">✘ ${ng}</span>` : ''}${dev ? `<span>${ic('device')} ${esc(dev.name)}</span>` : ''}</div></div>
+      ${fp ? `<img class="nthumb" data-src="${esc(fp)}">` : ''}</div>`;
+  }).join(''));
+  $$('img[data-src]', box).forEach(async im => { im.src = await fileSrc(im.dataset.src); });
+  $$('[data-n]', box).forEach(el => el.onclick = () => push({ v: 'note', id: el.dataset.n }));
+  $$('[data-c]', v).forEach(b => b.onclick = () => { noteCatF = b.dataset.c; nav.render(); });
+  v.querySelector('[data-cats]').onclick = () => catManager();
+  const inp = v.querySelector('#nq'); let t; inp.oninput = () => { clearTimeout(t); t = setTimeout(() => { noteQ = inp.value; const pos = inp.selectionStart; nav.render(); const i2 = document.querySelector('#nq'); if (i2) { i2.focus(); i2.setSelectionRange(pos, pos); } }, 250); };
+  const ea = v.querySelector('#nExpAll'); if (ea) ea.onclick = () => exportMenu(list, cat(noteCatF)?.name);
+}
+export function newNoteAndOpen(p) { const n = newNote(p); save(); push({ v: 'note', id: n.id, fresh: true }); }
+
+function catManager() {
+  const draw = (b) => {
+    b.innerHTML = S.state.noteCats.map(c => `<div class="set-row"><span class="cdot big" style="background:${c.color}"></span><div class="grow tt">${esc(c.name)}</div>
+      <button class="more" data-ed="${c.id}">${ic('edit')}</button><button class="more" data-del="${c.id}">${ic('trash')}</button></div>`).join('') +
+      `<button class="btn sec" data-add style="margin-top:12px">${ic('plus')} Thêm mục</button>`;
+    b.querySelector('[data-add]').onclick = async () => { const n = await promptBox('Mục mới', 'Tên mục', '', { ph: 'VD: Bơm, Van servo, Hồ sơ nghiệm thu…' }); if (n) { S.state.noteCats.push({ id: uid(), name: n, color: COLORS[S.state.noteCats.length % COLORS.length] }); save(); draw(b); nav.render(); } };
+    $$('[data-ed]', b).forEach(x => x.onclick = async () => { const c = cat(x.dataset.ed); const n = await promptBox('Đổi tên mục', 'Tên mục', c.name); if (n) { c.name = n; save(); draw(b); nav.render(); } });
+    $$('[data-del]', b).forEach(x => x.onclick = async () => {
+      const c = cat(x.dataset.del); const cnt = S.state.notes.filter(n => n.cat === c.id).length;
+      if (S.state.noteCats.length <= 1) { toast('Cần giữ ít nhất 1 mục'); return; }
+      if (!await confirmBox('Xóa mục?', `Xóa mục “${esc(c.name)}”.${cnt ? ` ${cnt} ghi chú trong mục sẽ chuyển sang mục “${esc(S.state.noteCats.find(z => z !== c).name)}”.` : ''}`, 'Xóa', true)) return;
+      const other = S.state.noteCats.find(z => z !== c); S.state.notes.forEach(n => { if (n.cat === c.id) n.cat = other.id; });
+      S.state.noteCats = S.state.noteCats.filter(z => z !== c); if (noteCatF === c.id) noteCatF = 'all'; save(); draw(b); nav.render();
+    });
+  };
+  openSheet('Quản lý mục ghi chú', '<div class="set-group" id="cm"></div>', b => draw(b.querySelector('#cm')));
+}
+
+// ---------------- trình soạn ghi chú ----------------
+let saveT = null, focusId = null, focusHooked = false;
+function touch(n) { n.updated = new Date().toISOString(); clearTimeout(saveT); saveT = setTimeout(() => save(), 400); }
+function codeSuggestions() {
+  const set = new Set(); const re = /\b\d{3,}(?:[-.]\d+)+\b|\b[A-Z]{1,4}[-\d]*\d{2,}[A-Z0-9-]*\b/g;
+  for (const nd of S.state.nodes) (nd.codes || '').split('\n').forEach(l => (l.match(re) || []).forEach(x => set.add(x)));
+  for (const n of S.state.notes) for (const b of n.blocks) if (b.t === 'img') (b.codes || []).forEach(x => set.add(x));
+  let cnt = 0; for (const lines of Object.values(S.index)) { for (const l of lines) { (l.match(re) || []).forEach(x => set.add(x)); if (++cnt > 20000) break; } if (set.size > 3000) break; }
+  return [...set].slice(0, 3000);
+}
+
+export function viewNote(v, id, fresh) {
+  const n = note(id); if (!n) { pop(); return; }
+  const c = cat(n.cat); const dev = device(n.deviceId);
+  v.innerHTML = `<div class="editor">
+    <input class="ed-title" id="eT" placeholder="Tiêu đề ghi chú" value="${esc(n.title)}">
+    <div class="ed-meta">
+      <button class="mchip" data-m="cat"><span class="cdot" style="background:${c?.color || '#999'}"></span>${esc(c?.name || 'Chọn mục')}</button>
+      <button class="mchip" data-m="dev">${ic('device')}${dev ? esc(dev.name) : 'Gắn thiết bị'}</button>
+      <button class="mchip ${n.pinned ? 'on' : ''}" data-m="pin">${ic('pin')}${n.pinned ? 'Đã ghim' : 'Ghim'}</button>
+      <button class="mchip" data-m="qa">${ic('tag')}${n.qa ? 'Phiếu QA' : 'Thêm thông tin QA'}</button>
+    </div>
+    ${n.qa ? `<div class="qa-head" data-m="qa"><div><span>Số PO / phiếu nhập</span><b>${esc(n.qa.po || '—')}</b></div><div><span>Nhà cung cấp</span><b>${esc(n.qa.supplier || '—')}</b></div>
+      <div><span>Người kiểm tra</span><b>${esc(n.qa.inspector || '—')}</b></div><div><span>Ngày kiểm tra</span><b>${n.qa.date ? fmtShort(n.qa.date) + '/' + n.qa.date.slice(0, 4) : '—'}</b></div></div>` : ''}
+    <div id="blocks"></div>
+    <div class="ed-foot muted">Tự động lưu · sửa lần cuối ${new Date(n.updated).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</div>
+  </div>
+  <div class="ed-bar" id="edBar">
+    <button data-add="img">${ic('camera')}<span>Ảnh vật tư</span></button>
+    <button data-add="h"><b style="font-size:17px">H</b><span>Tiêu đề</span></button>
+    <button data-add="p">${ic('note')}<span>Đoạn</span></button>
+    <button data-add="li"><b style="font-size:20px;line-height:20px">•</b><span>Gạch đầu</span></button>
+    <button data-add="chk">${ic('done')}<span>Checklist</span></button>
+  </div>`;
+  const q = s => v.querySelector(s);
+  q('#eT').oninput = e => { n.title = e.target.value; touch(n); };
+  if (fresh) setTimeout(() => q('#eT').focus(), 200);
+  $$('[data-m]', v).forEach(b => b.onclick = () => metaAction(n, b.dataset.m));
+  focusId = null;
+  if (!focusHooked) { focusHooked = true; document.addEventListener('focusin', e => { const bl = e.target.closest && e.target.closest('[data-bid]'); if (bl) focusId = bl.dataset.bid; }); }
+  $$('[data-add]', q('#edBar')).forEach(b => b.onmousedown = e => e.preventDefault());
+  $$('[data-add]', q('#edBar')).forEach(b => b.onclick = async () => {
+    const t = b.dataset.add; const i = focusId ? n.blocks.findIndex(x => x.id === focusId) : n.blocks.length - 1;
+    const blk = t === 'img' ? { id: uid(), t: 'img', photos: [], codes: [], caption: '', qa: '', qty: '' } : { id: uid(), t, text: '', done: false };
+    // nếu khối hiện tại là đoạn trống thì thay thế
+    const curB = n.blocks[i];
+    if (curB && curB.t !== 'img' && !curB.text && t !== 'img') { curB.t = t; renderBlocks(v, n); focusBlock(v, curB.id); touch(n); return; }
+    n.blocks.splice(i + 1, 0, blk); touch(n); renderBlocks(v, n);
+    if (t === 'img') { await addPhoto(v, n, blk); setTimeout(() => v.querySelector(`[data-bid="${blk.id}"] .cinp`)?.focus(), 150); }
+    else focusBlock(v, blk.id);
+  });
+  renderBlocks(v, n);
+}
+function focusBlock(v, id) { const el = v.querySelector(`[data-bid="${id}"] textarea`); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }
+function autoGrow(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+
+function renderBlocks(v, n) {
+  const box = v.querySelector('#blocks'); let imgNo = 0;
+  box.innerHTML = n.blocks.map(b => {
+    if (b.t === 'img') {
+      imgNo++;
+      return `<div class="blk blk-img" data-bid="${b.id}">
+        <div class="bi-head"><b>Hình ${imgNo}</b><span class="grow"></span>${b.qa ? `<span class="qa ${QA[b.qa][1]}">${QA[b.qa][0]}</span>` : ''}<button class="more" data-bm="${b.id}">${ic('dots')}</button></div>
+        <div class="bi-grid">${(b.photos || []).map((p, i) => `<div class="bi-ph"><img data-src="${esc(p)}" data-i="${i}"><button data-rmph="${i}">${ic('x', 2.4)}</button></div>`).join('')}
+          <button class="bi-add" data-addph>${ic('camera')}<span>${b.photos?.length ? 'Thêm ảnh' : 'Chụp / chọn ảnh'}</span></button></div>
+        <div class="bi-codes">${(b.codes || []).map((c, i) => `<span class="code">${esc(c)}<button data-rmc="${i}">${ic('x', 2.6)}</button></span>`).join('')}
+          <input class="cinp" list="codeSug" placeholder="${b.codes?.length ? '+ mã khác' : 'Nhập mã vật tư…'}" enterkeyhint="done"></div>
+        <textarea class="bi-cap" rows="1" placeholder="Chú thích / mô tả (tùy chọn)">${esc(b.caption || '')}</textarea>
+        <div class="bi-row"><div class="qa-seg">${Object.entries(QA).map(([k, [l, c]]) => `<button data-qa="${k}" class="${c} ${b.qa === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+          <input class="bi-qty" placeholder="SL" value="${esc(b.qty || '')}"></div>
+        ${b.qa === 'ng' ? `<button class="btn sec bi-bl" data-bl>${ic('alert')} ${b.backlogId ? 'Đã tạo tồn đọng ✔' : 'Tạo tồn đọng / khiếu nại NCC'}</button>` : ''}
+      </div>`;
+    }
+    const cls = { h: 'blk-h', p: 'blk-p', li: 'blk-li', chk: 'blk-chk' }[b.t];
+    return `<div class="blk ${cls} ${b.t === 'chk' && b.done ? 'checked' : ''}" data-bid="${b.id}">
+      ${b.t === 'li' ? '<span class="bul">•</span>' : ''}${b.t === 'chk' ? `<button class="cbx" data-cbx>${ic('check', 3)}</button>` : ''}
+      <textarea rows="1" placeholder="${{ h: 'Tiêu đề mục', p: 'Nhập nội dung…', li: 'Gạch đầu dòng', chk: 'Việc cần làm' }[b.t]}">${esc(b.text || '')}</textarea>
+      <button class="bdel" data-bm="${b.id}">${ic('dots')}</button></div>`;
+  }).join('') + `<datalist id="codeSug"></datalist>`;
+  // gợi ý mã (nạp chậm để không làm giật)
+  setTimeout(() => { const dl = box.querySelector('#codeSug'); if (dl && !dl.children.length) dl.innerHTML = codeSuggestions().map(c => `<option value="${esc(c)}">`).join(''); }, 300);
+  $$('textarea', box).forEach(autoGrow);
+  for (const el of $$('[data-bid]', box)) {
+    const b = n.blocks.find(x => x.id === el.dataset.bid);
+    el.querySelector('[data-bm]') && (el.querySelector('[data-bm]').onclick = () => blockMenu(v, n, b));
+    if (b.t === 'img') bindImg(v, n, b, el);
+    else {
+      const ta = el.querySelector('textarea');
+      ta.oninput = () => { b.text = ta.value; autoGrow(ta); touch(n); };
+      ta.onkeydown = e => {
+        if (e.key === 'Enter' && (b.t === 'li' || b.t === 'chk' || b.t === 'h')) {
+          e.preventDefault();
+          if (!ta.value && b.t !== 'h') { b.t = 'p'; renderBlocks(v, n); focusBlock(v, b.id); touch(n); return; }
+          const nb = { id: uid(), t: b.t === 'h' ? 'p' : b.t, text: '', done: false }; n.blocks.splice(n.blocks.indexOf(b) + 1, 0, nb); touch(n); renderBlocks(v, n); focusBlock(v, nb.id);
+        } else if (e.key === 'Backspace' && !ta.value && n.blocks.length > 1) {
+          e.preventDefault(); const i = n.blocks.indexOf(b); n.blocks.splice(i, 1); touch(n); renderBlocks(v, n);
+          const prev = n.blocks[Math.max(0, i - 1)]; if (prev && prev.t !== 'img') focusBlock(v, prev.id);
+        }
+      };
+      const cb = el.querySelector('[data-cbx]'); if (cb) cb.onclick = () => { b.done = !b.done; el.classList.toggle('checked', b.done); touch(n); };
+    }
+  }
+  $$('img[data-src]', box).forEach(async im => { im.src = await fileSrc(im.dataset.src); });
+}
+function bindImg(v, n, b, el) {
+  el.querySelector('[data-addph]').onclick = () => addPhoto(v, n, b);
+  $$('[data-rmph]', el).forEach(x => x.onclick = async () => {
+    if (!await confirmBox('Xóa ảnh?', 'Ảnh sẽ bị gỡ khỏi khối này.', 'Xóa', true)) return;
+    const p = b.photos.splice(+x.dataset.rmph, 1)[0]; touch(n); if (!pathInUse(p)) deletePath(p); renderBlocks(v, n);
+  });
+  $$('img[data-i]', el).forEach(im => im.onclick = () => viewPhoto(im.src));
+  $$('[data-rmc]', el).forEach(x => x.onclick = () => { b.codes.splice(+x.dataset.rmc, 1); touch(n); renderBlocks(v, n); });
+  const ci = el.querySelector('.cinp');
+  const addCode = () => { const vals = ci.value.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean); if (!vals.length) return false; b.codes = [...(b.codes || []), ...vals.filter(x => !(b.codes || []).includes(x))]; touch(n); renderBlocks(v, n); setTimeout(() => v.querySelector(`[data-bid="${b.id}"] .cinp`)?.focus(), 30); return true; };
+  ci.onkeydown = e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addCode(); } };
+  ci.onchange = () => { if (ci.value && S.state && ci.value.length > 2) addCode(); };
+  ci.onblur = () => { if (ci.value.trim()) addCode(); };
+  const cap = el.querySelector('.bi-cap'); cap.oninput = () => { b.caption = cap.value; autoGrow(cap); touch(n); };
+  el.querySelector('.bi-qty').oninput = e => { b.qty = e.target.value; touch(n); };
+  $$('[data-qa]', el).forEach(x => x.onclick = () => { b.qa = b.qa === x.dataset.qa ? '' : x.dataset.qa; touch(n); renderBlocks(v, n); });
+  const blb = el.querySelector('[data-bl]'); if (blb) blb.onclick = () => {
+    if (b.backlogId) { toast('Tồn đọng đã được tạo – xem ở Nhật ký'); return; }
+    const nb = newBacklog({ deviceId: n.deviceId, desc: `QA không đạt: ${(b.codes || []).join(', ') || 'vật tư'}${b.caption ? ' – ' + b.caption : ''}`, reason: 'khac', reasonText: 'Chờ đổi hàng / khiếu nại nhà cung cấp', parts: (b.codes || []).join(', '), photos: [...(b.photos || [])], fromNote: n.id, severity: 2 });
+    b.backlogId = nb.id; touch(n); renderBlocks(v, n); toast('Đã tạo tồn đọng – xem ở tab Nhật ký');
+  };
+}
+async function addPhoto(v, n, b) {
+  try { const b64 = await takePhoto(); if (!b64) return; const p = `photos/${uid()}.jpg`; await saveB64(p, b64); b.photos.push(p); touch(n); renderBlocks(v, n); }
+  catch (e) { if (!String(e).match(/cancel/i)) toast('Không lấy được ảnh'); }
+}
+function blockMenu(v, n, b) {
+  const i = n.blocks.indexOf(b);
+  const items = [];
+  if (i > 0) items.push({ icon: 'back', label: 'Chuyển lên trên', run: () => { n.blocks.splice(i, 1); n.blocks.splice(i - 1, 0, b); touch(n); renderBlocks(v, n); } });
+  if (i < n.blocks.length - 1) items.push({ icon: 'chev', label: 'Chuyển xuống dưới', run: () => { n.blocks.splice(i, 1); n.blocks.splice(i + 1, 0, b); touch(n); renderBlocks(v, n); } });
+  if (b.t !== 'img') for (const [t, l] of [['h', 'Đổi thành Tiêu đề mục'], ['p', 'Đổi thành Đoạn văn'], ['li', 'Đổi thành Gạch đầu dòng'], ['chk', 'Đổi thành Checklist']]) if (t !== b.t) items.push({ icon: 'edit', label: l, run: () => { b.t = t; touch(n); renderBlocks(v, n); } });
+  items.push({ icon: 'trash', label: b.t === 'img' ? 'Xóa khối ảnh này' : 'Xóa dòng này', danger: true, run: async () => {
+    if (b.t === 'img' && b.photos?.length && !await confirmBox('Xóa khối ảnh?', `${b.photos.length} ảnh, mã và chú thích trong khối sẽ bị xóa.`, 'Xóa', true)) return;
+    n.blocks.splice(n.blocks.indexOf(b), 1); if (!n.blocks.length) n.blocks.push({ id: uid(), t: 'p', text: '' });
+    if (b.t === 'img') (b.photos || []).forEach(p => { if (!pathInUse(p)) deletePath(p); });
+    touch(n); renderBlocks(v, n);
+  } });
+  menu(b.t === 'img' ? 'Khối ảnh vật tư' : 'Dòng', items);
+}
+
+function metaAction(n, k) {
+  if (k === 'cat') menu('Chọn mục', S.state.noteCats.map(c => ({ icon: n.cat === c.id ? 'check' : 'tag', label: c.name, run: () => { n.cat = c.id; touch(n); nav.render(); } })));
+  else if (k === 'dev') menu('Gắn thiết bị', [{ icon: 'x', label: 'Không gắn thiết bị', run: () => { n.deviceId = ''; touch(n); nav.render(); } },
+    ...S.state.devices.map(d => ({ icon: n.deviceId === d.id ? 'check' : 'device', label: d.name, run: () => { n.deviceId = d.id; touch(n); nav.render(); } }))]);
+  else if (k === 'pin') { n.pinned = !n.pinned; touch(n); nav.render(); }
+  else if (k === 'qa') qaForm(n);
+}
+function qaForm(n) {
+  const isNewQa = !n.qa; const q0 = n.qa || { po: '', supplier: '', inspector: S.state.settings.name || '', date: today() };
+  const sups = [...new Set(S.state.notes.map(x => x.qa?.supplier).filter(Boolean))];
+  openSheet('Thông tin phiếu QA', `
+    <div class="field"><label class="lb">Số PO / phiếu nhập</label><input class="inp" id="qPo" value="${esc(q0.po)}" placeholder="VD: PO-2026-0915"></div>
+    <div class="field"><label class="lb">Nhà cung cấp</label><input class="inp" id="qSu" list="qSuL" value="${esc(q0.supplier)}"><datalist id="qSuL">${sups.map(s => `<option value="${esc(s)}">`).join('')}</datalist></div>
+    <div class="field"><label class="lb">Người kiểm tra</label><input class="inp" id="qIn" value="${esc(q0.inspector)}"></div>
+    <div class="field"><label class="lb">Ngày kiểm tra</label><input type="date" class="inp" id="qDa" value="${q0.date}"></div>
+    <button class="btn pri" id="qS">${ic('check')} Lưu</button>${n.qa ? `<button class="btn dan" id="qD">${ic('trash')} Bỏ thông tin QA</button>` : ''}`, (b, close) => {
+    b.querySelector('#qS').onclick = () => { n.qa = { po: b.querySelector('#qPo').value.trim(), supplier: b.querySelector('#qSu').value.trim(), inspector: b.querySelector('#qIn').value.trim(), date: b.querySelector('#qDa').value };
+      if (isNewQa && S.state.noteCats.some(c => c.id === 'qa')) n.cat = 'qa'; touch(n); close(); nav.render(); };
+    const d = b.querySelector('#qD'); if (d) d.onclick = () => { n.qa = null; touch(n); close(); nav.render(); };
+  });
+}
+export function noteMenu(id) {
+  const n = note(id); if (!n) return;
+  menu(n.title || 'Ghi chú', [
+    { icon: 'file', label: 'Xuất PDF', run: () => runExport([n], 'pdf') },
+    { icon: 'file', label: 'Xuất Word (.docx)', run: () => runExport([n], 'docx') },
+    { icon: 'trash', label: 'Xóa ghi chú', danger: true, run: async () => {
+      if (!await confirmBox('Xóa ghi chú?', `“${esc(n.title || 'Ghi chú không tên')}” và ảnh trong đó sẽ bị xóa.`, 'Xóa', true)) return;
+      S.state.notes = S.state.notes.filter(x => x !== n);
+      n.blocks.forEach(b => (b.photos || []).forEach(p => { if (!pathInUse(p)) deletePath(p); })); save(); pop(); toast('Đã xóa ghi chú');
+    } },
+  ]);
+}
+function exportMenu(list, name) { menu(`Xuất ${list.length} ghi chú`, [{ icon: 'file', label: 'Xuất PDF', run: () => runExport(list, 'pdf', name) }, { icon: 'file', label: 'Xuất Word (.docx)', run: () => runExport(list, 'docx', name) }]); }
+
+function noteItems(n, items, multi) {
+  const c = cat(n.cat); const dev = device(n.deviceId); let no = 0;
+  if (multi) items.push({ h: n.title || 'Ghi chú không tên' });
+  const kv = [];
+  if (multi) kv.push(['Cập nhật', fmtD(n.updated.slice(0, 10))]);
+  if (dev) kv.push(['Thiết bị', dev.name]);
+  if (n.qa) { if (n.qa.po) kv.push(['Số PO / phiếu nhập', n.qa.po]); if (n.qa.supplier) kv.push(['Nhà cung cấp', n.qa.supplier]); if (n.qa.inspector) kv.push(['Người kiểm tra', n.qa.inspector]); if (n.qa.date) kv.push(['Ngày kiểm tra', fmtD(n.qa.date)]); }
+  const imgs = n.blocks.filter(b => b.t === 'img'); const ok = imgs.filter(b => b.qa === 'ok').length, ng = imgs.filter(b => b.qa === 'ng').length, ck = imgs.filter(b => b.qa === 'chk').length;
+  if (ok + ng + ck) kv.push(['Kết quả QA', `${ok} đạt · ${ng} không đạt · ${ck} cần xem lại`]);
+  if (kv.length) items.push({ kv });
+  for (const b of n.blocks) {
+    if (b.t === 'img') {
+      no++; const badge = [b.qa ? 'Kết quả: ' + QA[b.qa][0] : '', b.qty ? 'Số lượng: ' + b.qty : ''].filter(Boolean).join('   ·   ');
+      const colr = b.qa === 'ok' ? [20, 150, 95] : b.qa === 'ng' ? [210, 50, 45] : b.qa === 'chk' ? [200, 120, 10] : undefined;
+      items.push({ imgs: { paths: b.photos || [], codes: b.codes || [], caption: b.caption, no, badge, badgeColor: colr, badgeHex: colr ? colr.map(x => x.toString(16).padStart(2, '0')).join('') : undefined } });
+    } else if (!b.text?.trim()) continue;
+    else if (b.t === 'h') items.push(multi ? { p: '▸ ' + b.text } : { h: b.text });
+    else if (b.t === 'p') items.push({ p: b.text });
+    else if (b.t === 'li') items.push({ li: b.text });
+    else if (b.t === 'chk') items.push({ chk: b.text, done: b.done });
+  }
+}
+async function runExport(list, kind, groupName) {
+  const multi = list.length > 1; const items = [];
+  list.forEach(n => noteItems(n, items, multi));
+  const one = list[0]; const c = cat(one.cat);
+  const doc = { title: multi ? `Ghi chú – ${groupName || 'tổng hợp'}` : (one.title || 'Ghi chú'),
+    subtitle: multi ? `${list.length} ghi chú · xuất ngày ${fmtD(today())}` : `${c ? c.name + ' · ' : ''}Cập nhật ${fmtD(one.updated.slice(0, 10))}${S.state.settings.name ? ' · ' + S.state.settings.name : ''}`, items };
+  const bz = busy('Đang tạo file…');
+  try { await (kind === 'pdf' ? exportPdf : exportDocx)(doc, (i, t) => bz.set(`Đang xử lý ảnh ${i}/${t}…`)); }
+  catch (e) { if (!String(e).match(/cancel/i)) toast('Lỗi xuất file: ' + (e.message || e)); console.error(e); }
+  finally { bz.done(); }
+}
+export { runExport as exportNotes };
+
+export function cleanupNote(id) {
+  const n = note(id); if (!n) return;
+  const empty = !n.title.trim() && !n.qa && n.blocks.every(b => b.t === 'img' ? !(b.photos || []).length && !(b.codes || []).length && !b.caption : !(b.text || '').trim());
+  if (empty) { S.state.notes = S.state.notes.filter(x => x !== n); save(); }
+}

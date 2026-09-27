@@ -8,22 +8,32 @@ import { viewHome, viewTasks, taskForm } from './tasks.js';
 import { viewDevices, viewDevice, deviceForm } from './devices.js';
 import { viewParts, openF } from './parts.js';
 import { viewRef, viewRefSec, refTitle, clearRefQ } from './ref.js';
+import { viewNotes, viewNote, noteMenu, newNoteAndOpen, cleanupNote, note } from './notes.js';
+import { viewJournal, viewBuy, backlogForm } from './journal.js';
 import { SystemBars, SystemBarsStyle } from '@capacitor/core';
 import { native, notifInit, onBack, readB64, saveB64, shareFile, pickFiles, testNotif, exactAlarmStatus, openExactAlarmSetting } from './platform.js';
 
-const TABS = { home: ['home', 'Tổng quan'], tasks: ['tasks', 'Công việc'], devices: ['device', 'Thiết bị'], parts: ['parts', 'Vật tư'], ref: ['ref', 'Tra cứu'] };
+const TABS = { home: ['home', 'Tổng quan'], journal: ['journal', 'Nhật ký'], notes: ['note', 'Ghi chú'], parts: ['folder', 'Tài liệu'], more: ['grid', 'Thêm'], tasks: ['tasks', 'Công việc'], devices: ['device', 'Thiết bị'], ref: ['ref', 'Tra cứu'] };
+const TABHL = { tasks: 'more', devices: 'more', ref: 'more' };
 
 function render() {
   const r = cur(); const v = $('#view');
-  $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === nav.tab));
+  $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === (TABHL[nav.tab] || nav.tab)));
+  document.body.classList.toggle('editing', r.v === 'note');
+  $('#btnMenu').hidden = r.v !== 'note'; $('#btnSearch').hidden = r.v === 'note'; $('#btnSettings').hidden = r.v === 'note';
   const sub = nav.stack.length > 0 || (nav.tab === 'parts' && nav.partsNode !== 'root');
   $('#btnBack').hidden = !sub;
-  $('#fab').hidden = ['search', 'settings', 'ref', 'refsec'].includes(r.v);
+  $('#fab').hidden = ['search', 'settings', 'ref', 'refsec', 'more', 'note', 'buy'].includes(r.v);
   let title = TABS[nav.tab]?.[1] || '', eyebrow = 'BẢO TRÌ THỦY LỰC';
   if (r.v === 'home') viewHome(v);
+  else if (r.v === 'journal') { eyebrow = 'KẾ HOẠCH & TỒN ĐỌNG'; viewJournal(v); }
+  else if (r.v === 'notes') { eyebrow = 'SỔ TAY KỸ THUẬT'; viewNotes(v); }
+  else if (r.v === 'note') { title = 'Ghi chú'; eyebrow = (S.state.noteCats.find(c => c.id === note(r.id)?.cat)?.name || 'GHI CHÚ').toUpperCase(); viewNote(v, r.id, r.fresh); r.fresh = false; }
+  else if (r.v === 'more') { title = 'Tiện ích'; viewMore(v); }
+  else if (r.v === 'buy') { title = 'Vật tư cần mua'; eyebrow = 'TỪ TỒN ĐỌNG'; viewBuy(v); }
   else if (r.v === 'tasks') viewTasks(v);
   else if (r.v === 'devices') viewDevices(v);
-  else if (r.v === 'parts') { viewParts(v); eyebrow = 'SƠ ĐỒ VẬT TƯ'; }
+  else if (r.v === 'parts') { viewParts(v); eyebrow = 'SƠ ĐỒ TÀI LIỆU'; }
   else if (r.v === 'device') { const d = device(r.id); title = 'Hồ sơ thiết bị'; eyebrow = 'THIẾT BỊ'; viewDevice(v, r.id); }
   else if (r.v === 'search') { title = 'Tìm kiếm'; eyebrow = 'TÌM NHANH'; viewSearch(v); }
   else if (r.v === 'settings') { title = 'Cài đặt'; eyebrow = 'ỨNG DỤNG'; viewSettings(v); }
@@ -36,9 +46,29 @@ nav.render = render;
 function fabAction() {
   const r = cur();
   if (r.v === 'devices') deviceForm(null);
+  else if (r.v === 'notes') newNoteAndOpen();
+  else if (r.v === 'journal') taskForm(null, { due: today() });
   else if (r.v === 'parts') $('[data-a=branch]')?.click();
   else if (r.v === 'device') taskForm(null, { deviceId: r.id });
   else taskForm(null);
+}
+
+function leaving() { const r = cur(); if (r.v === 'note') cleanupNote(r.id); }
+
+// ---------- mục Thêm ----------
+function viewMore(v) {
+  const ob = S.state.backlog.filter(b => !b.resolved && b.reason === 'vattu').length;
+  const tiles = [
+    ['tasks', 'tasks', 'Công việc', `${S.state.tasks.filter(t => !t.done).length} việc đang mở`],
+    ['devices', 'device', 'Thiết bị', `${S.state.devices.length} thiết bị · hồ sơ & lịch sử`],
+    ['ref', 'ref', 'Tra cứu kỹ thuật', 'Ống SCH, ren, ống mềm, đổi đơn vị…'],
+    ['buy', 'cart', 'Vật tư cần mua', ob ? `${ob} mục đang chờ vật tư` : 'Gom từ tồn đọng “chờ vật tư”'],
+    ['search', 'search', 'Tìm kiếm', 'Tìm mọi thứ theo mã, tên…'],
+    ['settings', 'settings', 'Cài đặt & sao lưu', 'Giao diện, nhắc việc, sao lưu'],
+  ];
+  v.innerHTML = `<div class="fade-in"><div class="brand"><img src="logo.png" alt=""><div><b>Bảo Trì Thủy Lực</b><span>${esc(S.state.settings.name || 'Sổ tay bảo trì thiết bị thủy lực')}</span></div></div>
+    <div class="refgrid">${tiles.map(([k, i, t, d]) => `<button class="refcard" data-go="${k}"><div class="ri">${ic(i)}</div><div class="rt">${t}</div><div class="rd">${d}</div></button>`).join('')}</div></div>`;
+  $$('[data-go]', v).forEach(b => b.onclick = () => { const k = b.dataset.go; if (['tasks', 'devices', 'ref'].includes(k)) { if (k === 'ref') clearRefQ(); go(k); } else push({ v: k }); });
 }
 
 // ---------- tìm kiếm ----------
@@ -55,10 +85,19 @@ function doSearch(box, q) {
   const m = matcher(q); const hits = [];
   for (const t of S.state.tasks) if (m(t.title) || m(t.note)) hits.push({ k: 'Công việc', t: t.title, s: t.done ? 'Đã xong' : dueLabel(t.due).t, go: () => taskForm(t) });
   for (const d of S.state.devices) if (m(d.name) || m(d.code) || m(d.location) || m(d.note)) hits.push({ k: 'Thiết bị', t: d.name, s: [d.code, d.location].filter(Boolean).join(' · '), go: () => { nav.tab = 'devices'; nav.stack = [{ v: 'device', id: d.id }]; render(); } });
+  for (const n of S.state.notes) {
+    const blob = [n.title, n.qa?.po, n.qa?.supplier].join(' ');
+    if (m(blob)) hits.push({ k: 'Ghi chú', t: n.title || 'Ghi chú không tên', s: n.updated.slice(0, 10), go: () => push({ v: 'note', id: n.id }) });
+    for (const b of n.blocks) {
+      if (b.t === 'img' && ((b.codes || []).some(c => m(c)) || m(b.caption))) hits.push({ k: 'Ảnh vật tư · ' + (n.title || 'Ghi chú'), t: [(b.codes || []).join(', '), b.caption].filter(Boolean).join(' – '), raw: true, go: () => push({ v: 'note', id: n.id }) });
+      else if (b.t !== 'img' && m(b.text)) hits.push({ k: 'Trong ghi chú · ' + (n.title || 'Ghi chú'), t: snippet(b.text, q), raw: true, go: () => push({ v: 'note', id: n.id }) });
+    }
+  }
+  for (const b of S.state.backlog) if (m(b.desc) || m(b.parts) || m(b.action)) hits.push({ k: b.resolved ? 'Tồn đọng · đã xử lý' : 'Tồn đọng', t: b.desc, s: b.parts, go: () => backlogForm(b) });
   const toNode = n => () => { nav.partsNode = n.id; nav.tab = 'parts'; nav.stack = []; render(); };
   for (const n of S.state.nodes) {
-    if (m(n.name)) hits.push({ k: 'Nhánh vật tư', t: n.name, s: `${n.files.length} file`, go: toNode(n) });
-    if (n.codes) n.codes.split('\n').filter(l => m(l)).slice(0, 5).forEach(l => hits.push({ k: 'Mã vật tư · ' + n.name, t: l, raw: true, go: toNode(n) }));
+    if (m(n.name)) hits.push({ k: 'Nhánh tài liệu', t: n.name, s: `${n.files.length} file`, go: toNode(n) });
+    if (n.codes) n.codes.split('\n').filter(l => m(l)).slice(0, 5).forEach(l => hits.push({ k: 'Mã / từ khóa · ' + n.name, t: l, raw: true, go: toNode(n) }));
     for (const f of n.files) {
       if (m(f.name)) hits.push({ k: 'File · ' + n.name, t: f.name, s: fileKind(f.name)[1], go: () => openF(f) });
       const idx = S.index[f.id];
@@ -66,7 +105,7 @@ function doSearch(box, q) {
     }
     for (const l of n.links) if (m(l.title) || m(l.url)) hits.push({ k: 'Liên kết · ' + n.name, t: l.title, s: 'OneDrive', go: toNode(n) });
   }
-  if (!hits.length) { box.innerHTML = `<div class="empty">${ic('search')}Không tìm thấy “${esc(q)}”<br><span style="font-size:12.5px">Mẹo: nhập mã vật tư vào mục “Mã vật tư & ghi chú” của nhánh để tìm được.</span></div>`; return; }
+  if (!hits.length) { box.innerHTML = `<div class="empty">${ic('search')}Không tìm thấy “${esc(q)}”<br><span style="font-size:12.5px">Mẹo: nhập mã vào mục “Mã / từ khóa & ghi chú” của nhánh tài liệu để tìm được.</span></div>`; return; }
   box.innerHTML = `<div class="muted" style="font-size:12.5px;margin:0 4px 8px">${hits.length} kết quả</div>` + hits.slice(0, 120).map((h, i) =>
     `<div class="hit" data-h="${i}"><div class="k">${esc(h.k)}</div><div class="${h.raw ? 's' : 't'}">${highlight(h.t, q)}</div>${h.s ? `<div class="muted" style="font-size:12.5px;margin-top:3px">${esc(h.s)}</div>` : ''}</div>`).join('');
   $$('[data-h]', box).forEach(el => el.onclick = () => hits[+el.dataset.h].go());
@@ -93,22 +132,25 @@ async function viewSettings(v) {
       <div class="set-row"><div class="ic">${ic('clock')}</div><div class="grow"><div class="tt">Giờ nhắc</div><div class="ds">Giờ trong ngày sẽ hiện thông báo</div></div>
         <input type="time" id="sTime" value="${st.remindTime}" style="color-scheme:dark"></div>
       <div class="set-row"><div class="ic">${ic('cal')}</div><div class="grow"><div class="tt">Nhắc thêm vào ngày đến hạn</div><div class="ds">Thêm một thông báo sáng ngày đến hạn</div></div>
-        <input type="checkbox" id="sDue" ${st.dueDay ? 'checked' : ''} style="width:22px;height:22px;accent-color:#D4B06A"></div>
+        <input type="checkbox" id="sDue" ${st.dueDay ? 'checked' : ''} style="width:22px;height:22px;accent-color:var(--gold)"></div>
       <button class="set-row" id="sTest" style="width:100%;text-align:left"><div class="ic">${ic('bell')}</div><div class="grow"><div class="tt">Gửi thông báo thử</div><div class="ds">Kiểm tra điện thoại có hiện thông báo không</div></div>${ic('chev')}</button>
       <button class="set-row" id="sExact" style="width:100%;text-align:left"><div class="ic">${ic('alert')}</div><div class="grow"><div class="tt">Cho phép nhắc đúng giờ</div><div class="ds" id="sExactDs">Đang kiểm tra…</div></div>${ic('chev')}</button>
     </div>
     <div class="sec-h"><h2>Dữ liệu</h2></div>
     <div class="set-group">
-      <button class="set-row" id="sBackup" style="width:100%;text-align:left"><div class="ic">${ic('backup')}</div><div class="grow"><div class="tt">Sao lưu toàn bộ dữ liệu</div><div class="ds">${S.state.tasks.length} việc · ${S.state.devices.length} thiết bị · ${nFiles} file → 1 file .zip, gửi lên OneDrive/Zalo</div></div>${ic('chev')}</button>
+      <button class="set-row" id="sBackup" style="width:100%;text-align:left"><div class="ic">${ic('backup')}</div><div class="grow"><div class="tt">Sao lưu toàn bộ dữ liệu</div><div class="ds">${S.state.tasks.length} việc · ${S.state.notes.length} ghi chú · ${S.state.devices.length} thiết bị · ${nFiles} file → 1 file .zip</div></div>${ic('chev')}</button>
+      <div class="set-row"><div class="ic">${ic('bell')}</div><div class="grow"><div class="tt">Nhắc sao lưu hằng tuần</div><div class="ds">Thông báo 8:00 sáng thứ 2</div></div>
+        <input type="checkbox" id="sBk" ${st.backupRemind !== false ? 'checked' : ''} style="width:22px;height:22px;accent-color:var(--gold)"></div>
       <button class="set-row" id="sRestore" style="width:100%;text-align:left"><div class="ic">${ic('restore')}</div><div class="grow"><div class="tt">Khôi phục từ file sao lưu</div><div class="ds">Dùng khi đổi điện thoại hoặc cài lại app</div></div>${ic('chev')}</button>
     </div>
-    <div class="muted" style="text-align:center;font-size:12px;margin-top:18px">Bảo Trì Thủy Lực · phiên bản 1.0<br>Dữ liệu lưu trên điện thoại, không cần mạng</div></div>`;
+    <div class="about"><img src="logo.png" alt=""><div><b>Bảo Trì Thủy Lực</b><br><span>Phiên bản 2.0 · dữ liệu lưu trên điện thoại, không cần mạng</span></div></div></div>`;
   const q = s => v.querySelector(s);
   $$('[data-theme-opt]', v).forEach(b => b.onclick = () => { st.theme = b.dataset.themeOpt; save(); applyTheme(); render(); });
   q('#sName').onchange = e => { st.name = e.target.value.trim(); save(); };
   q('#sDays').onchange = e => { st.remindDays = +e.target.value; save(); toast('Đã cập nhật lịch nhắc'); };
   q('#sTime').onchange = e => { st.remindTime = e.target.value || '07:00'; save(); toast('Đã cập nhật giờ nhắc'); };
   q('#sDue').onchange = e => { st.dueDay = e.target.checked; save(); };
+  q('#sBk').onchange = e => { st.backupRemind = e.target.checked; save(); };
   q('#sTest').onclick = async () => { if (await testNotif()) toast('Thông báo sẽ hiện sau 3 giây'); else toast('Chỉ hoạt động trên điện thoại'); };
   const ex = await exactAlarmStatus();
   q('#sExactDs').textContent = ex === 'granted' ? '✔ Đã bật – thông báo hiện đúng giờ' : 'Chưa bật – thông báo có thể trễ vài phút. Chạm để bật';
@@ -122,7 +164,7 @@ async function backup() {
   try {
     const zip = new JSZip();
     zip.file('data.json', JSON.stringify({ app: 'baotri', v: 1, at: new Date().toISOString(), state: S.state, index: S.index }));
-    const paths = [...S.state.nodes.flatMap(n => n.files.map(f => f.path)), ...S.state.tasks.flatMap(t => t.photos || [])];
+    const paths = [...new Set([...S.state.nodes.flatMap(n => n.files.map(f => f.path)), ...S.state.tasks.flatMap(t => t.photos || []), ...S.state.backlog.flatMap(b => b.photos || []), ...S.state.notes.flatMap(n => n.blocks.flatMap(b => b.photos || []))])];
     for (let i = 0; i < paths.length; i++) {
       b.set(`Đang đóng gói ${i + 1}/${paths.length}…`);
       try { const d = await readB64(paths[i]); if (d != null) zip.file(paths[i], d, { base64: true }); } catch (e) { console.warn('skip', paths[i]); }
@@ -155,7 +197,7 @@ function applyTheme() {
   const pref = S.state.settings.theme || 'dark';
   const t = pref === 'auto' ? (mq && mq.matches ? 'light' : 'dark') : pref;
   document.documentElement.dataset.theme = t;
-  document.querySelector('meta[name=theme-color]')?.setAttribute('content', t === 'light' ? '#F3F0E8' : '#0B111A');
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', t === 'light' ? '#F2F6FC' : '#081225');
   if (native) SystemBars.setStyle({ style: t === 'light' ? SystemBarsStyle.Light : SystemBarsStyle.Dark }).catch(() => {});
 }
 mq && mq.addEventListener && mq.addEventListener('change', () => { if ((S.state.settings.theme || 'dark') === 'auto') applyTheme(); });
@@ -164,9 +206,10 @@ mq && mq.addEventListener && mq.addEventListener('change', () => { if ((S.state.
 async function init() {
   $('#btnBack').innerHTML = ic('back'); $('#btnSearch').innerHTML = ic('search'); $('#btnSettings').innerHTML = ic('settings'); $('#fab').innerHTML = ic('plus', 2.4);
   $$('#tabbar button').forEach(b => { const [i, l] = TABS[b.dataset.tab]; b.innerHTML = ic(i) + `<span>${l}</span>`; b.onclick = () => { if (b.dataset.tab === 'ref') clearRefQ(); if (b.dataset.tab === 'parts' && nav.tab === 'parts' && !nav.stack.length) nav.partsNode = 'root'; go(b.dataset.tab); }; });
-  $('#btnBack').onclick = () => { if (pop()) return; if (nav.tab === 'parts' && nav.partsNode !== 'root') { nav.partsNode = node(nav.partsNode)?.parentId || 'root'; render(); } };
+  $('#btnBack').onclick = () => { leaving(); if (pop()) return; if (nav.tab === 'parts' && nav.partsNode !== 'root') { nav.partsNode = node(nav.partsNode)?.parentId || 'root'; render(); } };
   $('#btnSearch').onclick = () => { if (cur().v !== 'search') push({ v: 'search' }); };
   $('#btnSettings').onclick = () => { if (cur().v !== 'settings') push({ v: 'settings' }); };
+  $('#btnMenu').innerHTML = ic('dots'); $('#btnMenu').onclick = () => { const r = cur(); if (r.v === 'note') noteMenu(r.id); };
   $('#fab').onclick = fabAction;
   await load();
   applyTheme();
@@ -174,12 +217,13 @@ async function init() {
   onBack(() => {
     if (closePhoto()) return true;
     if (sheetOpen()) { closeTopSheet(); return true; }
+    leaving();
     if (pop()) return true;
     if (nav.tab === 'parts' && nav.partsNode !== 'root') { nav.partsNode = node(nav.partsNode)?.parentId || 'root'; render(); return true; }
     if (nav.tab !== 'home') { go('home'); return true; }
     return false;
   });
-  await notifInit(extra => { const t = extra.taskId && task(extra.taskId); if (t) { go('tasks'); taskForm(t); } });
+  await notifInit(extra => { if (extra.go === 'backup') { go('home'); push({ v: 'settings' }); return; } const t = extra.taskId && task(extra.taskId); if (t) { go('tasks'); taskForm(t); } });
   reschedule();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
 }
