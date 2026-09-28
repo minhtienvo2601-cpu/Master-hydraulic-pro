@@ -8,7 +8,7 @@ import { viewHome, viewTasks, taskForm } from './tasks.js';
 import { viewDevices, viewDevice, deviceForm } from './devices.js';
 import { viewParts, openF } from './parts.js';
 import { viewRef, viewRefSec, refTitle, clearRefQ } from './ref.js';
-import { viewNotes, viewNote, noteMenu, newNoteAndOpen, cleanupNote, note } from './notes.js';
+import { viewNotes, viewNote, noteMenu, newNoteAndOpen, cleanupNote, note, undoNote, redoNote } from './notes.js';
 import { viewJournal, viewBuy, backlogForm } from './journal.js';
 import { closeViewer, deliver } from './viewer.js';
 import { SystemBars, SystemBarsStyle } from '@capacitor/core';
@@ -22,7 +22,7 @@ function render() {
   const r = cur(); const v = $('#view');
   markTab();
   document.body.classList.toggle('editing', r.v === 'note');
-  $('#btnMenu').hidden = r.v !== 'note'; $('#btnSearch').hidden = r.v === 'note'; $('#btnSettings').hidden = r.v === 'note';
+  $('#btnMenu').hidden = r.v !== 'note'; $('#btnUndo').hidden = r.v !== 'note'; $('#btnRedo').hidden = r.v !== 'note'; $('#btnSearch').hidden = r.v === 'note'; $('#btnSettings').hidden = r.v === 'note';
   const sub = nav.stack.length > 0 || (nav.tab === 'parts' && nav.partsNode !== 'root');
   $('#btnBack').hidden = !sub;
   $('#fab').hidden = ['search', 'settings', 'tpl', 'ref', 'refsec', 'more', 'note', 'buy'].includes(r.v);
@@ -97,7 +97,7 @@ function doSearch(box, q) {
     const blob = [n.title, n.qa?.po, n.qa?.supplier].join(' ');
     if (m(blob)) hits.push({ k: 'Ghi chú', t: n.title || 'Ghi chú không tên', s: n.updated.slice(0, 10), go: () => push({ v: 'note', id: n.id }) });
     for (const b of n.blocks) {
-      if (b.t === 'img' && ((b.codes || []).some(c => m(c)) || m(b.caption) || m(b.name))) hits.push({ k: 'Ảnh vật tư · ' + (n.title || 'Ghi chú'), t: [(b.codes || []).join(', '), b.name, b.caption].filter(Boolean).join(' – '), raw: true, go: () => push({ v: 'note', id: n.id }) });
+      if (b.t === 'img' && ((b.codes || []).some(c => m(c)) || m(b.caption))) hits.push({ k: 'Ảnh vật tư · ' + (n.title || 'Ghi chú'), t: [(b.codes || []).join(', '), b.caption].filter(Boolean).join(' – '), raw: true, go: () => push({ v: 'note', id: n.id }) });
       else if (b.t !== 'img' && m(b.text)) hits.push({ k: 'Trong ghi chú · ' + (n.title || 'Ghi chú'), t: snippet(b.text, q), raw: true, go: () => push({ v: 'note', id: n.id }) });
     }
   }
@@ -236,7 +236,7 @@ async function backup() {
   try {
     const zip = new JSZip();
     zip.file('data.json', JSON.stringify({ app: 'baotri', v: 1, at: new Date().toISOString(), state: S.state, index: S.index }));
-    const paths = [...new Set([...S.state.nodes.flatMap(n => n.files.map(f => f.path)), ...S.state.tasks.flatMap(t => t.photos || []), ...S.state.backlog.flatMap(b => b.photos || []), ...S.state.notes.flatMap(n => n.blocks.flatMap(b => b.photos || [])), ...(S.state.settings.logoPath ? [S.state.settings.logoPath] : [])])];
+    const paths = [...new Set([...S.state.nodes.flatMap(n => n.files.map(f => f.path)), ...S.state.tasks.flatMap(t => t.photos || []), ...S.state.backlog.flatMap(b => b.photos || []), ...S.state.notes.flatMap(n => n.blocks.flatMap(b => [b.tem, ...(b.photos || [])].filter(Boolean))), ...(S.state.settings.logoPath ? [S.state.settings.logoPath] : [])])];
     for (let i = 0; i < paths.length; i++) {
       b.set(`Đang đóng gói ${i + 1}/${paths.length}…`);
       try { const d = await readB64(paths[i]); if (d != null) zip.file(paths[i], d, { base64: true }); } catch (e) { console.warn('skip', paths[i]); }
@@ -294,6 +294,11 @@ function initDesktop() {
   document.addEventListener('keydown', e => {
     const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '') || document.activeElement?.isContentEditable;
     if (e.key === 'Escape') { if (typing && document.activeElement.blur && !sheetOpen() && !document.querySelector('.vw')) { document.activeElement.blur(); return; } e.preventDefault(); handleBack(); return; }
+    if ((e.ctrlKey || e.metaKey) && cur().v === 'note' && !sheetOpen() && !document.querySelector('.vw,.photo-view')) {
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); undoNote(); return; }
+      if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); redoNote(); return; }
+    }
     if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'k')) {
       e.preventDefault();
       const vf = document.querySelector('.vw [data-a=find]'); if (vf) { vf.click(); return; }
@@ -315,6 +320,9 @@ async function init() {
   $('#btnBack').onclick = () => { leaving(); if (pop()) return; if (nav.tab === 'parts' && nav.partsNode !== 'root') { nav.partsNode = node(nav.partsNode)?.parentId || 'root'; render(); } };
   $('#btnSearch').onclick = () => { if (cur().v !== 'search') push({ v: 'search' }); };
   $('#btnSettings').onclick = () => { if (cur().v !== 'settings') push({ v: 'settings' }); };
+  $('#btnUndo').innerHTML = ic('undo'); $('#btnRedo').innerHTML = ic('redo');
+  $('#btnUndo').onmousedown = e => e.preventDefault(); $('#btnRedo').onmousedown = e => e.preventDefault();
+  $('#btnUndo').onclick = () => undoNote(); $('#btnRedo').onclick = () => redoNote();
   $('#btnMenu').innerHTML = ic('dots'); $('#btnMenu').onclick = () => { const r = cur(); if (r.v === 'note') noteMenu(r.id); };
   $('#fab').onclick = fabAction;
   await load();

@@ -69,12 +69,15 @@ export function busy(msg) {
 }
 let pv = null;
 // Xem ảnh toàn màn hình: chụm 2 ngón / chạm đúp / Ctrl+lăn chuột để phóng to, kéo để di chuyển
-export function viewPhoto(src) {
+export function viewPhoto(src, opts = {}) {
   closePhoto();
+  const acts = opts.actions || [];
   pv = document.createElement('div'); pv.className = 'photo-view';
-  pv.innerHTML = `<img src="${src}" draggable="false" alt=""><button aria-label="Đóng">${ic('x')}</button><div class="pv-hint">Chụm 2 ngón hoặc chạm đúp để phóng to</div>`;
+  pv.innerHTML = `<img src="${src}" draggable="false" alt=""><button class="pv-x" aria-label="Đóng">${ic('x')}</button>
+    ${acts.length ? `<div class="pv-acts">${acts.map((a, i) => `<button data-act="${i}">${ic(a.icon || 'check')}<span>${esc(a.label)}</span></button>`).join('')}</div>` : `<div class="pv-hint">Chụm 2 ngón hoặc chạm đúp để phóng to</div>`}`;
   document.body.appendChild(pv);
-  const img = pv.querySelector('img'); pv.querySelector('button').onclick = closePhoto;
+  const img = pv.querySelector('img'); pv.querySelector('.pv-x').onclick = closePhoto;
+  pv.querySelectorAll('[data-act]').forEach(b => b.onclick = () => { const a = acts[+b.dataset.act]; closePhoto(); a.run(); });
   let s = 1, tx = 0, ty = 0; const MAX = 6;
   const pts = new Map(); let g = null, lastTap = null, moved = false;
   const apply = (anim) => { img.style.transition = anim ? 'transform .2s' : 'none'; img.style.transform = `translate(${tx}px,${ty}px) scale(${s})`; };

@@ -156,14 +156,6 @@ export async function rangeRead(path, offset, length) {
   return b64ToBytes(r.data || '');
 }
 
-// ---------- đọc chữ trên ảnh (ML Kit, chỉ có trên điện thoại) ----------
-const TextOcr = registerPlugin('TextOcr');
-export const ocrAvailable = native || !!globalThis.__ocrMock; // __ocrMock: chỉ dùng khi chạy thử trên máy tính
-export async function ocrPhoto(path) {
-  if (globalThis.__ocrMock) return globalThis.__ocrMock(path);
-  const r = await TextOcr.recognize({ path }); return { text: r.text || '', lines: r.lines || [] };
-}
-
 // ---------- share / export ----------
 // Chia sẻ (Zalo, Drive, Gmail…) từ dữ liệu base64
 export async function shareFile(name, b64, mime) {

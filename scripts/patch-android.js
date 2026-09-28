@@ -53,7 +53,6 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(FileRangePlugin.class);
-        registerPlugin(TextOcrPlugin.class);
         super.onCreate(savedInstanceState);
         Window w = getWindow();
         WindowCompat.setDecorFitsSystemWindows(w, false);
@@ -131,69 +130,6 @@ public class FileRangePlugin extends Plugin {
 }
 `);
 
-// Plugin đọc chữ trên ảnh tem vật tư (Google ML Kit, chạy ngay trên máy, không cần mạng)
-fs.writeFileSync('android/app/src/main/java/vn/tien/baotri/TextOcrPlugin.java', `package vn.tien.baotri;
-
-import android.graphics.Rect;
-import android.net.Uri;
-import com.getcapacitor.JSArray;
-import com.getcapacitor.JSObject;
-import com.getcapacitor.Plugin;
-import com.getcapacitor.PluginCall;
-import com.getcapacitor.PluginMethod;
-import com.getcapacitor.annotation.CapacitorPlugin;
-import com.google.mlkit.vision.common.InputImage;
-import com.google.mlkit.vision.text.Text;
-import com.google.mlkit.vision.text.TextRecognition;
-import com.google.mlkit.vision.text.TextRecognizer;
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
-import java.io.File;
-
-@CapacitorPlugin(name = "TextOcr")
-public class TextOcrPlugin extends Plugin {
-    private TextRecognizer recognizer;
-
-    @PluginMethod
-    public void recognize(final PluginCall call) {
-        String path = call.getString("path");
-        if (path == null) { call.reject("missing path"); return; }
-        File f = new File(getContext().getFilesDir(), path);
-        if (!f.isFile()) { call.reject("not found"); return; }
-        InputImage image;
-        try {
-            image = InputImage.fromFilePath(getContext(), Uri.fromFile(f));
-        } catch (Exception e) {
-            call.reject("image error: " + e.getMessage());
-            return;
-        }
-        if (recognizer == null) recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
-        recognizer.process(image)
-            .addOnSuccessListener(result -> {
-                JSArray lines = new JSArray();
-                for (Text.TextBlock b : result.getTextBlocks()) {
-                    for (Text.Line l : b.getLines()) {
-                        JSObject o = new JSObject();
-                        o.put("text", l.getText());
-                        Rect r = l.getBoundingBox();
-                        if (r != null) {
-                            o.put("x", r.left);
-                            o.put("y", r.top);
-                            o.put("w", r.width());
-                            o.put("h", r.height());
-                        }
-                        lines.put(o);
-                    }
-                }
-                JSObject ret = new JSObject();
-                ret.put("text", result.getText());
-                ret.put("lines", lines);
-                call.resolve(ret);
-            })
-            .addOnFailureListener(e -> call.reject("ocr error: " + e.getMessage()));
-    }
-}
-`);
-
 // quyền
 const man = 'android/app/src/main/AndroidManifest.xml';
 let m = fs.readFileSync(man, 'utf8');
@@ -226,10 +162,6 @@ if (!g.includes('signingConfigs')) {
             signingConfig signingConfigs.fixedKey
         }`);
 }
-// thư viện đọc chữ ML Kit (mô hình chữ Latin có sẵn trong app → dùng được khi không có mạng)
-if (!g.includes('com.google.mlkit:text-recognition')) g = g.replace(/\ndependencies \{/, "\ndependencies {\n    implementation 'com.google.mlkit:text-recognition:16.0.1'");
-if (!g.includes('abiFilters')) g = g.replace(/defaultConfig \{/, "defaultConfig {\n        ndk { abiFilters 'arm64-v8a', 'armeabi-v7a' }");
-if (!g.includes('com.google.mlkit:text-recognition')) { console.error('patch-android: KHÔNG chèn được ML Kit!'); process.exit(1); }
 if (!g.includes('signingConfig signingConfigs.fixedKey')) { console.error('patch-android: KHÔNG chèn được cấu hình ký!'); process.exit(1); }
 fs.writeFileSync(bg, g);
 console.log('patch-android: OK, version 1.0.' + run);

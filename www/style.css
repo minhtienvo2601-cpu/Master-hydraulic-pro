@@ -225,7 +225,7 @@ input[type=date].inp,input[type=time]{color-scheme:var(--scheme)}
 .set-row select,.set-row input{background:var(--s2);border:1px solid var(--line2);border-radius:10px;padding:8px 10px;outline:none}
 .photo-view{position:fixed;inset:0;background:#000;z-index:80;display:grid;place-items:center;overflow:hidden;touch-action:none;user-select:none}
 .photo-view img{max-width:100%;max-height:100%}
-.photo-view button{position:absolute;top:calc(var(--sat) + 14px);right:14px;width:42px;height:42px;border-radius:14px;background:rgba(255,255,255,.12);display:grid;place-items:center}
+.photo-view .pv-x{position:absolute;top:calc(var(--sat) + 14px);right:14px;width:42px;height:42px;border-radius:14px;background:rgba(255,255,255,.12);display:grid;place-items:center}
 #toast{position:fixed;left:50%;bottom:calc(var(--sab) + 96px);transform:translate(-50%,20px);background:#E6F0FF;color:#0B2A66;
   padding:11px 18px;border-radius:14px;font-weight:600;font-size:14px;opacity:0;transition:.25s;z-index:90;pointer-events:none;max-width:88%;text-align:center}
 #toast.show{opacity:1;transform:translate(-50%,0)}
@@ -574,11 +574,25 @@ body.editing .ed-bar{display:grid}
 .photo-view button{z-index:2}
 .pv-hint{position:absolute;left:50%;bottom:calc(var(--sab) + 24px);transform:translateX(-50%);background:rgba(255,255,255,.14);color:#fff;font-size:12.5px;padding:7px 14px;border-radius:999px;white-space:nowrap;transition:opacity .4s;pointer-events:none}
 .pv-hint.hide{opacity:0}
-/* tên vật tư + đọc tem */
-.bi-name{width:100%;margin-top:8px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:10px;outline:none;resize:none;overflow:hidden;font-size:15px;font-weight:600;color:var(--tx)}
-.bi-nametxt{margin-top:6px;font-size:14px;font-weight:600;color:var(--tx)}
-.bi-ocr{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:10px;background:var(--goldDim);border:1px solid rgba(30,111,255,.45);color:var(--gold2);font-size:12.5px;font-weight:700}
-.bi-ocr svg{width:15px;height:15px}
-.ocr-raw{margin:4px 0 14px;font-size:13px;color:var(--tx2)}
-.ocr-raw summary{cursor:pointer;padding:4px 0}
-.ocr-raw pre{white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;margin:6px 0 0;font-size:12.5px;max-height:180px;overflow:auto}
+
+.pv-acts{position:absolute;left:0;right:0;bottom:calc(var(--sab) + 20px);display:flex;justify-content:center;gap:10px;z-index:2}
+.pv-acts button{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:14px;background:rgba(255,255,255,.16);color:#fff;font-weight:600;font-size:14px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.2)}
+.pv-acts svg{width:18px;height:18px}
+/* ảnh tem vật tư */
+.bi-temadd{width:100%;display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;border:1.5px dashed rgba(30,111,255,.55);background:var(--goldDim);color:var(--gold2);text-align:left;margin-bottom:8px}
+.bi-temadd svg{width:26px;height:26px;flex:none}
+.bi-temadd b{display:block;font-size:14.5px}.bi-temadd small{display:block;font-size:12px;color:var(--tx2);font-weight:500;margin-top:2px}
+.bi-tem{position:relative;border-radius:14px;overflow:hidden;border:2px solid rgba(30,111,255,.6);margin-bottom:8px;background:#000}
+.bi-tem img{display:block;width:100%;max-height:260px;object-fit:contain;cursor:zoom-in}
+.bi-temlb{position:absolute;left:8px;top:8px;display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:8px;background:#1E6FFF;color:#fff;font-size:12px;font-weight:700}
+.bi-temlb svg{width:13px;height:13px}
+.bi-temx{position:absolute;right:8px;top:8px;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:grid;place-items:center}
+.bi-temx svg{width:13px;height:13px}
+.bi-temre{position:absolute;right:8px;bottom:8px;display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:10px;background:rgba(0,0,0,.6);color:#fff;font-size:12.5px;font-weight:600}
+.bi-temre svg{width:14px;height:14px}
+.bi-temth{position:relative;flex:none}
+.bi-temth img{border:2px solid #1E6FFF!important}
+.bi-temth span{position:absolute;left:3px;bottom:3px;background:#1E6FFF;color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:5px}
+.bi-strip img{cursor:zoom-in}
+/* nút quay lại / làm lại */
+.icon-btn.off{opacity:.35}

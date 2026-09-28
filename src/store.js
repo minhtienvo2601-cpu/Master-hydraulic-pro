@@ -51,6 +51,8 @@ function migrate() {
   st.notes = st.notes || []; st.backlog = st.backlog || [];
   if (!st.noteCats || !st.noteCats.length) st.noteCats = blank().noteCats;
   for (const n of st.nodes) for (const f of n.files) if (f.pinned == null) f.pinned = false;
+  // bản 10 có ô "Tên vật tư" (đã bỏ) → chuyển vào đầu ô Chú thích để không mất chữ
+  for (const n of st.notes) for (const b of n.blocks) if (b.t === 'img' && b.name != null) { const nm = String(b.name).trim(); if (nm) b.caption = nm + (b.caption && b.caption.trim() ? ' – ' + b.caption : ''); delete b.name; }
 }
 let t1 = null;
 export function save(opts = {}) {
@@ -122,7 +124,7 @@ export function pathInUse(path, except) {
   const inArr = a => (a || []).includes(path);
   if (st.tasks.some(t => t !== except && inArr(t.photos))) return true;
   if (st.backlog.some(b => b !== except && inArr(b.photos))) return true;
-  if (st.notes.some(n => n !== except && n.blocks.some(k => k.t === 'img' && inArr(k.photos)))) return true;
+  if (st.notes.some(n => n !== except && n.blocks.some(k => k.t === 'img' && (inArr(k.photos) || k.tem === path)))) return true;
   return st.nodes.some(n => n.files.some(f => f.path === path));
 }
 
