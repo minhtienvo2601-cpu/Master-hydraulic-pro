@@ -574,3 +574,11 @@ body.editing .ed-bar{display:grid}
 .photo-view button{z-index:2}
 .pv-hint{position:absolute;left:50%;bottom:calc(var(--sab) + 24px);transform:translateX(-50%);background:rgba(255,255,255,.14);color:#fff;font-size:12.5px;padding:7px 14px;border-radius:999px;white-space:nowrap;transition:opacity .4s;pointer-events:none}
 .pv-hint.hide{opacity:0}
+/* tên vật tư + đọc tem */
+.bi-name{width:100%;margin-top:8px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:10px;outline:none;resize:none;overflow:hidden;font-size:15px;font-weight:600;color:var(--tx)}
+.bi-nametxt{margin-top:6px;font-size:14px;font-weight:600;color:var(--tx)}
+.bi-ocr{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:10px;background:var(--goldDim);border:1px solid rgba(30,111,255,.45);color:var(--gold2);font-size:12.5px;font-weight:700}
+.bi-ocr svg{width:15px;height:15px}
+.ocr-raw{margin:4px 0 14px;font-size:13px;color:var(--tx2)}
+.ocr-raw summary{cursor:pointer;padding:4px 0}
+.ocr-raw pre{white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;margin:6px 0 0;font-size:12.5px;max-height:180px;overflow:auto}

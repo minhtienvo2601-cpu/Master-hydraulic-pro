@@ -97,7 +97,7 @@ function doSearch(box, q) {
     const blob = [n.title, n.qa?.po, n.qa?.supplier].join(' ');
     if (m(blob)) hits.push({ k: 'Ghi chú', t: n.title || 'Ghi chú không tên', s: n.updated.slice(0, 10), go: () => push({ v: 'note', id: n.id }) });
     for (const b of n.blocks) {
-      if (b.t === 'img' && ((b.codes || []).some(c => m(c)) || m(b.caption))) hits.push({ k: 'Ảnh vật tư · ' + (n.title || 'Ghi chú'), t: [(b.codes || []).join(', '), b.caption].filter(Boolean).join(' – '), raw: true, go: () => push({ v: 'note', id: n.id }) });
+      if (b.t === 'img' && ((b.codes || []).some(c => m(c)) || m(b.caption) || m(b.name))) hits.push({ k: 'Ảnh vật tư · ' + (n.title || 'Ghi chú'), t: [(b.codes || []).join(', '), b.name, b.caption].filter(Boolean).join(' – '), raw: true, go: () => push({ v: 'note', id: n.id }) });
       else if (b.t !== 'img' && m(b.text)) hits.push({ k: 'Trong ghi chú · ' + (n.title || 'Ghi chú'), t: snippet(b.text, q), raw: true, go: () => push({ v: 'note', id: n.id }) });
     }
   }

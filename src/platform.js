@@ -107,10 +107,10 @@ export async function openUrl(url) {
 async function storePhoto(blob, uid) { const p = `photos/${uid}.jpg`; await saveBlob(p, blob); return p; }
 const rid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 // Chụp ảnh liên tục: sau mỗi tấm tự mở lại camera, bấm Quay lại để dừng. onEach(path) gọi sau mỗi tấm.
-export async function capturePhotos(onEach) {
+export async function capturePhotos(onEach, max = 30) {
   const out = [];
-  if (!native) { const fs = await pickFiles('image/*', true); for (const f of fs) { const p = await storePhoto(f, rid()); out.push(p); onEach && onEach(p); } return out; }
-  for (let i = 0; i < 30; i++) {
+  if (!native) { const fs = await pickFiles('image/*', max > 1); for (const f of fs.slice(0, max)) { const p = await storePhoto(f, rid()); out.push(p); onEach && onEach(p); } return out; }
+  for (let i = 0; i < max; i++) {
     let r;
     try { r = await Camera.takePhoto({ quality: 72, targetWidth: 1600, targetHeight: 1600, correctOrientation: true, saveToGallery: false }); }
     catch (e) { break; } // người dùng bấm Quay lại / hủy
@@ -121,11 +121,11 @@ export async function capturePhotos(onEach) {
   return out;
 }
 // Chọn nhiều ảnh từ thư viện cùng lúc
-export async function pickPhotos(onEach) {
+export async function pickPhotos(onEach, max = 0) {
   const out = [];
-  if (!native) { const fs = await pickFiles('image/*', true); for (const f of fs) { const p = await storePhoto(f, rid()); out.push(p); onEach && onEach(p); } return out; }
+  if (!native) { const fs = await pickFiles('image/*', max !== 1); for (const f of (max ? fs.slice(0, max) : fs)) { const p = await storePhoto(f, rid()); out.push(p); onEach && onEach(p); } return out; }
   let res;
-  try { res = await Camera.chooseFromGallery({ allowMultipleSelection: true, limit: 0, quality: 72, targetWidth: 1600, targetHeight: 1600, correctOrientation: true }); }
+  try { res = await Camera.chooseFromGallery({ allowMultipleSelection: max !== 1, limit: max, quality: 72, targetWidth: 1600, targetHeight: 1600, correctOrientation: true }); }
   catch (e) { return out; }
   for (const r of (res && res.results) || []) {
     try { const blob = await (await fetch(r.webPath)).blob(); const p = await storePhoto(blob, rid()); out.push(p); onEach && onEach(p); } catch (e) { console.warn(e); }
@@ -154,6 +154,14 @@ export async function rangeSize(path) {
 export async function rangeRead(path, offset, length) {
   const r = await FileRange.read({ path, offset: String(offset), length: String(length) });
   return b64ToBytes(r.data || '');
+}
+
+// ---------- đọc chữ trên ảnh (ML Kit, chỉ có trên điện thoại) ----------
+const TextOcr = registerPlugin('TextOcr');
+export const ocrAvailable = native || !!globalThis.__ocrMock; // __ocrMock: chỉ dùng khi chạy thử trên máy tính
+export async function ocrPhoto(path) {
+  if (globalThis.__ocrMock) return globalThis.__ocrMock(path);
+  const r = await TextOcr.recognize({ path }); return { text: r.text || '', lines: r.lines || [] };
 }
 
 // ---------- share / export ----------

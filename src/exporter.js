@@ -162,8 +162,10 @@ export async function exportPdf(doc, onStep) {
     const innerW = CW - 2 * pad; const tileW = cols === 1 ? innerW : (innerW - gap * (cols - 1)) / cols;
     const tileH = cols === 1 ? Math.min(92, innerW * 0.55) : tileW * 0.72;
     font(9.2, 'italic'); const capLines = c.caption ? pdf.splitTextToSize(c.caption, innerW) : [];
+    font(9.8, 'bold'); const nameLines = c.name ? pdf.splitTextToSize(c.name, innerW) : [];
     const capH = capLines.length ? capLines.length * lh(9.2) * 1.1 + 2 : 0; const rowH = tileH + labelH + 2;
-    const total = headH + pad + Math.max(1, Math.ceil(d.length / cols)) * rowH + capH + pad;
+    const nameH = nameLines.length ? nameLines.length * lh(9.8) * 1.1 + 2 : 0;
+    const total = headH + pad + nameH + Math.max(1, Math.ceil(d.length / cols)) * rowH + capH + pad;
     return { total: total + 3, fits: total <= BOT - TOP2, headH, rowH };
   }
   function drawCard(c) {
@@ -173,9 +175,11 @@ export async function exportPdf(doc, onStep) {
     const tileH = cols === 1 ? Math.min(92, innerW * 0.55) : tileW * 0.72;
     const rowsN = Math.ceil(d.length / cols);
     font(9.2, 'italic'); const capLines = c.caption ? pdf.splitTextToSize(c.caption, innerW) : [];
+    font(9.8, 'bold'); const nameLines = c.name ? pdf.splitTextToSize(c.name, innerW) : [];
     const capH = capLines.length ? capLines.length * lh(9.2) * 1.1 + 2 : 0;
+    const nameH = nameLines.length ? nameLines.length * lh(9.8) * 1.1 + 2 : 0;
     const rowH = tileH + labelH + 2;
-    const total = headH + pad + rowsN * rowH + capH + pad;
+    const total = headH + pad + nameH + rowsN * rowH + capH + pad;
     const fits = total <= BOT - TOP2;
     need(fits ? total + 3 : headH + rowH + 3);
     const y0 = y;
@@ -187,6 +191,8 @@ export async function exportPdf(doc, onStep) {
     const r = RES[c.result];
     if (r) { font(8.4, 'bold', [255, 255, 255]); const bw = pdf.getTextWidth(r.t) + 6; pdf.setFillColor(...r.c); pdf.roundedRect(W - M - pad - bw, y + 1.8, bw, 5.4, 1.2, 1.2, 'F'); pdf.text(r.t, W - M - pad - bw / 2, y + 5.6, { align: 'center' }); }
     y += headH + pad;
+    // tên vật tư
+    if (nameLines.length) { font(9.8, 'bold', [22, 30, 46]); nameLines.forEach(l => { pdf.text(l, M + pad, y + lh(9.8) * 0.8); y += lh(9.8) * 1.1; }); y += 2; }
     // ảnh
     for (let rI = 0; rI < rowsN; rI++) {
       if (!fits) need(rowH);
@@ -300,6 +306,7 @@ function docxCard(c, contentPx, landscape, CWt) {
       ...(c.qty ? [R(`   · SL: ${c.qty}`, { size: 19, color: hex(GREY) })] : []),
       ...(res ? [R('\t' + res.t, { bold: true, size: 19, color: hex(res.c) })] : [])] })] })] });
   const rows = [head];
+  if (c.name) rows.push(new TableRow({ cantSplit: true, children: [new TableCell({ columnSpan: cols, borders: allB(), margins: cm, children: [P(R(c.name, { bold: true, size: 19 }), { after: 0, keepNext: true })] })] }));
   for (let i = 0; i < d.length; i += cols) {
     rows.push(new TableRow({ cantSplit: true, children: Array.from({ length: cols }, (_, j) => { const im = d[i + j]; const k = i + j + 1;
       if (!im) return new TableCell({ borders: allB(), width: { size: Math.round(CWt / cols), type: WidthType.DXA }, children: [P([])] });

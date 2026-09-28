@@ -3,7 +3,8 @@ import { nav, push, pop } from './nav.js';
 import { ic } from './icons.js';
 import { esc, uid, today, fmtD, fmtShort, matcher, highlight, $$ } from './util.js';
 import { openSheet, confirmBox, promptBox, menu, toast, busy, viewPhoto, addPhotos } from './ui.js';
-import { deletePath, fileSrc } from './platform.js';
+import { deletePath, fileSrc, capturePhotos, pickPhotos, ocrPhoto, ocrAvailable } from './platform.js';
+import { parseLabel } from './label.js';
 import { exportPdf, exportDocx, exportXlsx } from './exporter.js';
 
 export const note = id => S.state.notes.find(n => n.id === id);
@@ -145,7 +146,7 @@ function focusBlock(v, id) { const el = v.querySelector(`[data-bid="${id}"] text
 function autoGrow(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
 
 // mục ảnh "đã nhập" = có ảnh hoặc mã hoặc chú thích
-const hasContent = b => (b.photos || []).length || (b.codes || []).length || (b.caption || '').trim();
+const hasContent = b => (b.photos || []).length || (b.codes || []).length || (b.caption || '').trim() || (b.name || '').trim();
 function lockDone(n) { let ch = false; for (const b of n.blocks) if (b.t === 'img' && !b.locked && hasContent(b)) { b.locked = true; ch = true; } if (ch) touch(n); return ch; }
 function scrollToBlock(v, id) { setTimeout(() => { const el = v.querySelector(`[data-bid="${id}"]`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60); }
 function lockedHtml(b, imgNo) {
@@ -154,6 +155,7 @@ function lockedHtml(b, imgNo) {
       <button class="bi-unlock" data-unlock>${ic('lock')}<span>Mở khóa</span></button><button class="more" data-bm="${b.id}">${ic('dots')}</button></div>
     ${(b.photos || []).length ? `<div class="bi-strip">${b.photos.map((p, i) => `<img data-src="${esc(p)}" data-i="${i}">`).join('')}</div>` : ''}
     ${(b.codes || []).length ? `<div class="bi-codes ro">${b.codes.map(c => `<span class="code">${esc(c)}</span>`).join('')}</div>` : ''}
+    ${(b.name || '').trim() ? `<div class="bi-nametxt">${esc(b.name)}</div>` : ''}
     ${(b.caption || '').trim() ? `<div class="bi-captxt">${esc(b.caption)}</div>` : ''}
     ${b.qa === 'ng' && b.backlogId ? `<div class="bi-captxt muted" style="font-style:normal">${ic('alert')} Đã tạo tồn đọng</div>` : ''}
   </div>`;
@@ -166,16 +168,17 @@ function renderBlocks(v, n) {
       imgNo++;
       if (b.locked) return lockedHtml(b, imgNo);
       return `<div class="blk blk-img" data-bid="${b.id}">
-        <div class="bi-head"><b>Hình ${imgNo}</b><span class="grow"></span>${b.qa ? `<span class="qa ${QA[b.qa][1]}">${QA[b.qa][0]}</span>` : ''}<button class="more" data-bm="${b.id}">${ic('dots')}</button></div>
+        <div class="bi-head"><b>Hình ${imgNo}</b><span class="grow"></span>${b.qa ? `<span class="qa ${QA[b.qa][1]}">${QA[b.qa][0]}</span>` : ''}${ocrAvailable ? `<button class="bi-ocr" data-ocr>${ic('scan')}<span>Đọc tem</span></button>` : ''}<button class="more" data-bm="${b.id}">${ic('dots')}</button></div>
         <div class="bi-grid">${(b.photos || []).map((p, i) => `<div class="bi-ph"><img data-src="${esc(p)}" data-i="${i}"><button data-rmph="${i}">${ic('x', 2.4)}</button></div>`).join('')}
           <button class="bi-add" data-addph>${ic('camera')}<span>${b.photos?.length ? 'Thêm ảnh' : 'Chụp / chọn ảnh'}</span></button></div>
         <div class="bi-codes">${(b.codes || []).map((c, i) => `<span class="code">${esc(c)}<button data-rmc="${i}">${ic('x', 2.6)}</button></span>`).join('')}
           <input class="cinp" autocomplete="off" placeholder="${b.codes?.length ? '+ mã khác' : 'Nhập mã vật tư…'}" enterkeyhint="done"></div>
         <div class="csug" hidden></div>
-        <textarea class="bi-cap" rows="1" placeholder="Chú thích / mô tả (tùy chọn)">${esc(b.caption || '')}</textarea>
+        <textarea class="bi-name" rows="1" placeholder="Tên vật tư">${esc(b.name || '')}</textarea>
         <div class="bi-row"><div class="qa-seg">${Object.entries(QA).map(([k, [l, c]]) => `<button data-qa="${k}" class="${c} ${b.qa === k ? 'on' : ''}">${l}</button>`).join('')}</div>
           <input class="bi-qty" placeholder="SL" value="${esc(b.qty || '')}"></div>
         ${b.qa === 'ng' ? `<button class="btn sec bi-bl" data-bl>${ic('alert')} ${b.backlogId ? 'Đã tạo tồn đọng ✔' : 'Tạo tồn đọng / khiếu nại NCC'}</button>` : ''}
+        <textarea class="bi-cap" rows="1" placeholder="Chú thích / mô tả (tùy chọn)">${esc(b.caption || '')}</textarea>
         ${hasContent(b) ? `<button class="btn pri bi-done" data-done>${ic('check')} Xong – khóa mục này</button>` : ''}
       </div>`;
     }
@@ -239,14 +242,57 @@ function bindImg(v, n, b, el) {
   ci.onchange = () => { if (ci.value && S.state && ci.value.length > 2) addCode(); };
   ci.onblur = () => { if (ci.value.trim()) addCode(); };
   const cap = el.querySelector('.bi-cap'); cap.oninput = () => { b.caption = cap.value; autoGrow(cap); touch(n); };
+  const nm = el.querySelector('.bi-name'); nm.oninput = () => { b.name = nm.value.replace(/\n/g, ' '); autoGrow(nm); touch(n); };
+  const oc = el.querySelector('[data-ocr]'); if (oc) oc.onclick = () => readLabel(v, n, b);
   el.querySelector('.bi-qty').oninput = e => { b.qty = e.target.value; touch(n); };
   $$('[data-qa]', el).forEach(x => x.onclick = () => { b.qa = b.qa === x.dataset.qa ? '' : x.dataset.qa; touch(n); renderBlocks(v, n); });
   const blb = el.querySelector('[data-bl]'); if (blb) blb.onclick = () => {
     if (b.backlogId) { toast('Tồn đọng đã được tạo – xem ở Nhật ký'); return; }
-    const nb = newBacklog({ deviceId: n.deviceId, desc: `QA không đạt: ${(b.codes || []).join(', ') || 'vật tư'}${b.caption ? ' – ' + b.caption : ''}`, reason: 'khac', reasonText: 'Chờ đổi hàng / khiếu nại nhà cung cấp', parts: (b.codes || []).join(', '), photos: [...(b.photos || [])], fromNote: n.id, severity: 2 });
+    const nb = newBacklog({ deviceId: n.deviceId, desc: `QA không đạt: ${(b.codes || []).join(', ') || 'vật tư'}${b.name ? ' ' + b.name : ''}${b.caption ? ' – ' + b.caption : ''}`, reason: 'khac', reasonText: 'Chờ đổi hàng / khiếu nại nhà cung cấp', parts: (b.codes || []).join(', '), photos: [...(b.photos || [])], fromNote: n.id, severity: 2 });
     b.backlogId = nb.id; touch(n); renderBlocks(v, n); toast('Đã tạo tồn đọng – xem ở tab Nhật ký');
   };
 }
+// ---------- đọc tem vật tư: lấy mã + tên ----------
+function readLabel(v, n, b) {
+  const has = (b.photos || []).length;
+  openSheet('Đọc tem vật tư', `<p class="muted" style="margin:0 0 10px;font-size:13.5px">Chụp gần, thẳng, rõ chữ, tránh lóa nilon. App lấy <b>mã vật tư</b> và <b>tên vật tư</b> trên tem.</p>
+    <button class="menu-item" data-k="cam">${ic('camera')}<span>Chụp tem</span></button>
+    <button class="menu-item" data-k="lib">${ic('grid')}<span>Chọn ảnh tem trong thư viện</span></button>
+    ${has ? `<button class="menu-item" data-k="have">${ic('scan')}<span>Đọc từ ảnh đã có trong mục này</span></button>` : ''}`, (body, close) => {
+    body.querySelectorAll('[data-k]').forEach(x => x.onclick = () => { close(); setTimeout(() => runOcr(v, n, b, x.dataset.k), 250); });
+  });
+}
+async function runOcr(v, n, b, kind) {
+  let paths = [];
+  try { paths = kind === 'cam' ? await capturePhotos(null, 1) : kind === 'lib' ? await pickPhotos(null, 1) : [...(b.photos || [])].reverse(); }
+  catch (e) { paths = []; }
+  if (!paths.length) return;
+  if (kind !== 'have') { b.photos = [...(b.photos || []), paths[0]]; touch(n); renderBlocks(v, n); }
+  const bz = busy('Đang đọc chữ trên tem…'); let best = null;
+  try {
+    for (const p of paths.slice(0, 6)) {
+      const r = await ocrPhoto(p); const pr = parseLabel(r.text);
+      if (!best || (pr.code && !best.code)) best = { ...pr, raw: r.text };
+      if (pr.code) break;
+    }
+  } catch (e) { bz.done(); toast('Không đọc được chữ trên ảnh: ' + (e.message || e), 3500); return; }
+  bz.done();
+  const r = best || { code: '', name: '', raw: '' };
+  openSheet('Kết quả đọc tem', `
+    ${r.code ? '' : `<div class="card" style="border-color:var(--p2);color:var(--p2t);font-size:13.5px;margin-bottom:12px">${ic('alert')} Không nhận ra mã vật tư. Sửa tay bên dưới, hoặc chụp lại gần hơn, thẳng hơn.</div>`}
+    <div class="field"><label class="lb">Mã vật tư</label><input class="inp" id="oC" value="${esc(r.code)}" inputmode="numeric" style="font-family:ui-monospace,monospace;font-weight:700"></div>
+    <div class="field"><label class="lb">Tên vật tư</label><textarea class="inp" id="oN" rows="2">${esc(r.name)}</textarea></div>
+    ${r.raw ? `<details class="ocr-raw"><summary>Chữ đọc được trên tem</summary><pre>${esc(r.raw)}</pre></details>` : ''}
+    <button class="btn pri" id="oOk">${ic('check')} Điền vào</button>`, (body, close) => {
+    body.querySelector('#oOk').onclick = () => {
+      const code = body.querySelector('#oC').value.trim(); const name = body.querySelector('#oN').value.replace(/\s+/g, ' ').trim();
+      if (code && !(b.codes || []).includes(code)) b.codes = [...(b.codes || []), code];
+      if (name) b.name = name;
+      touch(n); close(); renderBlocks(v, n); toast(code || name ? 'Đã điền mã và tên vật tư' : 'Không có gì để điền');
+    };
+  });
+}
+
 async function addPhoto(v, n, b) {
   await addPhotos(p => { b.photos.push(p); touch(n); renderBlocks(v, n); });
 }
@@ -324,7 +370,7 @@ function textItems(n, multi) {
   }
   return out;
 }
-function cardsOf(n) { let no = 0; return n.blocks.filter(b => b.t === 'img').map(b => ({ no: ++no, title: `Mục ${no}`, codes: b.codes || [], qty: b.qty, result: b.qa, caption: b.caption, paths: b.photos || [] })); }
+function cardsOf(n) { let no = 0; return n.blocks.filter(b => b.t === 'img').map(b => ({ no: ++no, title: `Mục ${no}`, codes: b.codes || [], name: b.name || '', qty: b.qty, result: b.qa, caption: b.caption, paths: b.photos || [] })); }
 function buildDocs(list, groupName) {
   const st = S.state.settings; const org = st.org || ''; const dept = st.dept || '';
   if (list.length === 1 && isQA(list[0])) {
@@ -334,19 +380,19 @@ function buildDocs(list, groupName) {
     const T = tpl();
     const info = [[T.qaLblPo, q.po || '—'], [T.qaLblSup, q.supplier || '—'], [T.qaLblDate, q.date ? fmtD(q.date) : '—'], [T.qaLblIns, q.inspector || '—'],
       [T.qaLblDev, dev ? dev.name + (dev.location ? ' · ' + dev.location : '') : '—'], [T.qaLblRes, `${verdict} · ${imgs.length} mục: ${cnt('ok')} đạt, ${cnt('ng')} không đạt, ${cnt('chk')} cần xem lại`]];
-    const rows = imgs.map((b, i) => [String(i + 1), (b.codes || []).join('\n') || '—', b.caption || '', b.qty || '', String((b.photos || []).length), b.qa ? { t: RESULT_TXT[b.qa], result: b.qa } : '—']);
+    const rows = imgs.map((b, i) => [String(i + 1), (b.codes || []).join('\n') || '—', b.name || '', b.caption || '', b.qty || '', String((b.photos || []).length), b.qa ? { t: RESULT_TXT[b.qa], result: b.qa } : '—']);
     const texts = textItems(n);
     const doc = { org, dept, label: T.qaLabel, title: T.qaTitle, subtitle: n.title || '', docNo: no, dateText: 'Ngày ' + dmy(q.date || today()),
       fileBase: `BienBanQA_${no}_${dmy(q.date || today()).replace(/\//g, '-')}`, info,
       sections: [
-        { heading: T.qaSec1, items: [imgs.length ? { table: { cols: ['STT', 'Mã vật tư', 'Mô tả / chú thích', 'SL', 'Số ảnh', 'Kết quả'], widths: [6, 20, 44, 6, 8, 15], rows } } : { p: 'Chưa có mục vật tư nào.' }] },
+        { heading: T.qaSec1, items: [imgs.length ? { table: { cols: ['STT', 'Mã vật tư', 'Tên vật tư', 'Chú thích', 'SL', 'Số ảnh', 'Kết quả'], widths: [7, 16, 25, 24, 6, 8, 14], rows } } : { p: 'Chưa có mục vật tư nào.' }] },
         ...(imgs.length ? [{ heading: T.qaSec2, items: cardsOf(n).map(c => ({ card: c })) }] : []),
         ...(texts.length ? [{ heading: T.qaSec3, items: texts }] : []),
       ],
       signers: signersOf(T.qaSigners, q.inspector) };
     const sheets = [{ name: 'Bien ban QA', title: T.qaTitle, info,
-      cols: [{ h: 'STT', w: 6, center: true, num: true }, { h: 'Mã vật tư', w: 20 }, { h: 'Mô tả / chú thích', w: 38 }, { h: 'SL', w: 8, center: true }, { h: 'Kết quả', w: 14, center: true }],
-      rows: imgs.map((b, i) => [String(i + 1), (b.codes || []).join('\n'), b.caption || '', b.qty || '', b.qa ? { t: RESULT_TXT[b.qa], result: b.qa } : '']), photos: imgs.map(b => b.photos || []), landscape: true }];
+      cols: [{ h: 'STT', w: 6, center: true, num: true }, { h: 'Mã vật tư', w: 18 }, { h: 'Tên vật tư', w: 34 }, { h: 'Chú thích', w: 30 }, { h: 'SL', w: 7, center: true }, { h: 'Kết quả', w: 14, center: true }],
+      rows: imgs.map((b, i) => [String(i + 1), (b.codes || []).join('\n'), b.name || '', b.caption || '', b.qty || '', b.qa ? { t: RESULT_TXT[b.qa], result: b.qa } : '']), photos: imgs.map(b => b.photos || []), landscape: true }];
     return { doc, sheets };
   }
   // ghi chú thường (1 hoặc nhiều)
@@ -356,7 +402,7 @@ function buildDocs(list, groupName) {
     if (multi) items.push({ p: [`Cập nhật ${fmtD(n.updated.slice(0, 10))}`, dev ? 'Thiết bị: ' + dev.name : '', n.qa?.po ? 'PO: ' + n.qa.po : ''].filter(Boolean).join('  ·  ') });
     let no = 0;
     for (const b of n.blocks) {
-      if (b.t === 'img') { no++; items.push({ card: { no: multi ? `${i + 1}.${no}` : no, title: `Hình ${multi ? `${i + 1}.${no}` : no}`, codes: b.codes || [], qty: b.qty, result: b.qa, caption: b.caption, paths: b.photos || [] } }); }
+      if (b.t === 'img') { no++; items.push({ card: { no: multi ? `${i + 1}.${no}` : no, title: `Hình ${multi ? `${i + 1}.${no}` : no}`, codes: b.codes || [], name: b.name || '', qty: b.qty, result: b.qa, caption: b.caption, paths: b.photos || [] } }); }
       else if ((b.text || '').trim()) items.push(b.t === 'h' ? { subh: b.text } : b.t === 'p' ? { p: b.text } : b.t === 'li' ? { li: b.text } : { chk: b.text, done: b.done });
     }
     return { heading: multi ? `${i + 1}. ${(n.title || 'Ghi chú không tên').toUpperCase()}` : '', items };
@@ -370,7 +416,7 @@ function buildDocs(list, groupName) {
     sections, signers: signersOf(tpl().noteSigners, st.name) };
   const rows = [], photos = [];
   list.forEach((n, i) => { let no = 0; n.blocks.forEach(b => {
-    if (b.t === 'img') { no++; rows.push([String(rows.length + 1), multi ? n.title || '' : '', 'Ảnh ' + no, [(b.codes || []).join(', '), b.caption].filter(Boolean).join(' – '), b.qty || '', b.qa ? { t: RESULT_TXT[b.qa], result: b.qa } : '']); photos.push(b.photos || []); }
+    if (b.t === 'img') { no++; rows.push([String(rows.length + 1), multi ? n.title || '' : '', 'Ảnh ' + no, [(b.codes || []).join(', '), b.name, b.caption].filter(Boolean).join(' – '), b.qty || '', b.qa ? { t: RESULT_TXT[b.qa], result: b.qa } : '']); photos.push(b.photos || []); }
     else if ((b.text || '').trim()) { rows.push([String(rows.length + 1), multi ? n.title || '' : '', { h: 'Tiêu đề', p: 'Đoạn', li: 'Gạch đầu dòng', chk: b.done ? 'Việc – đã xong' : 'Việc' }[b.t], b.text, '', '']); photos.push([]); }
   }); });
   const cols = [{ h: 'STT', w: 6, center: true, num: true }, { h: 'Ghi chú', w: multi ? 26 : 4 }, { h: 'Loại', w: 13 }, { h: 'Nội dung / mã vật tư', w: 48 }, { h: 'SL', w: 7, center: true }, { h: 'Kết quả', w: 13, center: true }];
@@ -391,6 +437,6 @@ export { runExport as exportNotes };
 export function cleanupNote(id) {
   const n = note(id); if (!n) return;
   lockDone(n); // rời ghi chú → khóa các mục ảnh đã nhập
-  const empty = !n.title.trim() && !n.qa && n.blocks.every(b => b.t === 'img' ? !(b.photos || []).length && !(b.codes || []).length && !b.caption : !(b.text || '').trim());
+  const empty = !n.title.trim() && !n.qa && n.blocks.every(b => b.t === 'img' ? !(b.photos || []).length && !(b.codes || []).length && !b.caption && !b.name : !(b.text || '').trim());
   if (empty) { S.state.notes = S.state.notes.filter(x => x !== n); save(); }
 }
