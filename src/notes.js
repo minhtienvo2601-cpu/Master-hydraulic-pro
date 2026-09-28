@@ -72,6 +72,24 @@ function catManager() {
 // ---------------- trình soạn ghi chú ----------------
 let saveT = null, focusId = null, focusHooked = false;
 function touch(n) { n.updated = new Date().toISOString(); clearTimeout(saveT); saveT = setTimeout(() => save(), 400); }
+// Mã vật tư đã nhập gần đây (mới nhất trước), lấy từ các ghi chú
+function recentCodes() {
+  const out = [], seen = new Set();
+  const notes = [...S.state.notes].sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
+  for (const n of notes) for (const b of [...n.blocks].reverse()) if (b.t === 'img') for (const c of [...(b.codes || [])].reverse()) { const k = c.toUpperCase(); if (!seen.has(k)) { seen.add(k); out.push(c); } }
+  return out;
+}
+const ckey = s => String(s).toUpperCase().replace(/[^A-Z0-9]/g, '');
+// Tối đa 3 gợi ý: ô trống → 3 mã nhập gần nhất; đang gõ → mã khớp (ưu tiên mã đã dùng gần đây)
+function suggestCodes(q, exclude) {
+  const ex = new Set((exclude || []).map(c => c.toUpperCase())); const k = ckey(q); const out = [];
+  const push = c => { if (out.length < 3 && !ex.has(c.toUpperCase()) && !out.some(o => o.toUpperCase() === c.toUpperCase())) out.push(c); };
+  const rc = recentCodes();
+  if (!k) { rc.forEach(push); return out; }
+  rc.filter(c => ckey(c).includes(k)).forEach(push);
+  if (out.length < 3 && k.length >= 3) codeSuggestions().filter(c => ckey(c).includes(k)).forEach(push);
+  return out;
+}
 function codeSuggestions() {
   const set = new Set(); const re = /\b\d{3,}(?:[-.]\d+)+\b|\b[A-Z]{1,4}[-\d]*\d{2,}[A-Z0-9-]*\b/g;
   for (const nd of S.state.nodes) (nd.codes || '').split('\n').forEach(l => (l.match(re) || []).forEach(x => set.add(x)));
@@ -111,13 +129,14 @@ export function viewNote(v, id, fresh) {
   if (!focusHooked) { focusHooked = true; document.addEventListener('focusin', e => { const bl = e.target.closest && e.target.closest('[data-bid]'); if (bl) focusId = bl.dataset.bid; }); }
   $$('[data-add]', q('#edBar')).forEach(b => b.onmousedown = e => e.preventDefault());
   $$('[data-add]', q('#edBar')).forEach(b => b.onclick = async () => {
-    const t = b.dataset.add; const i = focusId ? n.blocks.findIndex(x => x.id === focusId) : n.blocks.length - 1;
+    const t = b.dataset.add;
     const blk = t === 'img' ? { id: uid(), t: 'img', photos: [], codes: [], caption: '', qa: '', qty: '' } : { id: uid(), t, text: '', done: false };
-    // nếu khối hiện tại là đoạn trống thì thay thế
-    const curB = n.blocks[i];
-    if (curB && curB.t !== 'img' && !curB.text && t !== 'img') { curB.t = t; renderBlocks(v, n); focusBlock(v, curB.id); touch(n); return; }
-    n.blocks.splice(i + 1, 0, blk); touch(n); renderBlocks(v, n);
-    if (t === 'img') { await addPhoto(v, n, blk); setTimeout(() => v.querySelector(`[data-bid="${blk.id}"] .cinp`)?.focus(), 150); }
+    lockDone(n); // thêm mục mới → các mục ảnh đã nhập tự khóa
+    // mục mới luôn ở cuối; nếu dòng cuối là đoạn trống thì dùng luôn dòng đó
+    const last = n.blocks[n.blocks.length - 1];
+    if (last && last.t !== 'img' && !last.text && t !== 'img') { last.t = t; touch(n); renderBlocks(v, n); focusBlock(v, last.id); scrollToBlock(v, last.id); return; }
+    n.blocks.push(blk); touch(n); renderBlocks(v, n); scrollToBlock(v, blk.id);
+    if (t === 'img') { await addPhoto(v, n, blk); setTimeout(() => { v.querySelector(`[data-bid="${blk.id}"] .cinp`)?.focus(); scrollToBlock(v, blk.id); }, 150); }
     else focusBlock(v, blk.id);
   });
   renderBlocks(v, n);
@@ -125,21 +144,39 @@ export function viewNote(v, id, fresh) {
 function focusBlock(v, id) { const el = v.querySelector(`[data-bid="${id}"] textarea`); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }
 function autoGrow(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
 
+// mục ảnh "đã nhập" = có ảnh hoặc mã hoặc chú thích
+const hasContent = b => (b.photos || []).length || (b.codes || []).length || (b.caption || '').trim();
+function lockDone(n) { let ch = false; for (const b of n.blocks) if (b.t === 'img' && !b.locked && hasContent(b)) { b.locked = true; ch = true; } if (ch) touch(n); return ch; }
+function scrollToBlock(v, id) { setTimeout(() => { const el = v.querySelector(`[data-bid="${id}"]`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60); }
+function lockedHtml(b, imgNo) {
+  return `<div class="blk blk-img locked" data-bid="${b.id}">
+    <div class="bi-head"><b>Hình ${imgNo}</b>${b.qa ? `<span class="qa ${QA[b.qa][1]}">${QA[b.qa][0]}</span>` : ''}${b.qty ? `<span class="bi-sl">SL: ${esc(b.qty)}</span>` : ''}<span class="grow"></span>
+      <button class="bi-unlock" data-unlock>${ic('lock')}<span>Mở khóa</span></button><button class="more" data-bm="${b.id}">${ic('dots')}</button></div>
+    ${(b.photos || []).length ? `<div class="bi-strip">${b.photos.map((p, i) => `<img data-src="${esc(p)}" data-i="${i}">`).join('')}</div>` : ''}
+    ${(b.codes || []).length ? `<div class="bi-codes ro">${b.codes.map(c => `<span class="code">${esc(c)}</span>`).join('')}</div>` : ''}
+    ${(b.caption || '').trim() ? `<div class="bi-captxt">${esc(b.caption)}</div>` : ''}
+    ${b.qa === 'ng' && b.backlogId ? `<div class="bi-captxt muted" style="font-style:normal">${ic('alert')} Đã tạo tồn đọng</div>` : ''}
+  </div>`;
+}
+
 function renderBlocks(v, n) {
   const box = v.querySelector('#blocks'); let imgNo = 0;
   box.innerHTML = n.blocks.map(b => {
     if (b.t === 'img') {
       imgNo++;
+      if (b.locked) return lockedHtml(b, imgNo);
       return `<div class="blk blk-img" data-bid="${b.id}">
         <div class="bi-head"><b>Hình ${imgNo}</b><span class="grow"></span>${b.qa ? `<span class="qa ${QA[b.qa][1]}">${QA[b.qa][0]}</span>` : ''}<button class="more" data-bm="${b.id}">${ic('dots')}</button></div>
         <div class="bi-grid">${(b.photos || []).map((p, i) => `<div class="bi-ph"><img data-src="${esc(p)}" data-i="${i}"><button data-rmph="${i}">${ic('x', 2.4)}</button></div>`).join('')}
           <button class="bi-add" data-addph>${ic('camera')}<span>${b.photos?.length ? 'Thêm ảnh' : 'Chụp / chọn ảnh'}</span></button></div>
         <div class="bi-codes">${(b.codes || []).map((c, i) => `<span class="code">${esc(c)}<button data-rmc="${i}">${ic('x', 2.6)}</button></span>`).join('')}
-          <input class="cinp" list="codeSug" placeholder="${b.codes?.length ? '+ mã khác' : 'Nhập mã vật tư…'}" enterkeyhint="done"></div>
+          <input class="cinp" autocomplete="off" placeholder="${b.codes?.length ? '+ mã khác' : 'Nhập mã vật tư…'}" enterkeyhint="done"></div>
+        <div class="csug" hidden></div>
         <textarea class="bi-cap" rows="1" placeholder="Chú thích / mô tả (tùy chọn)">${esc(b.caption || '')}</textarea>
         <div class="bi-row"><div class="qa-seg">${Object.entries(QA).map(([k, [l, c]]) => `<button data-qa="${k}" class="${c} ${b.qa === k ? 'on' : ''}">${l}</button>`).join('')}</div>
           <input class="bi-qty" placeholder="SL" value="${esc(b.qty || '')}"></div>
         ${b.qa === 'ng' ? `<button class="btn sec bi-bl" data-bl>${ic('alert')} ${b.backlogId ? 'Đã tạo tồn đọng ✔' : 'Tạo tồn đọng / khiếu nại NCC'}</button>` : ''}
+        ${hasContent(b) ? `<button class="btn pri bi-done" data-done>${ic('check')} Xong – khóa mục này</button>` : ''}
       </div>`;
     }
     const cls = { h: 'blk-h', p: 'blk-p', li: 'blk-li', chk: 'blk-chk' }[b.t];
@@ -147,9 +184,7 @@ function renderBlocks(v, n) {
       ${b.t === 'li' ? '<span class="bul">•</span>' : ''}${b.t === 'chk' ? `<button class="cbx" data-cbx>${ic('check', 3)}</button>` : ''}
       <textarea rows="1" placeholder="${{ h: 'Tiêu đề mục', p: 'Nhập nội dung…', li: 'Gạch đầu dòng', chk: 'Việc cần làm' }[b.t]}">${esc(b.text || '')}</textarea>
       <button class="bdel" data-bm="${b.id}">${ic('dots')}</button></div>`;
-  }).join('') + `<datalist id="codeSug"></datalist>`;
-  // gợi ý mã (nạp chậm để không làm giật)
-  setTimeout(() => { const dl = box.querySelector('#codeSug'); if (dl && !dl.children.length) dl.innerHTML = codeSuggestions().map(c => `<option value="${esc(c)}">`).join(''); }, 300);
+  }).join('');
   $$('textarea', box).forEach(autoGrow);
   for (const el of $$('[data-bid]', box)) {
     const b = n.blocks.find(x => x.id === el.dataset.bid);
@@ -174,6 +209,13 @@ function renderBlocks(v, n) {
   $$('img[data-src]', box).forEach(async im => { im.src = await fileSrc(im.dataset.src); });
 }
 function bindImg(v, n, b, el) {
+  if (b.locked) {
+    $$('img[data-i]', el).forEach(im => im.onclick = () => viewPhoto(im.src));
+    el.querySelector('[data-unlock]').onclick = () => { b.locked = false; touch(n); renderBlocks(v, n); };
+    return;
+  }
+  const dn = el.querySelector('[data-done]'); if (dn) dn.onclick = () => { if (ci.value.trim()) addCodeSilently(); b.locked = true; touch(n); renderBlocks(v, n); };
+  const addCodeSilently = () => { const vals = ci.value.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean); b.codes = [...(b.codes || []), ...vals.filter(x => !(b.codes || []).includes(x))]; ci.value = ''; };
   el.querySelector('[data-addph]').onclick = () => addPhoto(v, n, b);
   $$('[data-rmph]', el).forEach(x => x.onclick = async () => {
     if (!await confirmBox('Xóa ảnh?', 'Ảnh sẽ bị gỡ khỏi khối này.', 'Xóa', true)) return;
@@ -184,6 +226,16 @@ function bindImg(v, n, b, el) {
   const ci = el.querySelector('.cinp');
   const addCode = () => { const vals = ci.value.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean); if (!vals.length) return false; b.codes = [...(b.codes || []), ...vals.filter(x => !(b.codes || []).includes(x))]; touch(n); renderBlocks(v, n); setTimeout(() => v.querySelector(`[data-bid="${b.id}"] .cinp`)?.focus(), 30); return true; };
   ci.onkeydown = e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addCode(); } };
+  // gợi ý tối đa 3 mã
+  const sg = el.querySelector('.csug');
+  const showSug = () => {
+    const list = suggestCodes(ci.value, b.codes);
+    sg.hidden = !list.length;
+    sg.innerHTML = list.length ? `<span class="muted">${ci.value.trim() ? 'Gợi ý' : 'Gần đây'}:</span>` + list.map(c => `<button data-sg="${esc(c)}">${esc(c)}</button>`).join('') : '';
+    $$('[data-sg]', sg).forEach(x => { x.onpointerdown = e => e.preventDefault(); x.onclick = () => { ci.value = x.dataset.sg; addCode(); }; });
+  };
+  ci.addEventListener('focus', showSug); ci.addEventListener('input', showSug);
+  ci.addEventListener('blur', () => setTimeout(() => { sg.hidden = true; }, 150));
   ci.onchange = () => { if (ci.value && S.state && ci.value.length > 2) addCode(); };
   ci.onblur = () => { if (ci.value.trim()) addCode(); };
   const cap = el.querySelector('.bi-cap'); cap.oninput = () => { b.caption = cap.value; autoGrow(cap); touch(n); };
@@ -203,6 +255,7 @@ function blockMenu(v, n, b) {
   const items = [];
   if (i > 0) items.push({ icon: 'back', label: 'Chuyển lên trên', run: () => { n.blocks.splice(i, 1); n.blocks.splice(i - 1, 0, b); touch(n); renderBlocks(v, n); } });
   if (i < n.blocks.length - 1) items.push({ icon: 'chev', label: 'Chuyển xuống dưới', run: () => { n.blocks.splice(i, 1); n.blocks.splice(i + 1, 0, b); touch(n); renderBlocks(v, n); } });
+  if (b.t === 'img' && b.locked) { items.push({ icon: 'lock', label: 'Mở khóa để sửa', run: () => { b.locked = false; touch(n); renderBlocks(v, n); } }); menu('Khối ảnh vật tư (đã khóa)', items); return; }
   if (b.t !== 'img') for (const [t, l] of [['h', 'Đổi thành Tiêu đề mục'], ['p', 'Đổi thành Đoạn văn'], ['li', 'Đổi thành Gạch đầu dòng'], ['chk', 'Đổi thành Checklist']]) if (t !== b.t) items.push({ icon: 'edit', label: l, run: () => { b.t = t; touch(n); renderBlocks(v, n); } });
   items.push({ icon: 'trash', label: b.t === 'img' ? 'Xóa khối ảnh này' : 'Xóa dòng này', danger: true, run: async () => {
     if (b.t === 'img' && b.photos?.length && !await confirmBox('Xóa khối ảnh?', `${b.photos.length} ảnh, mã và chú thích trong khối sẽ bị xóa.`, 'Xóa', true)) return;
@@ -273,7 +326,7 @@ function textItems(n, multi) {
 }
 function cardsOf(n) { let no = 0; return n.blocks.filter(b => b.t === 'img').map(b => ({ no: ++no, title: `Mục ${no}`, codes: b.codes || [], qty: b.qty, result: b.qa, caption: b.caption, paths: b.photos || [] })); }
 function buildDocs(list, groupName) {
-  const st = S.state.settings; const org = st.org || 'CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT'; const dept = st.dept || '';
+  const st = S.state.settings; const org = st.org || ''; const dept = st.dept || '';
   if (list.length === 1 && isQA(list[0])) {
     const n = list[0]; const no = qaNo(n); const q = n.qa; const dev = device(n.deviceId);
     const imgs = n.blocks.filter(b => b.t === 'img'); const cnt = k => imgs.filter(b => b.qa === k).length;
@@ -337,6 +390,7 @@ export { runExport as exportNotes };
 
 export function cleanupNote(id) {
   const n = note(id); if (!n) return;
+  lockDone(n); // rời ghi chú → khóa các mục ảnh đã nhập
   const empty = !n.title.trim() && !n.qa && n.blocks.every(b => b.t === 'img' ? !(b.photos || []).length && !(b.codes || []).length && !b.caption : !(b.text || '').trim());
   if (empty) { S.state.notes = S.state.notes.filter(x => x !== n); save(); }
 }

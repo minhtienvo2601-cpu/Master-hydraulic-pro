@@ -52,6 +52,7 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(FileRangePlugin.class);
         super.onCreate(savedInstanceState);
         Window w = getWindow();
         WindowCompat.setDecorFitsSystemWindows(w, false);
@@ -62,6 +63,69 @@ public class MainActivity extends BridgeActivity {
             w.setStatusBarContrastEnforced(false);
         }
         w.getDecorView().setBackgroundColor(Color.parseColor("#081225"));
+    }
+}
+`);
+
+// Plugin đọc từng đoạn file (để mở PDF lớn nhanh, không phải nạp cả file vào bộ nhớ)
+fs.writeFileSync('android/app/src/main/java/vn/tien/baotri/FileRangePlugin.java', `package vn.tien.baotri;
+
+import android.util.Base64;
+import com.getcapacitor.JSObject;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.CapacitorPlugin;
+import java.io.File;
+import java.io.RandomAccessFile;
+
+@CapacitorPlugin(name = "FileRange")
+public class FileRangePlugin extends Plugin {
+    private File resolve(String path) {
+        return new File(getContext().getFilesDir(), path);
+    }
+
+    @PluginMethod
+    public void size(PluginCall call) {
+        String path = call.getString("path");
+        if (path == null) { call.reject("missing path"); return; }
+        File f = resolve(path);
+        if (!f.isFile()) { call.reject("not found"); return; }
+        JSObject r = new JSObject();
+        r.put("size", String.valueOf(f.length()));
+        call.resolve(r);
+    }
+
+    @PluginMethod
+    public void read(PluginCall call) {
+        String path = call.getString("path");
+        String offS = call.getString("offset");
+        String lenS = call.getString("length");
+        if (path == null || offS == null || lenS == null) { call.reject("missing args"); return; }
+        long off;
+        int len;
+        try { off = Long.parseLong(offS); len = Integer.parseInt(lenS); } catch (NumberFormatException e) { call.reject("bad args"); return; }
+        if (off < 0 || len <= 0 || len > 16 * 1024 * 1024) { call.reject("bad range"); return; }
+        RandomAccessFile raf = null;
+        try {
+            raf = new RandomAccessFile(resolve(path), "r");
+            raf.seek(off);
+            byte[] buf = new byte[len];
+            int n = 0;
+            while (n < len) {
+                int k = raf.read(buf, n, len - n);
+                if (k < 0) break;
+                n += k;
+            }
+            JSObject r = new JSObject();
+            r.put("data", Base64.encodeToString(buf, 0, n, Base64.NO_WRAP));
+            r.put("length", n);
+            call.resolve(r);
+        } catch (Exception e) {
+            call.reject("read error: " + e.getMessage());
+        } finally {
+            if (raf != null) { try { raf.close(); } catch (Exception ignored) {} }
+        }
     }
 }
 `);

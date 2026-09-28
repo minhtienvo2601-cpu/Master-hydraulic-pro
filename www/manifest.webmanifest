@@ -1,0 +1,15 @@
+{
+  "name": "Bảo Trì Thủy Lực",
+  "short_name": "Bảo Trì TL",
+  "description": "Sổ tay bảo trì thiết bị thủy lực: nhật ký, tồn đọng, ghi chú QA, tài liệu",
+  "lang": "vi",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#081225",
+  "theme_color": "#081225",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

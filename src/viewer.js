@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 import { renderAsync } from 'docx-preview';
 import { esc } from './util.js';
 import { ic } from './icons.js';
-import { readBytes, b64ToBytes, readB64, openFile, sharePath, shareFile, saveToDevice, writeExport, fileSrc, readJSON, writeJSON } from './platform.js';
+import { native, readBytes, rangeSize, rangeRead, b64ToBytes, readB64, openFile, sharePath, shareFile, saveToDevice, writeExport, fileSrc, readJSON, writeJSON } from './platform.js';
 import { openSheet, toast, promptBox, menu } from './ui.js';
 
 // ---------- nhận dạng loại file ----------
@@ -72,10 +72,10 @@ export async function viewFile(f) {
   const onResize = () => ctx.onResize && ctx.onResize();
   window.addEventListener('resize', onResize); ctx.cleanup.push(() => window.removeEventListener('resize', onResize));
   try {
+    if (kind === 'pdf') { await openPdf(ctx); return; }
     const data = f.b64 ? b64ToBytes(f.b64).buffer : await readBytes(f.path);
     if (ctx.closed) return;
-    if (kind === 'pdf') await openPdf(ctx, data);
-    else if (kind === 'docx') await openDocx(ctx, data);
+    if (kind === 'docx') await openDocx(ctx, data);
     else if (kind === 'sheet') openXls(ctx, data);
     else if (kind === 'img') await openImg(ctx);
     else openText(ctx, data);
@@ -101,7 +101,7 @@ function fileActions(f) {
   openSheet('File đã tạo xong', `<div class="item" style="margin-bottom:14px"><div class="fi zip">${ic('file')}</div><div class="grow"><div class="nm">${esc(f.name)}</div><div class="sz">${kb > 1024 ? (kb / 1024).toFixed(1) + ' MB' : kb + ' KB'}</div></div></div>
     <button class="btn pri" data-s>${ic('save')} Lưu vào máy</button>
     <button class="btn sec" data-h style="margin-top:10px">${ic('share')} Chia sẻ (Drive, Zalo, Gmail…)</button>
-    <p class="muted" style="font-size:12.5px;margin:12px 2px 0">Lưu vào máy: file nằm trong thư mục <b>Documents/BaoTriThuyLuc</b>, mở bằng app <b>Quản lý file</b>.</p>`, (b, cl) => {
+    ${native ? `<p class="muted" style="font-size:12.5px;margin:12px 2px 0">Lưu vào máy: file nằm trong thư mục <b>Documents/BaoTriThuyLuc</b>, mở bằng app <b>Quản lý file</b>.</p>` : ''}`, (b, cl) => {
     b.querySelector('[data-s]').onclick = () => { cl(); doSave(f); };
     b.querySelector('[data-h]').onclick = () => { cl(); doShare(f); };
   });
@@ -111,7 +111,7 @@ async function doSave(f) {
     const b64 = f.b64 || await readB64(f.path);
     const where = await saveToDevice(f.name, b64, f.mime);
     toast('Đã lưu: ' + where, 4200);
-  } catch (e) { console.error(e); toast('Không lưu được vào máy – hãy dùng Chia sẻ', 3500); }
+  } catch (e) { if (e && e.name === 'AbortError') return; console.error(e); toast('Không lưu được vào máy – hãy dùng Chia sẻ', 3500); }
 }
 async function doShare(f) {
   try { if (f.path) await sharePath(f.path, f.name, f.mime); else await shareFile(f.name, f.b64, f.mime); }
@@ -131,9 +131,9 @@ function moreMenu(ctx) {
     items.push({ icon: 'bookmark', label: `Đánh dấu trang ${ctx.pdf.cur() + 1}`, run: () => ctx.pdf.addMark() });
     items.push({ icon: 'fit', label: 'Vừa khung màn hình', run: () => ctx.setZoom && ctx.setZoom(1) });
   } else if (ctx.setZoom) items.push({ icon: 'fit', label: 'Vừa khung màn hình', run: () => ctx.setZoom(1) });
-  items.push({ icon: 'save', label: 'Lưu vào máy (Documents)', run: () => doSave(f) });
+  items.push({ icon: 'save', label: native ? 'Lưu vào máy (Documents)' : 'Lưu về máy tính…', run: () => doSave(f) });
   items.push({ icon: 'share', label: 'Chia sẻ (Drive, Zalo, Gmail…)', run: () => doShare(f) });
-  items.push({ icon: 'open', label: 'Mở bằng ứng dụng khác', run: () => openExternal(f) });
+  if (native) items.push({ icon: 'open', label: 'Mở bằng ứng dụng khác', run: () => openExternal(f) });
   menu(f.name, items);
 }
 
@@ -209,10 +209,23 @@ function loadPdfjs() {
 }
 const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[đĐ]/g, 'd').toLowerCase();
 
-async function openPdf(ctx, data) {
+async function openPdf(ctx) {
   const lib = await loadPdfjs();
   const base = new URL('pdfjs/', location.href).href;
-  const task = lib.getDocument({ data: new Uint8Array(data), cMapUrl: base + 'cmaps/', cMapPacked: true, standardFontDataUrl: base + 'standard_fonts/', wasmUrl: base + 'wasm/', isEvalSupported: false, enableXfa: false, verbosity: 0 });
+  const f = ctx.f; let src;
+  if (f.b64) src = { data: b64ToBytes(f.b64) };
+  else {
+    // Điện thoại: chỉ đọc đoạn file cần xem (mở file hàng trăm MB gần như tức thì, không tốn RAM)
+    const size = await rangeSize(f.path);
+    if (size) {
+      const head = await rangeRead(f.path, 0, Math.min(size, 262144));
+      const tr = new lib.PDFDataRangeTransport(size, head);
+      tr.requestDataRange = (b, e) => { rangeRead(f.path, b, e - b).then(u => { if (!ctx.closed) tr.onDataRange(b, u); }).catch(err => console.warn('range', err)); };
+      src = { range: tr, rangeChunkSize: 262144, disableAutoFetch: true, disableStream: true };
+    } else src = { data: new Uint8Array(await readBytes(f.path)) };
+  }
+  if (ctx.closed) return;
+  const task = lib.getDocument({ ...src, cMapUrl: base + 'cmaps/', cMapPacked: true, standardFontDataUrl: base + 'standard_fonts/', wasmUrl: base + 'wasm/', isEvalSupported: false, enableXfa: false, verbosity: 0 });
   task.onPassword = (cb, reason) => {
     promptBox(reason === 2 ? 'Sai mật khẩu, nhập lại' : 'File PDF có mật khẩu', 'Mật khẩu').then(p => { if (p == null) { task.destroy(); ctx.close(); } else cb(p); });
   };
@@ -237,7 +250,7 @@ async function openPdf(ctx, data) {
   }
   let zoom = 1; const tops = [], cssW = [], cssH = [];
   function layout() {
-    const A = Math.max(120, (body.clientWidth - PAD * 2)) * zoom; let y = PAD;
+    const A = Math.max(120, Math.min(body.clientWidth - PAD * 2, 1100)) * zoom; let y = PAD;
     for (let i = 0; i < n; i++) {
       const w = A, h = A * sizes[i][1] / sizes[i][0];
       pages[i].el.style.width = w + 'px'; pages[i].el.style.height = h + 'px';
@@ -246,13 +259,14 @@ async function openPdf(ctx, data) {
     wrap.style.width = (A + PAD * 2) + 'px';
   }
   layout();
-  let curPage = 0;
+  let curPage = 0, lastScroll = 0;
   const pill = el.querySelector('.vw-pill'); pill.hidden = false;
   const setPill = () => { pill.textContent = `${curPage + 1} / ${n}`; };
   function pageAt(y) { let lo = 0, hi = n - 1; while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (tops[mid] <= y) lo = mid; else hi = mid - 1; } return lo; }
   function onScroll() {
     const i = pageAt(body.scrollTop + body.clientHeight * 0.35);
     if (i !== curPage) { curPage = i; setPill(); if (key) { my.p = i; saveMem(); } }
+    lastScroll = Date.now();
     pill.classList.add('show'); clearTimeout(onScroll.t); onScroll.t = setTimeout(() => pill.classList.remove('show'), 1600);
   }
   body.addEventListener('scroll', onScroll, { passive: true });
@@ -273,6 +287,9 @@ async function openPdf(ctx, data) {
   async function pump() {
     if (running) return; running = true;
     while (q.size && !ctx.closed) {
+      // đang cuộn nhanh thì chờ dừng tay rồi mới vẽ (đỡ giật)
+      while (Date.now() - lastScroll < 140 && !ctx.closed) await new Promise(r => setTimeout(r, 70));
+      if (!q.size) break;
       let best = null; for (const i of q) if (best === null || Math.abs(i - curPage) < Math.abs(best - curPage)) best = i;
       q.delete(best); const P = pages[best];
       if (!P.vis || Math.abs(P.cw - cssW[best]) < 1) continue;
@@ -284,8 +301,8 @@ async function openPdf(ctx, data) {
     const P = pages[i]; const page = await doc.getPage(i + 1);
     const v0 = page.getViewport({ scale: 1 });
     if (Math.abs(v0.width - sizes[i][0]) > 0.5 || Math.abs(v0.height - sizes[i][1]) > 0.5) { sizes[i] = [v0.width, v0.height]; keepAnchor(layout); }
-    const cw = cssW[i]; const dpr = Math.min(window.devicePixelRatio || 1, 3);
-    let s = cw / v0.width * dpr; const area = v0.width * v0.height * s * s, MAXPX = 16e6;
+    const cw = cssW[i]; const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let s = cw / v0.width * dpr; const area = v0.width * v0.height * s * s, MAXPX = zoom > 1.2 ? 10e6 : 5e6;
     if (area > MAXPX) s *= Math.sqrt(MAXPX / area);
     const vp = page.getViewport({ scale: s });
     const c = document.createElement('canvas'); c.width = Math.floor(vp.width); c.height = Math.floor(vp.height);
@@ -317,15 +334,6 @@ async function openPdf(ctx, data) {
   pinchZoom(ctx, wrap, () => zoom, setZ, 1, 5);
   ctx.setZoom = z => setZ(z, 0, body.scrollTop, 0, 0);
   ctx.onResize = () => { keepAnchor(layout); rerender(); };
-
-  // --- kích thước thật từng trang (bản vẽ khổ ngang lẫn khổ dọc) ---
-  (async () => {
-    let changed = false;
-    for (let i = 1; i < n && !ctx.closed; i++) {
-      try { const p = await doc.getPage(i + 1); const v = p.getViewport({ scale: 1 }); if (Math.abs(v.width - sizes[i][0]) > 0.5 || Math.abs(v.height - sizes[i][1]) > 0.5) { sizes[i] = [v.width, v.height]; changed = true; } } catch (e) {}
-      if (changed && (i % 25 === 0 || i === n - 1)) { keepAnchor(layout); changed = false; }
-    }
-  })();
 
   // --- mở lại trang đang đọc dở ---
   setPill();
@@ -389,23 +397,33 @@ async function openPdf(ctx, data) {
     drawHl(r.i); if (show.prev != null && show.prev !== r.i) drawHl(show.prev); show.prev = r.i;
     const b = r.boxes[0]; goTo(r.i, b ? b.t / 100 : 0, b ? b.l / 100 : null);
   }
+  // chữ của từng trang được lưu lại sau lần tìm đầu tiên → các lần sau tìm tức thì
+  let tcache; const ckey = key ? 'pdftxt_' + String(key).replace(/[^\w-]/g, '_').slice(-60) + '.json' : null;
+  async function loadCache() {
+    if (tcache !== undefined) return tcache; tcache = null;
+    if (ckey) { try { const c = await readJSON(ckey, null); if (c && c.n === n && Array.isArray(c.p)) tcache = c.p; } catch (e) {} }
+    return tcache;
+  }
   async function search(qs) {
     const qq = norm(qs).replace(/\s+/g, ''); if (!qq) return;
     if (qq === lastQ && results.length) { ri = (ri + 1) % results.length; show(); return; }
-    lastQ = qq; const my = ++token; results = []; ri = -1;
+    lastQ = qq; const tk = ++token; results = []; ri = -1;
     pages.forEach(P => { if (P.hl) { P.hl.remove(); P.hl = null; } });
-    let anyText = false;
+    const cache = await loadCache();
+    let anyText = cache ? cache.some(x => x && x.length) : false, failed = false;
     for (let i = 0; i < n; i++) {
-      if (my !== token || ctx.closed) return;
+      if (tk !== token || ctx.closed) return;
+      if (cache && !(cache[i] || '').includes(qq)) continue; // trang không có chữ cần tìm → bỏ qua ngay
       if (ri < 0) cnt.textContent = `${Math.round(i / n * 100)}%`;
-      let t; try { t = await pageText(i); } catch (e) { continue; }
+      let t; try { t = await pageText(i); } catch (e) { failed = true; continue; }
       if (t.str.length) anyText = true;
       let from = 0, idx;
       while ((idx = t.str.indexOf(qq, from)) >= 0 && results.length < 999) { results.push({ i, boxes: boxesFor(t, idx, idx + qq.length) }); from = idx + qq.length; }
       if (results.length && ri < 0) { ri = 0; show(); }
       else if (ri >= 0) { cnt.textContent = `${ri + 1}/${results.length}`; if (results.some(r => r.i === i)) drawHl(i); }
     }
-    if (my !== token) return;
+    if (tk !== token) return;
+    if (!cache && !failed && ckey) { tcache = Array.from({ length: n }, (_, i) => (texts.get(i) || {}).str || ''); writeJSON(ckey, { n, p: tcache }); }
     if (!results.length) { cnt.textContent = '0'; toast(anyText ? 'Không tìm thấy “' + qs + '”' : 'File này là bản scan (ảnh) nên không tìm chữ được', 3200); }
   }
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); search(inp.value); } });
@@ -485,7 +503,7 @@ async function openDocx(ctx, data) {
   let pw = 0; secs.forEach(s => { pw = Math.max(pw, s.offsetWidth); }); pw = pw || 794;
   wrap.style.width = (pw + 16) + 'px';
   ctx.sub.textContent = secs.length > 1 ? `${secs.length} trang · chỉ xem` : 'Chỉ xem';
-  zoomable(ctx, wrap, () => body.clientWidth / (pw + 16), 1, 4);
+  zoomable(ctx, wrap, () => Math.min(1.25, body.clientWidth / (pw + 16)), 1, 4);
 }
 
 // ================= EXCEL =================

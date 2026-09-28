@@ -174,7 +174,7 @@ const dmy = s => s ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}` : '';
 const SEVRES = { 1: 'ng', 2: 'chk', 3: 'doing' };
 async function exportWeek(ws, kind) {
   const W = weekData(ws); const st = S.state.settings; const name = st.name; const yr = ws.slice(0, 4); const no = weekNo(ws);
-  const org = st.org || 'CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT';
+  const org = st.org || '';
   const plan = [...W.carried, ...W.plan].sort((a, b) => areaOf(a).localeCompare(areaOf(b), 'vi') || (a.due || '').localeCompare(b.due || ''));
   const prow = plan.map((t, i) => { const dev = device(t.deviceId); const s2 = t.done ? 'done' : t.status || 'todo';
     return [String(i + 1), areaOf(t), dev?.name || '', t.title + (t.note ? '\n' + t.note : ''), t.due ? `${wdOf(t.due)} ${fmtShort(t.due)}` : '', t.assignee || '',

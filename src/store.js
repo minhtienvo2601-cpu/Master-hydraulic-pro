@@ -31,7 +31,7 @@ function blank() {
       { id: 'kt', name: 'Kỹ thuật', color: '#1E6FFF' }, { id: 'qa', name: 'QA vật tư', color: '#3CC48C' },
       { id: 'sc', name: 'Sự cố', color: '#F0564F' }, { id: 'ncc', name: 'Nhà cung cấp', color: '#F2A33A' }, { id: 'cn', name: 'Cá nhân', color: '#B07BF0' },
     ],
-    settings: { name: '', remindDays: 2, remindTime: '07:00', dueDay: true, theme: 'dark', backupRemind: true, org: 'CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT', dept: '', qaSeq: {} },
+    settings: { name: '', remindDays: 2, remindTime: '07:00', dueDay: true, theme: 'dark', backupRemind: true, org: '', dept: '', qaSeq: {} },
   };
 }
 

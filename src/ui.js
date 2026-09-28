@@ -68,9 +68,56 @@ export function busy(msg) {
   return { set: m => { d.querySelector('[data-m]').textContent = m; }, done: () => d.remove() };
 }
 let pv = null;
+// Xem ảnh toàn màn hình: chụm 2 ngón / chạm đúp / Ctrl+lăn chuột để phóng to, kéo để di chuyển
 export function viewPhoto(src) {
-  pv = document.createElement('div'); pv.className = 'photo-view'; pv.innerHTML = `<img src="${src}"><button>${ic('x')}</button>`;
-  pv.onclick = closePhoto; document.body.appendChild(pv);
+  closePhoto();
+  pv = document.createElement('div'); pv.className = 'photo-view';
+  pv.innerHTML = `<img src="${src}" draggable="false" alt=""><button aria-label="Đóng">${ic('x')}</button><div class="pv-hint">Chụm 2 ngón hoặc chạm đúp để phóng to</div>`;
+  document.body.appendChild(pv);
+  const img = pv.querySelector('img'); pv.querySelector('button').onclick = closePhoto;
+  let s = 1, tx = 0, ty = 0; const MAX = 6;
+  const pts = new Map(); let g = null, lastTap = null, moved = false;
+  const apply = (anim) => { img.style.transition = anim ? 'transform .2s' : 'none'; img.style.transform = `translate(${tx}px,${ty}px) scale(${s})`; };
+  const center = () => { const r = pv.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  const clamp = () => {
+    if (s <= 1) { s = 1; tx = 0; ty = 0; return; }
+    const w = img.offsetWidth * s, h = img.offsetHeight * s, W = pv.clientWidth, H = pv.clientHeight;
+    const mx = Math.max(0, (w - W) / 2), my = Math.max(0, (h - H) / 2);
+    tx = Math.max(-mx, Math.min(mx, tx)); ty = Math.max(-my, Math.min(my, ty));
+  };
+  // phóng quanh một điểm trên màn hình (px, py)
+  const zoomAt = (ns, px, py) => { ns = Math.max(1, Math.min(MAX, ns)); const [cx, cy] = center(); const qx = (px - cx - tx) / s, qy = (py - cy - ty) / s; s = ns; tx = px - cx - s * qx; ty = py - cy - s * qy; };
+  const hint = pv.querySelector('.pv-hint'); setTimeout(() => hint && hint.classList.add('hide'), 1800);
+  pv.addEventListener('pointerdown', e => {
+    if (e.target.closest('button')) return;
+    try { pv.setPointerCapture(e.pointerId); } catch (x) {} pts.set(e.pointerId, [e.clientX, e.clientY]); moved = false;
+    if (pts.size === 2) { const [a, b] = [...pts.values()]; g = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), s0: s, mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2, tx0: tx, ty0: ty }; }
+    else if (pts.size === 1) g = { px: e.clientX, py: e.clientY, tx0: tx, ty0: ty };
+  });
+  pv.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pts.size === 2 && g && g.d) {
+      const [a, b] = [...pts.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]); const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+      s = g.s0; tx = g.tx0; ty = g.ty0; zoomAt(g.s0 * d / g.d, g.mx, g.my); tx += mx - g.mx; ty += my - g.my; moved = true; apply(false);
+    } else if (pts.size === 1 && g && g.px != null) {
+      const dx = e.clientX - g.px, dy = e.clientY - g.py; if (Math.hypot(dx, dy) > 8) moved = true;
+      if (s > 1) { tx = g.tx0 + dx; ty = g.ty0 + dy; apply(false); }
+    }
+  });
+  const up = e => {
+    if (!pts.has(e.pointerId)) return; pts.delete(e.pointerId);
+    if (pts.size === 1) { const [p] = [...pts.values()]; g = { px: p[0], py: p[1], tx0: tx, ty0: ty }; clamp(); apply(true); return; }
+    if (pts.size) return;
+    const wasPinch = g && g.d; g = null; clamp(); apply(true);
+    if (moved || wasPinch) { lastTap = null; return; }
+    const now = Date.now();
+    if (lastTap && now - lastTap.t < 320 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 40) {
+      if (s > 1.05) { s = 1; tx = 0; ty = 0; } else { zoomAt(2.5, e.clientX, e.clientY); clamp(); }
+      apply(true); lastTap = null;
+    } else lastTap = { t: now, x: e.clientX, y: e.clientY };
+  };
+  pv.addEventListener('pointerup', up); pv.addEventListener('pointercancel', up);
+  pv.addEventListener('wheel', e => { e.preventDefault(); zoomAt(s * (e.deltaY < 0 ? 1.2 : 1 / 1.2), e.clientX, e.clientY); clamp(); apply(true); }, { passive: false });
 }
 export function closePhoto() { if (pv) { pv.remove(); pv = null; return true; } return false; }
 

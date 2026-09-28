@@ -1,5 +1,5 @@
 // Lớp nền tảng: chạy thật trên Android (Capacitor) hoặc chạy thử trên trình duyệt.
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Camera } from '@capacitor/camera';
@@ -8,8 +8,16 @@ import { AppLauncher } from '@capacitor/app-launcher';
 import { App } from '@capacitor/app';
 import { FileOpener } from '@capacitor-community/file-opener';
 
+import { idbGet, idbPut, idbDel, mimeOf } from './webstore.js';
+
 export const native = Capacitor.isNativePlatform();
-const webFiles = new Map(); // chạy thử: id -> objectURL
+const webFiles = new Map(); // bản máy tính: đường dẫn -> objectURL (dữ liệu thật nằm trong IndexedDB)
+function webSet(path, blob) { const o = webFiles.get(path); if (o && o.startsWith('blob:')) URL.revokeObjectURL(o); const u = URL.createObjectURL(blob); webFiles.set(path, u); return u; }
+async function webBlob(path) {
+  try { const b = await idbGet('files', path); if (b) return b; } catch (e) {}
+  const u = webFiles.get(path); if (u) return await (await fetch(u)).blob();
+  return null;
+}
 
 // ---------- JSON store ----------
 export async function readJSON(name, fallback) {
@@ -18,7 +26,8 @@ export async function readJSON(name, fallback) {
       const r = await Filesystem.readFile({ path: name, directory: Directory.Data, encoding: 'utf8' });
       return JSON.parse(r.data);
     }
-    const s = localStorage.getItem('bt_' + name);
+    try { const v = await idbGet('kv', name); if (v != null) return JSON.parse(v); } catch (e) {}
+    const s = localStorage.getItem('bt_' + name); // dữ liệu cũ / chạy thử
     return s ? JSON.parse(s) : fallback;
   } catch (e) { return fallback; }
 }
@@ -30,7 +39,8 @@ export async function writeJSON(name, obj) {
     try { await Filesystem.deleteFile({ path: name, directory: Directory.Data }); } catch (e) {}
     await Filesystem.rename({ from: name + '.tmp', to: name, directory: Directory.Data, toDirectory: Directory.Data });
   } else {
-    try { localStorage.setItem('bt_' + name, data); } catch (e) {}
+    try { await idbPut('kv', name, data); }
+    catch (e) { try { localStorage.setItem('bt_' + name, data); } catch (e2) {} }
   }
 }
 
@@ -45,7 +55,7 @@ function blobToB64(blob) {
   });
 }
 export async function saveBlob(path, blob, onProgress) {
-  if (!native) { webFiles.set(path, URL.createObjectURL(blob)); return; }
+  if (!native) { await idbPut('files', path, blob); webSet(path, blob); return; }
   await Filesystem.mkdir({ path: path.split('/').slice(0, -1).join('/'), directory: Directory.Data, recursive: true }).catch(() => {});
   if (blob.size === 0) { await Filesystem.writeFile({ path, directory: Directory.Data, data: '' }); return; }
   for (let off = 0; off < blob.size; off += CHUNK) {
@@ -56,33 +66,32 @@ export async function saveBlob(path, blob, onProgress) {
   }
 }
 export async function saveB64(path, b64) {
-  if (!native) { webFiles.set(path, 'data:image/jpeg;base64,' + b64); return; }
+  if (!native) { const blob = new Blob([b64ToBytes(b64)], { type: mimeOf(path) }); await idbPut('files', path, blob); webSet(path, blob); return; }
   await Filesystem.mkdir({ path: path.split('/').slice(0, -1).join('/'), directory: Directory.Data, recursive: true }).catch(() => {});
   await Filesystem.writeFile({ path, directory: Directory.Data, data: b64 });
 }
 export async function readB64(path) {
   if (!native) {
-    const u = webFiles.get(path); if (!u) return null;
-    const b = await (await fetch(u)).blob(); return blobToB64(b);
+    const b = await webBlob(path); return b ? blobToB64(b) : null;
   }
   const r = await Filesystem.readFile({ path, directory: Directory.Data });
   return typeof r.data === 'string' ? r.data : await blobToB64(r.data);
 }
 export async function deletePath(path) {
-  if (!native) { webFiles.delete(path); return; }
+  if (!native) { const o = webFiles.get(path); if (o && o.startsWith('blob:')) URL.revokeObjectURL(o); webFiles.delete(path); try { await idbDel('files', path); } catch (e) {} return; }
   try { await Filesystem.deleteFile({ path, directory: Directory.Data }); } catch (e) {}
 }
 const uriCache = new Map();
 export async function fileSrc(path) {
-  if (!native) return webFiles.get(path) || '';
+  if (!native) { if (webFiles.has(path)) return webFiles.get(path); const b = await webBlob(path); return b ? webSet(path, b) : ''; }
   if (uriCache.has(path)) return uriCache.get(path);
   const { uri } = await Filesystem.getUri({ path, directory: Directory.Data });
   const s = Capacitor.convertFileSrc(uri); uriCache.set(path, s); return s;
 }
 export async function openFile(path, mime, name) {
   if (!native) {
-    const u = webFiles.get(path);
-    if (u) { const a = document.createElement('a'); a.href = u; a.download = name || 'file'; a.target = '_blank'; a.click(); }
+    const u = await fileSrc(path); if (!u) throw new Error('Không tìm thấy file');
+    const a = document.createElement('a'); a.href = u; a.download = name || 'file'; a.click();
     return;
   }
   const { uri } = await Filesystem.getUri({ path, directory: Directory.Data });
@@ -135,21 +144,49 @@ export function pickFiles(accept = '*/*', multiple = true) {
   });
 }
 
+// ---------- đọc từng đoạn file (plugin riêng của app, dùng cho PDF lớn) ----------
+const FileRange = registerPlugin('FileRange');
+// trả về kích thước file (byte) hoặc null nếu bản app cũ chưa có plugin
+export async function rangeSize(path) {
+  if (!native) return null;
+  try { const r = await FileRange.size({ path }); const n = +r.size; return n > 0 ? n : null; } catch (e) { return null; }
+}
+export async function rangeRead(path, offset, length) {
+  const r = await FileRange.read({ path, offset: String(offset), length: String(length) });
+  return b64ToBytes(r.data || '');
+}
+
 // ---------- share / export ----------
 // Chia sẻ (Zalo, Drive, Gmail…) từ dữ liệu base64
 export async function shareFile(name, b64, mime) {
-  if (!native) { downloadB64(name, b64, mime); return; }
+  if (!native) { await webShare(name, new Blob([b64ToBytes(b64)], { type: mime || mimeOf(name) })); return; }
   await Filesystem.writeFile({ path: name, directory: Directory.Cache, data: b64 });
   const { uri } = await Filesystem.getUri({ path: name, directory: Directory.Cache });
   await Share.share({ title: name, files: [uri], dialogTitle: 'Chia sẻ / gửi file' });
 }
-function downloadB64(name, b64, mime) {
-  const a = document.createElement('a'); a.href = 'data:' + (mime || 'application/octet-stream') + ';base64,' + b64; a.download = name; a.click();
+function downloadBlob(name, blob) {
+  const u = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(u), 30000);
+}
+// Máy tính: dùng khung chia sẻ của Windows nếu có, không thì tải file về
+async function webShare(name, blob) {
+  const file = new File([blob], name, { type: blob.type || mimeOf(name) });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: name }); return; }
+  downloadBlob(name, blob);
 }
 // Lưu thẳng vào bộ nhớ máy: Documents/BaoTriThuyLuc/<tên file>. Trả về đường dẫn để báo cho người dùng.
 export const SAVE_DIR = 'BaoTriThuyLuc';
 export async function saveToDevice(name, b64, mime) {
-  if (!native) { downloadB64(name, b64, mime); return 'Thư mục Tải về'; }
+  if (!native) {
+    const blob = new Blob([b64ToBytes(b64)], { type: mime || mimeOf(name) });
+    if (window.showSaveFilePicker) { // Chrome/Edge trên máy tính: hộp thoại "Lưu thành…"
+      const ext = (name.match(/\.[^.]+$/) || [''])[0];
+      const h = await window.showSaveFilePicker({ suggestedName: name, types: ext ? [{ description: 'File ' + ext.slice(1).toUpperCase(), accept: { [blob.type || 'application/octet-stream']: [ext] } }] : undefined });
+      const w = await h.createWritable(); await w.write(blob); await w.close();
+      return h.name;
+    }
+    downloadBlob(name, blob); return 'thư mục Tải về (Downloads)';
+  }
   let nm = name, err;
   for (let k = 2; k < 30; k++) {
     try {
@@ -166,7 +203,7 @@ export async function saveToDevice(name, b64, mime) {
 // File xuất tạm để xem trước (xóa khi mở app lần sau)
 export async function writeExport(name, b64) {
   const path = `exports/${name}`;
-  if (!native) { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); webFiles.set(path, URL.createObjectURL(new Blob([u]))); return path; }
+  if (!native) { webSet(path, new Blob([b64ToBytes(b64)], { type: mimeOf(name) })); return path; }
   await Filesystem.writeFile({ path, directory: Directory.Data, data: b64, recursive: true });
   return path;
 }
@@ -183,7 +220,7 @@ export async function readBytes(path) {
 }
 export function b64ToBytes(b64) { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
 export async function sharePath(path, name, mime) {
-  if (!native) { const u = webFiles.get(path); if (u) { const a = document.createElement('a'); a.href = u; a.download = name; a.click(); } return; }
+  if (!native) { const b = await webBlob(path); if (b) await webShare(name, b); return; }
   const { uri } = await Filesystem.getUri({ path, directory: Directory.Data });
   await Share.share({ title: name, files: [uri], dialogTitle: 'Chia sẻ / gửi file' });
 }

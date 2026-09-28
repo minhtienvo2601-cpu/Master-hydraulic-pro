@@ -223,7 +223,7 @@ input[type=date].inp,input[type=time]{color-scheme:var(--scheme)}
 .set-row .tt{font-weight:500}
 .set-row .ds{font-size:12.5px;color:var(--mut)}
 .set-row select,.set-row input{background:var(--s2);border:1px solid var(--line2);border-radius:10px;padding:8px 10px;outline:none}
-.photo-view{position:fixed;inset:0;background:#000;z-index:80;display:grid;place-items:center}
+.photo-view{position:fixed;inset:0;background:#000;z-index:80;display:grid;place-items:center;overflow:hidden;touch-action:none;user-select:none}
 .photo-view img{max-width:100%;max-height:100%}
 .photo-view button{position:absolute;top:calc(var(--sat) + 14px);right:14px;width:42px;height:42px;border-radius:14px;background:rgba(255,255,255,.12);display:grid;place-items:center}
 #toast{position:fixed;left:50%;bottom:calc(var(--sab) + 96px);transform:translate(-50%,20px);background:#E6F0FF;color:#0B2A66;
@@ -500,3 +500,77 @@ body.editing .ed-bar{display:grid}
 .vw-th canvas{width:100%;height:100%;display:block}
 .vw-ol{font-size:14.5px;padding-top:12px;padding-bottom:12px}
 .vw-ol svg{width:16px;height:16px;flex:none;color:var(--gold)}
+
+/* ===== Bản máy tính (màn hình rộng) ===== */
+[hidden]{display:none!important}
+#tabbar button.dt{display:none}
+@media (hover:hover){
+  .item,.hit,.refcard,.set-row,.menu-item,.chip,.icon-btn,#tabbar button,.vw-th,.vw-tabs button{transition:background-color .15s,border-color .15s}
+  .item:hover,.hit:hover,.refcard:hover,button.set-row:hover,.menu-item:hover{background-color:var(--s2)}
+  .icon-btn:hover{background:var(--s2);color:var(--tx)}
+  .chip:hover{border-color:var(--line2)}
+  *{scrollbar-width:thin;scrollbar-color:var(--s3) transparent}
+}
+@media (min-width:900px){
+  :root{--side:236px}
+  #app{padding-left:var(--side)}
+  #topbar{padding:22px 36px 12px;max-width:calc(1120px + 72px);width:100%;margin:0 auto}
+  #topbar h1{font-size:26px}
+  #view{padding:6px 36px 60px}
+  #view>*{max-width:1120px;margin-left:auto;margin-right:auto}
+  /* thanh điều hướng thành cột bên trái */
+  #tabbar{left:0;top:0;bottom:0;right:auto;width:var(--side);height:auto;border-radius:0;border:0;border-right:1px solid var(--line);
+    flex-direction:column;justify-content:flex-start;align-items:stretch;gap:4px;padding:18px 14px;box-shadow:none;background:var(--bg2);backdrop-filter:none;-webkit-backdrop-filter:none}
+  #tabbar::before{content:"Bảo Trì Thủy Lực";display:flex;align-items:center;height:52px;padding-left:58px;margin:0 2px 18px;font-weight:800;font-size:15px;white-space:nowrap;color:var(--tx);
+    background:url(logo.png) no-repeat 2px center/44px 44px}
+  #tabbar button,#tabbar button.dt{display:flex;flex:none;flex-direction:row;justify-content:flex-start;gap:14px;padding:11px 14px;border-radius:14px;font-size:14.5px;color:var(--tx2)}
+  #tabbar button svg{width:21px;height:21px}
+  #tabbar button:hover{background:var(--s1);color:var(--tx)}
+  #tabbar button.on{background:var(--goldDim);color:var(--gold2)}
+  #tabbar button.on svg{filter:none}
+  #tabbar button[data-tab=tasks]{margin-top:14px;position:relative}
+  #tabbar button[data-tab=tasks]::before{content:"";position:absolute;left:10px;right:10px;top:-9px;border-top:1px solid var(--line)}
+  #tabbar button[data-tab=more]{margin-top:auto}
+  body.editing #tabbar{display:flex!important}
+  #fab{right:36px;bottom:32px}
+  #toast{bottom:36px;left:calc(50% + var(--side) / 2)}
+  .ed-bar{left:calc(var(--side) + 36px);right:36px;bottom:20px;max-width:720px;margin:0 auto}
+  body.editing #view{padding-bottom:110px}
+  .refgrid{grid-template-columns:repeat(3,1fr)}
+  .bi-grid{grid-template-columns:repeat(6,1fr)}
+  .sealgrid{grid-template-columns:repeat(6,1fr)}
+  .stats{grid-template-columns:repeat(4,1fr)}
+  /* hộp thoại ở giữa màn hình thay cho khung trượt từ dưới lên */
+  .sheet{left:50%;right:auto;top:50%;bottom:auto;width:min(580px,92vw);max-height:86vh;border-radius:22px;border:1px solid var(--line2);
+    transform:translate(-50%,-47%) scale(.97);opacity:0;transition:transform .2s,opacity .2s;box-shadow:0 30px 80px rgba(0,0,0,.45)}
+  .sheet.show{transform:translate(-50%,-50%);opacity:1}
+  .sheet .grab{display:none}
+  .sheet .sh-head{padding-top:16px}
+  .sheet .sh-body{padding-bottom:20px}
+  .vw-thumbs{grid-template-columns:repeat(4,1fr)}
+  /* trình xem file: nội dung giữa màn hình */
+  .vw-top{padding:10px 18px}
+  .vw-act{grid-template-columns:repeat(2,220px);justify-content:center}
+}
+@media (min-width:1400px){ .vw-thumbs{grid-template-columns:repeat(5,1fr)} }
+.vw-pages,.vw-doc,.vw-img{margin:0 auto}
+/* gợi ý mã vật tư (tối đa 3) */
+.csug{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0 2px;font-size:12.5px}
+.csug button{padding:5px 10px;border-radius:9px;border:1px dashed rgba(30,111,255,.55);color:var(--gold2);font-weight:700;font-size:13px;font-family:ui-monospace,monospace;background:transparent}
+/* mục ảnh vật tư đã khóa */
+.blk-img.locked{background:var(--bg2);border-style:solid;border-color:var(--line)}
+.blk-img.locked .bi-head{margin-bottom:8px}
+.bi-sl{font-size:12px;font-weight:700;color:var(--tx2);background:var(--s2);padding:3px 8px;border-radius:7px}
+.bi-unlock{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:10px;background:var(--s2);border:1px solid var(--line2);color:var(--tx2);font-size:12.5px;font-weight:600}
+.bi-unlock svg{width:14px;height:14px}
+.bi-strip{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.bi-strip img{width:68px;height:68px;flex:none;object-fit:cover;border-radius:10px;border:1px solid var(--line2);cursor:zoom-in}
+.bi-codes.ro{margin-top:8px;padding:0;background:none;border:0}
+.bi-captxt{margin-top:6px;font-size:13.5px;font-style:italic;color:var(--tx2);display:flex;gap:6px;align-items:center}
+.bi-captxt svg{width:14px;height:14px}
+.bi-done{margin-top:10px;height:44px;font-size:14.5px}
+
+.photo-view img{will-change:transform;transform-origin:center center;-webkit-user-drag:none}
+.photo-view button{z-index:2}
+.pv-hint{position:absolute;left:50%;bottom:calc(var(--sab) + 24px);transform:translateX(-50%);background:rgba(255,255,255,.14);color:#fff;font-size:12.5px;padding:7px 14px;border-radius:999px;white-space:nowrap;transition:opacity .4s;pointer-events:none}
+.pv-hint.hide{opacity:0}

@@ -10,8 +10,9 @@ import { viewParts, openF } from './parts.js';
 import { viewRef, viewRefSec, refTitle, clearRefQ } from './ref.js';
 import { viewNotes, viewNote, noteMenu, newNoteAndOpen, cleanupNote, note } from './notes.js';
 import { viewJournal, viewBuy, backlogForm } from './journal.js';
-import { closeViewer } from './viewer.js';
+import { closeViewer, deliver } from './viewer.js';
 import { SystemBars, SystemBarsStyle } from '@capacitor/core';
+import { persist } from './webstore.js';
 import { native, notifInit, onBack, readB64, saveB64, pickFiles, clearExports, testNotif, exactAlarmStatus, openExactAlarmSetting, fileSrc, deletePath } from './platform.js';
 
 const TABS = { home: ['home', 'Tổng quan'], journal: ['journal', 'Nhật ký'], notes: ['note', 'Ghi chú'], parts: ['folder', 'Tài liệu'], more: ['grid', 'Thêm'], tasks: ['tasks', 'Công việc'], devices: ['device', 'Thiết bị'], ref: ['ref', 'Tra cứu'] };
@@ -19,7 +20,7 @@ const TABHL = { tasks: 'more', devices: 'more', ref: 'more' };
 
 function render() {
   const r = cur(); const v = $('#view');
-  $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === (TABHL[nav.tab] || nav.tab)));
+  markTab();
   document.body.classList.toggle('editing', r.v === 'note');
   $('#btnMenu').hidden = r.v !== 'note'; $('#btnSearch').hidden = r.v === 'note'; $('#btnSettings').hidden = r.v === 'note';
   const sub = nav.stack.length > 0 || (nav.tab === 'parts' && nav.partsNode !== 'root');
@@ -44,6 +45,11 @@ function render() {
   $('#tbTitle').textContent = title; $('#tbEyebrow').textContent = eyebrow;
 }
 nav.render = render;
+function markTab() {
+  const direct = document.querySelector(`#tabbar button[data-tab="${nav.tab}"]`);
+  const t = direct && direct.offsetParent !== null ? nav.tab : (TABHL[nav.tab] || nav.tab);
+  $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+}
 
 function fabAction() {
   const r = cur();
@@ -128,7 +134,7 @@ async function viewSettings(v) {
     <div class="set-group"><div class="set-row"><div class="ic">${ic('user')}</div><div class="grow"><div class="tt">Tên hiển thị</div><div class="ds">Hiện ở lời chào trang Tổng quan</div></div>
       <input id="sName" value="${esc(st.name)}" placeholder="Tên của bạn" style="width:130px"></div>
       <div class="set-row" style="flex-wrap:wrap"><div class="ic">${ic('home')}</div><div class="grow"><div class="tt">Tên đơn vị</div><div class="ds">In ở đầu biên bản, báo cáo</div></div>
-        <input id="sOrg" value="${esc(st.org || 'CÔNG TY CỔ PHẦN THÉP HÒA PHÁT DUNG QUẤT')}" style="width:100%;margin-left:48px"></div>
+        <input id="sOrg" value="${esc(st.org || '')}" placeholder="VD: Công ty CP ABC" style="width:100%;margin-left:48px"></div>
       <div class="set-row" style="flex-wrap:wrap"><div class="ic">${ic('user')}</div><div class="grow"><div class="tt">Bộ phận</div><div class="ds">Dòng thứ hai dưới tên đơn vị (tùy chọn)</div></div>
         <input id="sDept" value="${esc(st.dept || '')}" placeholder="VD: Xưởng HSM – Tổ bảo trì thủy lực" style="width:100%;margin-left:48px"></div></div>
     <div class="sec-h"><h2>Biên bản & báo cáo</h2></div>
@@ -141,8 +147,14 @@ async function viewSettings(v) {
       <div class="set-row" style="flex-wrap:wrap"><div class="ic">${ic('note')}</div><div class="grow"><div class="tt">Dòng chân trang</div><div class="ds">In cuối mỗi trang (để trống = không in)</div></div>
         <input id="sFoot" value="${esc(st.footer == null ? 'Lập bằng ứng dụng Bảo Trì Thủy Lực' : st.footer)}" placeholder="VD: Tổ bảo trì thủy lực – HSM" style="width:100%;margin-left:48px"></div>
     </div>
-    <div class="sec-h"><h2>Nhắc việc</h2></div>
+    ${native ? '' : `<div class="sec-h"><h2>Máy tính</h2></div>
     <div class="set-group">
+      ${installEvt && !standalone() ? `<button class="set-row" id="sInstall" style="width:100%;text-align:left"><div class="ic">${ic('save')}</div><div class="grow"><div class="tt">Cài ứng dụng lên máy tính</div><div class="ds">Có biểu tượng trên màn hình, mở như phần mềm, dùng được khi mất mạng</div></div>${ic('chev')}</button>` : ''}
+      <div class="set-row"><div class="ic">${ic('alert')}</div><div class="grow"><div class="tt">Dữ liệu lưu trong trình duyệt của máy này</div><div class="ds">Chuyển dữ liệu từ điện thoại: điện thoại <b>Sao lưu</b> → gửi file .zip sang máy tính → bấm <b>Khôi phục</b> bên dưới. Đừng xóa dữ liệu duyệt web của trang này.</div></div></div>
+      <div class="set-row"><div class="ic">${ic('bell')}</div><div class="grow"><div class="tt">Nhắc việc</div><div class="ds">Thông báo nhắc việc chỉ có trên điện thoại</div></div></div>
+    </div>`}
+    <div class="sec-h" ${native ? '' : 'hidden'}><h2>Nhắc việc</h2></div>
+    <div class="set-group" ${native ? '' : 'hidden'}>
       <div class="set-row"><div class="ic">${ic('bell')}</div><div class="grow"><div class="tt">Nhắc trước hạn</div><div class="ds">Thông báo trước ngày đến hạn</div></div>
         <select id="sDays">${[1, 2, 3, 5, 7].map(d => `<option value="${d}" ${+st.remindDays === d ? 'selected' : ''}>${d} ngày</option>`).join('')}</select></div>
       <div class="set-row"><div class="ic">${ic('clock')}</div><div class="grow"><div class="tt">Giờ nhắc</div><div class="ds">Giờ trong ngày sẽ hiện thông báo</div></div>
@@ -155,11 +167,11 @@ async function viewSettings(v) {
     <div class="sec-h"><h2>Dữ liệu</h2></div>
     <div class="set-group">
       <button class="set-row" id="sBackup" style="width:100%;text-align:left"><div class="ic">${ic('backup')}</div><div class="grow"><div class="tt">Sao lưu toàn bộ dữ liệu</div><div class="ds">${S.state.tasks.length} việc · ${S.state.notes.length} ghi chú · ${S.state.devices.length} thiết bị · ${nFiles} file → 1 file .zip</div></div>${ic('chev')}</button>
-      <div class="set-row"><div class="ic">${ic('bell')}</div><div class="grow"><div class="tt">Nhắc sao lưu hằng tuần</div><div class="ds">Thông báo 8:00 sáng thứ 2</div></div>
+      <div class="set-row" ${native ? '' : 'hidden'}><div class="ic">${ic('bell')}</div><div class="grow"><div class="tt">Nhắc sao lưu hằng tuần</div><div class="ds">Thông báo 8:00 sáng thứ 2</div></div>
         <input type="checkbox" id="sBk" ${st.backupRemind !== false ? 'checked' : ''} style="width:22px;height:22px;accent-color:var(--gold)"></div>
       <button class="set-row" id="sRestore" style="width:100%;text-align:left"><div class="ic">${ic('restore')}</div><div class="grow"><div class="tt">Khôi phục từ file sao lưu</div><div class="ds">Dùng khi đổi điện thoại hoặc cài lại app</div></div>${ic('chev')}</button>
     </div>
-    <div class="about"><img src="logo.png" alt=""><div><b>Bảo Trì Thủy Lực</b><br><span>Phiên bản 2.0 · dữ liệu lưu trên điện thoại, không cần mạng</span></div></div></div>`;
+    <div class="about"><img src="logo.png" alt=""><div><b>Bảo Trì Thủy Lực</b><br><span>Phiên bản 2.0 · ${native ? 'dữ liệu lưu trên điện thoại' : 'bản máy tính · dữ liệu lưu trên máy này'}, không cần mạng</span></div></div></div>`;
   const q = s => v.querySelector(s);
   $$('[data-theme-opt]', v).forEach(b => b.onclick = () => { st.theme = b.dataset.themeOpt; save(); applyTheme(); render(); });
   q('#sName').onchange = e => { st.name = e.target.value.trim(); save(); };
@@ -188,6 +200,7 @@ async function viewSettings(v) {
   q('#sExactDs').textContent = ex === 'granted' ? '✔ Đã bật – thông báo hiện đúng giờ' : 'Chưa bật – thông báo có thể trễ vài phút. Chạm để bật';
   q('#sExact').onclick = async () => { await openExactAlarmSetting(); };
   q('#sBackup').onclick = backup;
+  if (q('#sInstall')) q('#sInstall').onclick = async () => { const e = installEvt; if (!e) return; e.prompt(); try { await e.userChoice; } catch (x) {} installEvt = null; render(); };
   q('#sRestore').onclick = restore;
 }
 
@@ -261,10 +274,44 @@ function applyTheme() {
 }
 mq && mq.addEventListener && mq.addEventListener('change', () => { if ((S.state.settings.theme || 'dark') === 'auto') applyTheme(); });
 
+function handleBack() {
+  if (closePhoto()) return true;
+  if (sheetOpen()) { closeTopSheet(); return true; }
+  if (closeViewer()) return true;
+  leaving();
+  if (pop()) return true;
+  if (nav.tab === 'parts' && nav.partsNode !== 'root') { nav.partsNode = node(nav.partsNode)?.parentId || 'root'; render(); return true; }
+  if (nav.tab !== 'home') { go('home'); return true; }
+  return false;
+}
+
+// ---------- bản máy tính (Chrome / Edge) ----------
+let installEvt = null;
+function initDesktop() {
+  document.body.classList.add('web');
+  persist();
+  // phím tắt
+  document.addEventListener('keydown', e => {
+    const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '') || document.activeElement?.isContentEditable;
+    if (e.key === 'Escape') { if (typing && document.activeElement.blur && !sheetOpen() && !document.querySelector('.vw')) { document.activeElement.blur(); return; } e.preventDefault(); handleBack(); return; }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'k')) {
+      e.preventDefault();
+      const vf = document.querySelector('.vw [data-a=find]'); if (vf) { vf.click(); return; }
+      if (cur().v !== 'search') push({ v: 'search' }); else document.getElementById('q')?.focus();
+    }
+  });
+  // cài như ứng dụng + chạy không cần mạng
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (cur().v === 'settings') render(); });
+  window.addEventListener('appinstalled', () => { installEvt = null; toast('✔ Đã cài ứng dụng lên máy tính'); });
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});
+  let rt = null; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(markTab, 150); });
+}
+const standalone = () => window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+
 // ---------- khởi động ----------
 async function init() {
   $('#btnBack').innerHTML = ic('back'); $('#btnSearch').innerHTML = ic('search'); $('#btnSettings').innerHTML = ic('settings'); $('#fab').innerHTML = ic('plus', 2.4);
-  $$('#tabbar button').forEach(b => { const [i, l] = TABS[b.dataset.tab]; b.innerHTML = ic(i) + `<span>${l}</span>`; b.onclick = () => { if (b.dataset.tab === 'ref') clearRefQ(); if (b.dataset.tab === 'parts' && nav.tab === 'parts' && !nav.stack.length) nav.partsNode = 'root'; go(b.dataset.tab); }; });
+  $$('#tabbar button').forEach(b => { const [i, l] = TABS[b.dataset.tab]; b.innerHTML = ic(i) + `<span>${l}</span>`; b.onclick = () => { leaving(); if (b.dataset.tab === 'ref') clearRefQ(); if (b.dataset.tab === 'parts' && nav.tab === 'parts' && !nav.stack.length) nav.partsNode = 'root'; go(b.dataset.tab); }; });
   $('#btnBack').onclick = () => { leaving(); if (pop()) return; if (nav.tab === 'parts' && nav.partsNode !== 'root') { nav.partsNode = node(nav.partsNode)?.parentId || 'root'; render(); } };
   $('#btnSearch').onclick = () => { if (cur().v !== 'search') push({ v: 'search' }); };
   $('#btnSettings').onclick = () => { if (cur().v !== 'settings') push({ v: 'settings' }); };
@@ -274,16 +321,8 @@ async function init() {
   clearExports();
   applyTheme();
   render();
-  onBack(() => {
-    if (closePhoto()) return true;
-    if (sheetOpen()) { closeTopSheet(); return true; }
-    if (closeViewer()) return true;
-    leaving();
-    if (pop()) return true;
-    if (nav.tab === 'parts' && nav.partsNode !== 'root') { nav.partsNode = node(nav.partsNode)?.parentId || 'root'; render(); return true; }
-    if (nav.tab !== 'home') { go('home'); return true; }
-    return false;
-  });
+  onBack(handleBack);
+  if (!native) initDesktop();
   await notifInit(extra => { if (extra.go === 'backup') { go('home'); push({ v: 'settings' }); return; } const t = extra.taskId && task(extra.taskId); if (t) { go('tasks'); taskForm(t); } });
   reschedule();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
