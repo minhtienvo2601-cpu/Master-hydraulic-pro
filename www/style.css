@@ -596,3 +596,97 @@ body.editing .ed-bar{display:grid}
 .bi-strip img{cursor:zoom-in}
 /* nút quay lại / làm lại */
 .icon-btn.off{opacity:.35}
+
+/* ===== Thay thế định kỳ (dạng bảng) ===== */
+b.red{color:var(--p1t)}b.amb{color:var(--p2t)}b.ok{color:var(--okt)}
+.amb-t{color:var(--p2t);font-weight:700}
+.mono{font-family:ui-monospace,Consolas,monospace}
+.num{font-variant-numeric:tabular-nums}
+.pm-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.pm-tile{padding:10px 12px;border-radius:14px;background:var(--s1);border:1px solid var(--line);text-align:left}
+.pm-tile b{display:block;font-size:24px;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}
+.pm-tile span{font-size:12px;color:var(--tx2);line-height:1.25;display:block}
+.pm-tile.red{background:rgba(240,86,79,.13);border-color:rgba(240,86,79,.4)}.pm-tile.red b{color:var(--p1t)}
+.pm-tile.amb{background:rgba(242,163,58,.13);border-color:rgba(242,163,58,.4)}.pm-tile.amb b{color:var(--p2t)}
+.pm-acts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.pm-acts button{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 2px;border-radius:14px;background:var(--s1);border:1px solid var(--line);font-size:11.5px;font-weight:500;color:var(--tx2);text-align:center;line-height:1.2}
+.pm-acts svg{width:20px;height:20px;color:var(--gold)}
+/* bảng */
+.tb{border-radius:14px;border:1px solid var(--line2);background:var(--bg2);overflow:hidden;overflow:clip;margin-bottom:6px}
+.tb-h{display:flex;align-items:center;gap:4px;padding:8px 10px;background:var(--s2);font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--tx2);text-transform:uppercase;position:sticky;top:0;z-index:2}
+.tb-r{display:flex;align-items:center;gap:4px;width:100%;padding:9px 10px;border-top:1px solid var(--line);background:var(--bg2);color:var(--tx);text-align:left;font-size:14px;content-visibility:auto;contain-intrinsic-size:auto 50px}
+.tb-r:nth-child(even){background:var(--s1)}
+button.tb-r:active{background:var(--s2)}
+.tb-r.sel{background:var(--goldDim)!important}
+.tb-t{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-t.wrap{white-space:normal;line-height:1.25}
+.tb-s{font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.tb-g{padding:7px 10px;background:var(--s2);border-top:1px solid var(--line2);font-weight:800;font-size:13px;color:var(--gold2)}
+.tb-g span{font-weight:500;color:var(--mut);font-size:12px}
+.mx{width:36px;flex:none;text-align:right;font-variant-numeric:tabular-nums;color:var(--tx2)}
+.tb-h .mx.red{color:var(--p1t)}.tb-h .mx.amb{color:var(--p2t)}.tb-h .mx.ok{color:var(--okt)}
+.tc-pos{width:70px;flex:none;font-weight:800;font-size:13px;color:var(--gold2);word-break:break-word;line-height:1.2}
+.tb-h .tc-pos{color:var(--tx2);font-size:10.5px;font-weight:700}
+.tc-date{width:58px;flex:none;text-align:center;font-size:12.5px;color:var(--tx2);font-variant-numeric:tabular-nums}
+.tc-left{width:66px;flex:none;text-align:right}
+.tb-h .tc-date,.tb-h .tc-left{font-size:10.5px}
+.tag{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:6px;background:var(--s2);color:var(--tx2);margin-right:6px;vertical-align:1px;font-family:Roboto,"Segoe UI",system-ui,sans-serif}
+.pos-t{font-weight:800;color:var(--gold2);margin-right:6px}
+.st.red,.st.amb,.st.ok{display:inline-block;min-width:48px;text-align:center;padding:3px 5px;border-radius:7px;font-size:12px;white-space:nowrap;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.25}
+.st.red{background:rgba(240,86,79,.18);color:var(--p1t)}
+.st.amb{background:rgba(242,163,58,.18);color:var(--p2t)}
+.st.ok{background:rgba(60,196,140,.12);color:var(--okt)}
+.st.none{display:inline-block;font-size:11px;font-weight:600;color:var(--mut);padding:0;line-height:1.2;text-align:right}
+/* thanh công cụ bảng */
+.pm-tabs{display:flex;gap:6px;overflow-x:auto;margin:0 -16px;padding:0 16px 2px;scrollbar-width:none}
+.pm-tabs::-webkit-scrollbar{display:none}
+.pm-tabs button{flex:none;padding:9px 14px;border-radius:12px;background:var(--s1);border:1px solid var(--line);font-size:13.5px;font-weight:600;color:var(--tx2);white-space:nowrap}
+.pm-tabs button small{font-weight:500;color:var(--mut);margin-left:2px}
+.pm-tabs button.on{background:var(--gold);border-color:var(--gold);color:#fff}.pm-tabs button.on small{color:rgba(255,255,255,.8)}
+.pm-tool{display:flex;gap:8px;align-items:center;margin-top:10px}
+.pm-tool .searchbox{border-radius:14px;min-width:0;padding:0 12px}.pm-tool .searchbox input{min-width:0;width:100%}.pm-tool .icon-btn{width:42px}
+.icon-btn.on{background:var(--goldDim);border-color:rgba(30,111,255,.5);color:var(--gold2)}
+.cbx2{width:22px;height:22px;border-radius:7px;border:2px solid var(--line2);flex:none;display:grid;place-items:center}
+.cbx2.on{background:var(--gold);border-color:var(--gold)}.cbx2 svg{width:14px;height:14px;color:#fff}
+.pm-selbar{position:fixed;left:12px;right:12px;bottom:calc(var(--sab) + 84px);display:flex;align-items:center;gap:8px;padding:8px;border-radius:18px;background:var(--bg2);border:1px solid var(--line2);box-shadow:var(--shadow);z-index:22}
+.pm-selbar span{flex:1;font-weight:700;font-size:13.5px;padding-left:6px}
+.pm-selbar .btn{width:auto;height:44px;padding:0 14px;font-size:14px;margin:0!important}
+.seg3{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;padding:4px;border-radius:14px;background:var(--s1);border:1px solid var(--line)}
+.seg3 button{padding:9px 4px;border-radius:11px;font-size:13px;font-weight:500;color:var(--tx2);line-height:1.2}
+.seg3 button.on{background:var(--gold);color:#fff;font-weight:700}
+.okbtn{width:40px;height:36px;border-radius:10px;background:rgba(60,196,140,.14);color:var(--okt);display:grid;place-items:center;flex:none;margin-left:4px}
+.okbtn svg{width:18px;height:18px}
+/* chi tiết vị trí */
+.pm-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin:4px 2px 12px}
+.kvt .kv{display:flex;gap:10px;padding:10px 12px;border-top:1px solid var(--line);font-size:14px;align-items:baseline}
+.kvt .kv:first-child{border-top:0}
+.kvt .kv>div:first-child{width:108px;flex:none;color:var(--mut);font-size:13px}
+.kvt .kv>div:last-child{flex:1;min-width:0;word-break:break-word}
+.hph{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap}
+.hph img{width:44px;height:44px;border-radius:8px;object-fit:cover;background:var(--s2);border:1px solid var(--line2)}
+.pm-bot{position:fixed;left:12px;right:12px;bottom:calc(var(--sab) + 84px);display:grid;grid-template-columns:1fr 2fr;gap:8px;z-index:22;padding:8px;border-radius:18px;background:var(--bg2);border:1px solid var(--line2);box-shadow:var(--shadow)}
+.pm-bot .btn{height:48px;margin:0!important}
+.pm-next{margin-top:12px;font-size:13.5px;color:var(--tx2);display:flex;align-items:center;gap:6px}
+.pm-next:empty{display:none}.pm-next svg{width:16px;height:16px;color:var(--gold)}.pm-next b{color:var(--gold2)}
+.imrow{display:flex;gap:12px;align-items:flex-start;padding:12px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.imrow input{width:20px;height:20px;accent-color:var(--gold);margin-top:2px;flex:none}
+.imrow small{font-size:12.5px}
+#tabbar button span{white-space:nowrap}
+.dk{display:none!important}
+.pmh-go{display:flex;align-items:center;gap:10px;width:100%;text-align:left}.pmh-go>svg{width:18px;height:18px;color:var(--mut);flex:none}
+.wc-s b.red{color:var(--p1t)}.wc-s b.amb{color:var(--p2t)}
+@media (min-width:900px){
+  .pm-selbar,.pm-bot{left:calc(var(--side) + 36px);right:36px;bottom:20px;max-width:720px;margin:0 auto}
+  .mx{width:74px}.tc-pos{width:120px;font-size:14px}.tc-date{width:90px;font-size:13.5px}.tc-left{width:100px}
+  .tb-r{padding:10px 14px;gap:10px}.tb-h{padding:9px 14px;gap:10px;font-size:11px}
+  .pm-tiles{grid-template-columns:repeat(3,220px)}
+  .pm-acts{grid-template-columns:repeat(4,160px)}
+  .pm-tabs{margin:0;padding:0;flex-wrap:wrap}
+  .dk{display:block!important}
+}
+
+/* ===== Cuộn mượt: bỏ hiệu ứng làm mờ nền (tốn GPU khi cuộn), ảnh chờ tải có nền xám ===== */
+:root{--tabbg:#101F3A}
+:root[data-theme=light]{--tabbg:#FFFFFF}
+#tabbar,.ed-bar{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+img[data-src]{background:var(--s2)}
