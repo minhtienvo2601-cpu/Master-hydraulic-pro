@@ -3,7 +3,8 @@ import { nav, push, pop } from './nav.js';
 import { ic } from './icons.js';
 import { esc, uid, today, fmtD, fmtShort, matcher, highlight, $$ } from './util.js';
 import { openSheet, confirmBox, promptBox, menu, toast, busy, viewPhoto, addPhotos } from './ui.js';
-import { deletePath, fileSrc, capturePhotos, pickPhotos } from './platform.js';
+import { deletePath, capturePhotos, pickPhotos } from './platform.js';
+import { lazyImgs, fullOf } from './lazy.js';
 import { exportPdf, exportDocx, exportXlsx } from './exporter.js';
 
 export const note = id => S.state.notes.find(n => n.id === id);
@@ -44,7 +45,7 @@ export function viewNotes(v) {
         ${nph ? `<span>${ic('camera')} ${nph}</span>` : ''}${ok ? `<span class="qa-ok-t">✔ ${ok}</span>` : ''}${ng ? `<span class="qa-ng-t">✘ ${ng}</span>` : ''}${dev ? `<span>${ic('device')} ${esc(dev.name)}</span>` : ''}</div></div>
       ${fp ? `<img class="nthumb" data-src="${esc(fp)}">` : ''}</div>`;
   }).join(''));
-  $$('img[data-src]', box).forEach(async im => { im.src = await fileSrc(im.dataset.src); });
+  lazyImgs(box);
   $$('[data-n]', box).forEach(el => el.onclick = () => push({ v: 'note', id: el.dataset.n }));
   $$('[data-c]', v).forEach(b => b.onclick = () => { noteCatF = b.dataset.c; nav.render(); });
   v.querySelector('[data-cats]').onclick = () => catManager();
@@ -201,7 +202,7 @@ function renderBlocks(v, n) {
       if (b.locked) return lockedHtml(b, imgNo);
       return `<div class="blk blk-img" data-bid="${b.id}">
         <div class="bi-head"><b>Hình ${imgNo}</b><span class="grow"></span>${b.qa ? `<span class="qa ${QA[b.qa][1]}">${QA[b.qa][0]}</span>` : ''}<button class="more" data-bm="${b.id}">${ic('dots')}</button></div>
-        ${b.tem ? `<div class="bi-tem"><img data-src="${esc(b.tem)}" data-temv><span class="bi-temlb">${ic('tag')} Tem vật tư</span><button class="bi-temx" data-temx aria-label="Bỏ ảnh tem">${ic('x', 2.4)}</button><button class="bi-temre" data-temadd>${ic('camera')} Chụp lại</button></div>`
+        ${b.tem ? `<div class="bi-tem"><img data-src="${esc(b.tem)}" data-hq data-temv><span class="bi-temlb">${ic('tag')} Tem vật tư</span><button class="bi-temx" data-temx aria-label="Bỏ ảnh tem">${ic('x', 2.4)}</button><button class="bi-temre" data-temadd>${ic('camera')} Chụp lại</button></div>`
           : `<button class="bi-temadd" data-temadd>${ic('tag')}<span><b>Chụp ảnh tem</b><small>Nhãn dán mã vật tư – ảnh chính của mục</small></span></button>`}
         <div class="bi-grid">${(b.photos || []).map((p, i) => `<div class="bi-ph"><img data-src="${esc(p)}" data-i="${i}"><button data-rmph="${i}">${ic('x', 2.4)}</button></div>`).join('')}
           <button class="bi-add" data-addph>${ic('camera')}<span>${b.photos?.length ? 'Thêm ảnh' : 'Chụp / chọn ảnh'}</span></button></div>
@@ -242,11 +243,11 @@ function renderBlocks(v, n) {
       const cb = el.querySelector('[data-cbx]'); if (cb) cb.onclick = () => { b.done = !b.done; el.classList.toggle('checked', b.done); touch(n); };
     }
   }
-  $$('img[data-src]', box).forEach(async im => { im.src = await fileSrc(im.dataset.src); });
+  lazyImgs(box);
 }
 function bindImg(v, n, b, el) {
   if (b.locked) {
-    $$('img[data-v]', el).forEach(im => im.onclick = () => viewPhoto(im.src));
+    $$('img[data-v]', el).forEach(im => im.onclick = () => viewPhoto(fullOf(im)));
     el.querySelector('[data-unlock]').onclick = () => { b.locked = false; touch(n); renderBlocks(v, n); };
     return;
   }
@@ -257,10 +258,10 @@ function bindImg(v, n, b, el) {
     if (!await confirmBox('Xóa ảnh?', 'Ảnh sẽ bị gỡ khỏi khối này.', 'Xóa', true)) return;
     const p = b.photos.splice(+x.dataset.rmph, 1)[0]; trashPh(p); touch(n); renderBlocks(v, n);
   });
-  $$('img[data-i]', el).forEach(im => im.onclick = () => viewPhoto(im.src, { actions: [{ icon: 'tag', label: 'Đặt làm ảnh tem', run: () => {
+  $$('img[data-i]', el).forEach(im => im.onclick = () => viewPhoto(fullOf(im), { actions: [{ icon: 'tag', label: 'Đặt làm ảnh tem', run: () => {
     const i = +im.dataset.i; const p = b.photos.splice(i, 1)[0]; if (b.tem) b.photos.unshift(b.tem); b.tem = p; touch(n); renderBlocks(v, n); toast('Đã đặt làm ảnh tem');
   } }] }));
-  const tv = el.querySelector('[data-temv]'); if (tv) tv.onclick = () => viewPhoto(tv.src, { actions: [{ icon: 'grid', label: 'Chuyển thành ảnh thường', run: () => { b.photos = [b.tem, ...(b.photos || [])]; b.tem = ''; touch(n); renderBlocks(v, n); } }] });
+  const tv = el.querySelector('[data-temv]'); if (tv) tv.onclick = () => viewPhoto(fullOf(tv), { actions: [{ icon: 'grid', label: 'Chuyển thành ảnh thường', run: () => { b.photos = [b.tem, ...(b.photos || [])]; b.tem = ''; touch(n); renderBlocks(v, n); } }] });
   const tx = el.querySelector('[data-temx]'); if (tx) tx.onclick = () => { trashPh(b.tem); b.tem = ''; touch(n); renderBlocks(v, n); toast('Đã bỏ ảnh tem – bấm ↶ nếu xóa nhầm'); };
   $$('[data-temadd]', el).forEach(x => x.onclick = () => addTem(v, n, b));
   $$('[data-rmc]', el).forEach(x => x.onclick = () => { b.codes.splice(+x.dataset.rmc, 1); touch(n); renderBlocks(v, n); });

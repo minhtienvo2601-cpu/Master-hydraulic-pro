@@ -78,8 +78,38 @@ export async function readB64(path) {
   return typeof r.data === 'string' ? r.data : await blobToB64(r.data);
 }
 export async function deletePath(path) {
+  if (!path) return;
+  if (!path.startsWith('thumbs/') && IMG_RE.test(path)) { tPend.delete(path); deletePath(thumbPath(path)); }
   if (!native) { const o = webFiles.get(path); if (o && o.startsWith('blob:')) URL.revokeObjectURL(o); webFiles.delete(path); try { await idbDel('files', path); } catch (e) {} return; }
+  uriCache.delete(path);
   try { await Filesystem.deleteFile({ path, directory: Directory.Data }); } catch (e) {}
+}
+// ---------- ảnh thu nhỏ (cuộn mượt): tạo 1 lần từ ảnh gốc, lưu ở thumbs/… ----------
+const IMG_RE = /\.(jpe?g|png|webp)$/i;
+const TSIZE = 320; // cạnh ngắn (px)
+const tPend = new Map();
+export const thumbPath = p => 'thumbs/' + String(p).replace(/\.[a-z0-9]+$/i, '') + '.jpg';
+async function exists(path) {
+  if (!native) { try { return !!(await idbGet('files', path)); } catch (e) { return false; } }
+  try { await Filesystem.stat({ path, directory: Directory.Data }); return true; } catch (e) { return false; }
+}
+export function thumbSrc(path) {
+  if (!IMG_RE.test(path)) return fileSrc(path);
+  if (tPend.has(path)) return tPend.get(path);
+  const pr = (async () => {
+    const tp = thumbPath(path);
+    if (await exists(tp)) return fileSrc(tp);
+    const src = await fileSrc(path); if (!src) return '';
+    const img = new Image(); img.decoding = 'async'; img.src = src; await img.decode();
+    const w = img.naturalWidth, h = img.naturalHeight; const k = TSIZE / Math.min(w, h);
+    if (!(k < 0.8)) return src; // ảnh vốn đã nhỏ
+    const c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
+    const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, c.width, c.height);
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.82)); c.width = c.height = 0;
+    if (!blob) return src;
+    await saveBlob(tp, blob); return fileSrc(tp);
+  })().catch(() => fileSrc(path));
+  tPend.set(path, pr); return pr;
 }
 const uriCache = new Map();
 export async function fileSrc(path) {

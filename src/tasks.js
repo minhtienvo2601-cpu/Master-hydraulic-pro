@@ -3,7 +3,9 @@ import { nav, push } from './nav.js';
 import { ic } from './icons.js';
 import { esc, uid, today, addDays, addMonths, daysTo, dueLabel, fmtD, fmtShort, repeatLabel, $$ } from './util.js';
 import { openSheet, confirmBox, toast, viewPhoto, addPhotos } from './ui.js';
-import { deletePath, fileSrc } from './platform.js';
+import { deletePath } from './platform.js';
+import { pmHomeCard, bindPmHomeCard } from './pm.js';
+import { lazyImgs, fullOf } from './lazy.js';
 
 const PR = { 1: 'Khẩn', 2: 'Quan trọng', 3: 'Bình thường' };
 
@@ -94,13 +96,12 @@ export function taskForm(t, preset = {}) {
     };
     const drawPh = async () => {
       const box = q('#fPh');
-      const srcs = await Promise.all(d.photos.map(p => fileSrc(p)));
-      box.innerHTML = d.photos.map((p, i) => `<div class="ph"><img src="${srcs[i]}" data-view="${i}"><button data-rm="${i}">${ic('x', 2.4)}</button></div>`).join('') + `<button class="add" data-add>${ic('camera')}</button>`;
+      box.innerHTML = d.photos.map((p, i) => `<div class="ph"><img data-src="${esc(p)}" data-view="${i}"><button data-rm="${i}">${ic('x', 2.4)}</button></div>`).join('') + `<button class="add" data-add>${ic('camera')}</button>`;
       box.querySelector('[data-add]').onclick = async () => {
         await addPhotos(p => { d.photos.push(p); drawPh(); });
       };
       $$('[data-rm]', box).forEach(x => x.onclick = () => { d.photos.splice(+x.dataset.rm, 1); drawPh(); });
-      $$('[data-view]', box).forEach(x => x.onclick = () => viewPhoto(x.src));
+      lazyImgs(box); $$('[data-view]', box).forEach(x => x.onclick = () => viewPhoto(fullOf(x)));
     };
     drawPh();
     const collect = () => {
@@ -178,13 +179,14 @@ export function viewHome(v) {
       <div class="pbar">${cnt.map((c, i) => `<i style="width:${c / tot * 100}%;background:var(--p${i + 1})"></i>`).join('')}</div>
       <div class="legend">${cnt.map((c, i) => `<span><b style="background:var(--p${i + 1})"></b>${PR[i + 1]}: <b style="background:none;width:auto;height:auto;color:var(--tx)">${c}</b></span>`).join('')}</div></div>
     ${weekCard()}
+    ${pmHomeCard()}
     <div class="sec-h"><h2>Cần làm sớm</h2><a data-go="tasks">Xem tất cả</a></div>
     <div id="hSoon">${soon.length ? soon.map(t => taskCard(t)).join('') : `<div class="card empty" style="padding:22px">${ic('done')}Không có việc quá hạn hay sắp đến hạn</div>`}</div>
     ${rec.length ? `<div class="sec-h"><h2>Bảo trì định kỳ sắp tới</h2></div><div>${rec.map(t => taskCard(t)).join('')}</div>` : ''}
     ${!st.tasks.length ? `<div class="card" style="margin-top:14px"><div style="font-weight:600;margin-bottom:6px">Bắt đầu nhanh</div>
       <div class="muted" style="font-size:13.5px">① Thêm thiết bị ở tab <b>Thiết bị</b> · ② Bấm nút <b>+</b> xanh để thêm công việc · ③ Xây sơ đồ và gắn tài liệu ở tab <b>Tài liệu</b>.</div></div>` : ''}
   </div>`;
-  bindTaskCards(v);
+  bindTaskCards(v); bindPmHomeCard(v);
   const wc = v.querySelector('[data-wc]'); if (wc) wc.onclick = () => { nav.week = weekStart(today()); nav.tab = 'journal'; nav.stack = []; nav.render(); };
   $$('[data-f]', v).forEach(b => b.onclick = () => { nav.taskFilter = b.dataset.f; nav.tab = 'tasks'; nav.stack = []; nav.render(); });
   $$('[data-go]', v).forEach(b => b.onclick = () => { nav.taskFilter = 'open'; nav.tab = 'tasks'; nav.render(); });

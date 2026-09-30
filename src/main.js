@@ -11,11 +11,12 @@ import { viewRef, viewRefSec, refTitle, clearRefQ } from './ref.js';
 import { viewNotes, viewNote, noteMenu, newNoteAndOpen, cleanupNote, note, undoNote, redoNote } from './notes.js';
 import { viewJournal, viewBuy, backlogForm } from './journal.js';
 import { closeViewer, deliver } from './viewer.js';
+import { viewPM, viewPMType, viewPMDue, viewPMItem, viewPMNeed, itemForm, pmSearch, pm } from './pm.js';
 import { SystemBars, SystemBarsStyle } from '@capacitor/core';
 import { persist } from './webstore.js';
 import { native, notifInit, onBack, readB64, saveB64, pickFiles, clearExports, testNotif, exactAlarmStatus, openExactAlarmSetting, fileSrc, deletePath } from './platform.js';
 
-const TABS = { home: ['home', 'Tổng quan'], journal: ['journal', 'Nhật ký'], notes: ['note', 'Ghi chú'], parts: ['folder', 'Tài liệu'], more: ['grid', 'Thêm'], tasks: ['tasks', 'Công việc'], devices: ['device', 'Thiết bị'], ref: ['ref', 'Tra cứu'] };
+const TABS = { home: ['home', 'Tổng quan'], journal: ['journal', 'Nhật ký'], pm: ['repeat', 'Định kỳ'], notes: ['note', 'Ghi chú'], parts: ['folder', 'Tài liệu'], more: ['grid', 'Thêm'], tasks: ['tasks', 'Công việc'], devices: ['device', 'Thiết bị'], ref: ['ref', 'Tra cứu'] };
 const TABHL = { tasks: 'more', devices: 'more', ref: 'more' };
 
 function render() {
@@ -25,7 +26,7 @@ function render() {
   $('#btnMenu').hidden = r.v !== 'note'; $('#btnUndo').hidden = r.v !== 'note'; $('#btnRedo').hidden = r.v !== 'note'; $('#btnSearch').hidden = r.v === 'note'; $('#btnSettings').hidden = r.v === 'note';
   const sub = nav.stack.length > 0 || (nav.tab === 'parts' && nav.partsNode !== 'root');
   $('#btnBack').hidden = !sub;
-  $('#fab').hidden = ['search', 'settings', 'tpl', 'ref', 'refsec', 'more', 'note', 'buy'].includes(r.v);
+  $('#fab').hidden = ['search', 'settings', 'tpl', 'ref', 'refsec', 'more', 'note', 'buy', 'pmdue', 'pmneed', 'pmitem'].includes(r.v) || (r.v === 'pmtype' && r.selMode);
   let title = TABS[nav.tab]?.[1] || '', eyebrow = 'BẢO TRÌ THỦY LỰC';
   if (r.v === 'home') viewHome(v);
   else if (r.v === 'journal') { eyebrow = 'KẾ HOẠCH & TỒN ĐỌNG'; viewJournal(v); }
@@ -42,6 +43,11 @@ function render() {
   else if (r.v === 'tpl') { title = 'Mẫu biên bản'; eyebrow = 'CÀI ĐẶT'; viewTpl(v); }
   else if (r.v === 'ref') { eyebrow = 'KỸ THUẬT THỦY LỰC'; viewRef(v); }
   else if (r.v === 'refsec') { title = refTitle(r.k); eyebrow = 'TRA CỨU'; viewRefSec(v, r.k); }
+  else if (r.v === 'pm') { title = 'Thay thế định kỳ'; eyebrow = 'VẬT TƯ ĐỊNH KỲ'; viewPM(v); }
+  else if (r.v === 'pmtype') { const t = pm().types.find(x => x.id === r.t); title = t ? t.name : (r.sys || 'Tất cả vị trí'); eyebrow = 'THAY THẾ ĐỊNH KỲ'; viewPMType(v, r); }
+  else if (r.v === 'pmdue') { title = 'Cần xử lý'; eyebrow = 'THAY THẾ ĐỊNH KỲ'; viewPMDue(v, r); }
+  else if (r.v === 'pmneed') { title = 'Nhu cầu vật tư'; eyebrow = 'THAY THẾ ĐỊNH KỲ'; viewPMNeed(v, r); }
+  else if (r.v === 'pmitem') { title = 'Chi tiết vị trí'; eyebrow = 'THAY THẾ ĐỊNH KỲ'; viewPMItem(v, r); }
   $('#tbTitle').textContent = title; $('#tbEyebrow').textContent = eyebrow;
 }
 nav.render = render;
@@ -58,6 +64,8 @@ function fabAction() {
   else if (r.v === 'journal') taskForm(null, { due: today() });
   else if (r.v === 'parts') $('[data-a=branch]')?.click();
   else if (r.v === 'device') taskForm(null, { deviceId: r.id });
+  else if (r.v === 'pm') itemForm(null, {});
+  else if (r.v === 'pmtype') itemForm(null, { type: r.t !== 'all' ? r.t : undefined, sys: r.sys || '' });
   else taskForm(null);
 }
 
@@ -101,6 +109,7 @@ function doSearch(box, q) {
       else if (b.t !== 'img' && m(b.text)) hits.push({ k: 'Trong ghi chú · ' + (n.title || 'Ghi chú'), t: snippet(b.text, q), raw: true, go: () => push({ v: 'note', id: n.id }) });
     }
   }
+  hits.push(...pmSearch(m));
   for (const b of S.state.backlog) if (m(b.desc) || m(b.parts) || m(b.action)) hits.push({ k: b.resolved ? 'Tồn đọng · đã xử lý' : 'Tồn đọng', t: b.desc, s: b.parts, go: () => backlogForm(b) });
   const toNode = n => () => { nav.partsNode = n.id; nav.tab = 'parts'; nav.stack = []; render(); };
   for (const n of S.state.nodes) {
@@ -236,7 +245,7 @@ async function backup() {
   try {
     const zip = new JSZip();
     zip.file('data.json', JSON.stringify({ app: 'baotri', v: 1, at: new Date().toISOString(), state: S.state, index: S.index }));
-    const paths = [...new Set([...S.state.nodes.flatMap(n => n.files.map(f => f.path)), ...S.state.tasks.flatMap(t => t.photos || []), ...S.state.backlog.flatMap(b => b.photos || []), ...S.state.notes.flatMap(n => n.blocks.flatMap(b => [b.tem, ...(b.photos || [])].filter(Boolean))), ...(S.state.settings.logoPath ? [S.state.settings.logoPath] : [])])];
+    const paths = [...new Set([...S.state.nodes.flatMap(n => n.files.map(f => f.path)), ...S.state.tasks.flatMap(t => t.photos || []), ...S.state.backlog.flatMap(b => b.photos || []), ...S.state.notes.flatMap(n => n.blocks.flatMap(b => [b.tem, ...(b.photos || [])].filter(Boolean))), ...(S.state.pm?.items || []).flatMap(i => (i.hist || []).flatMap(h => h.photos || [])), ...(S.state.settings.logoPath ? [S.state.settings.logoPath] : [])])];
     for (let i = 0; i < paths.length; i++) {
       b.set(`Đang đóng gói ${i + 1}/${paths.length}…`);
       try { const d = await readB64(paths[i]); if (d != null) zip.file(paths[i], d, { base64: true }); } catch (e) { console.warn('skip', paths[i]); }
@@ -331,7 +340,7 @@ async function init() {
   render();
   onBack(handleBack);
   if (!native) initDesktop();
-  await notifInit(extra => { if (extra.go === 'backup') { go('home'); push({ v: 'settings' }); return; } const t = extra.taskId && task(extra.taskId); if (t) { go('tasks'); taskForm(t); } });
+  await notifInit(extra => { if (extra.go === 'pm') { go('pm'); return; } if (extra.go === 'backup') { go('home'); push({ v: 'settings' }); return; } const t = extra.taskId && task(extra.taskId); if (t) { go('tasks'); taskForm(t); } });
   reschedule();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
 }

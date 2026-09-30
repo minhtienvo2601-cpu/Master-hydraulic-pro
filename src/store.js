@@ -125,6 +125,7 @@ export function pathInUse(path, except) {
   if (st.tasks.some(t => t !== except && inArr(t.photos))) return true;
   if (st.backlog.some(b => b !== except && inArr(b.photos))) return true;
   if (st.notes.some(n => n !== except && n.blocks.some(k => k.t === 'img' && (inArr(k.photos) || k.tem === path)))) return true;
+  if (st.pm && st.pm.items.some(i => (i.hist || []).some(h => inArr(h.photos)))) return true;
   return st.nodes.some(n => n.files.some(f => f.path === path));
 }
 
@@ -150,6 +151,25 @@ export async function reschedule() {
     const r1 = at(addDays(t.due, -Number(st.remindDays || 2)));
     if (r1.getTime() > now) list.push({ id: t.nid * 2, at: r1, title: `⏰ Còn ${st.remindDays} ngày: ${t.title}`, body: `${pr}${dev ? ' · ' + dev.name : ''} · Hạn ${fmtD(t.due)}`, extra: { taskId: t.id } });
     if (st.dueDay) { const r2 = at(t.due); if (r2.getTime() > now) list.push({ id: t.nid * 2 + 1, at: r2, title: `🔔 Hôm nay đến hạn: ${t.title}`, body: `${pr}${dev ? ' · ' + dev.name : ''}`, extra: { taskId: t.id } }); }
+  }
+  // thay thế định kỳ: gom theo ngày đến hạn, nhắc trước N ngày (hoặc đúng ngày hạn nếu đã quá mốc nhắc)
+  const P = S.state.pm;
+  if (P && P.items && P.items.length) {
+    const tname = id => (P.types.find(t => t.id === id) || {}).name || '';
+    const g = new Map();
+    for (const it of P.items) {
+      if (!it.cycle) continue;
+      let last = it.start || ''; for (const h of it.hist || []) if (h.d > last) last = h.d;
+      if (!last) continue;
+      const due = addDays(last, it.cycle);
+      let r = at(addDays(due, -Number(st.remindDays || 2))); if (r.getTime() <= now) r = at(due);
+      if (r.getTime() <= now) continue;
+      if (!g.has(due)) g.set(due, { r, its: [] }); g.get(due).its.push(it);
+    }
+    [...g.keys()].sort().slice(0, 40).forEach((due, i) => {
+      const { r, its } = g.get(due);
+      list.push({ id: 800000 + i, at: r, title: `🔧 Thay định kỳ ${fmtD(due)}: ${its.length} vị trí`, body: its.slice(0, 5).map(x => `${x.pos || x.sys || ''} ${tname(x.type)}`.trim()).join(' · ') + (its.length > 5 ? ' …' : ''), extra: { go: 'pm' } });
+    });
   }
   list.sort((a, b) => a.at - b.at);
   if (st.backupRemind !== false) list.unshift({ id: 900001, on: { weekday: 2, hour: 8, minute: 0 }, title: '💾 Nhắc sao lưu dữ liệu', body: 'Đầu tuần rồi – vào Cài đặt › Sao lưu để gửi bản sao lên OneDrive/Zalo.', extra: { go: 'backup' } });

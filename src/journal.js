@@ -4,7 +4,8 @@ import { nav, push } from './nav.js';
 import { ic } from './icons.js';
 import { esc, uid, today, addDays, parseD, daysTo, fmtD, fmtShort, $$ } from './util.js';
 import { openSheet, confirmBox, menu, toast, busy, viewPhoto, addPhotos } from './ui.js';
-import { deletePath, fileSrc } from './platform.js';
+import { deletePath } from './platform.js';
+import { lazyImgs, fullOf } from './lazy.js';
 import { deliver } from './viewer.js';
 import { taskForm } from './tasks.js';
 import { exportPdf, exportDocx, exportXlsx } from './exporter.js';
@@ -67,7 +68,7 @@ export function viewJournal(v) {
   $$('[data-pt]', v).forEach(el => el.onclick = () => taskForm(task(el.dataset.pt)));
   $$('[data-bl]', v).forEach(el => el.onclick = e => { if (e.target.closest('[data-fix]')) return; backlogForm(bl(el.dataset.bl)); });
   $$('[data-fix]', v).forEach(b => b.onclick = e => { e.stopPropagation(); resolveBacklog(bl(b.dataset.fix)); });
-  $$('img[data-src]', v).forEach(async im => { im.src = await fileSrc(im.dataset.src); });
+  lazyImgs(v);
   const act = { task: () => taskForm(null, { due: W.isCur ? today() : ws }), bl: () => backlogForm(null), copy: () => copyLastWeek(ws), exp: () => exportWeekMenu(ws), buy: () => push({ v: 'buy' }) };
   $$('[data-a]', v).forEach(b => b.onclick = () => act[b.dataset.a]());
 }
@@ -142,11 +143,11 @@ export function backlogForm(b0, preset = {}) {
     q('#bS').onclick = e => { const bt = e.target.closest('[data-s]'); if (!bt) return; d.severity = +bt.dataset.s; $$('#bS [data-s]', x).forEach(y => y.classList.toggle('on', y === bt)); };
     q('#bR').onclick = e => { const bt = e.target.closest('[data-r]'); if (!bt) return; d.reason = bt.dataset.r; $$('#bR [data-r]', x).forEach(y => y.classList.toggle('on', y === bt)); q('#bRT').style.display = d.reason === 'khac' ? '' : 'none'; q('#bPw').style.display = d.reason === 'vattu' ? '' : 'none'; };
     const drawPh = async () => {
-      const box = q('#bPh'); const srcs = await Promise.all(d.photos.map(p => fileSrc(p)));
-      box.innerHTML = d.photos.map((p, i) => `<div class="ph"><img src="${srcs[i]}" data-view="${i}"><button data-rm="${i}">${ic('x', 2.4)}</button></div>`).join('') + `<button class="add" data-add>${ic('camera')}</button>`;
+      const box = q('#bPh');
+      box.innerHTML = d.photos.map((p, i) => `<div class="ph"><img data-src="${esc(p)}" data-view="${i}"><button data-rm="${i}">${ic('x', 2.4)}</button></div>`).join('') + `<button class="add" data-add>${ic('camera')}</button>`;
       box.querySelector('[data-add]').onclick = async () => { await addPhotos(p => { d.photos.push(p); drawPh(); }); };
       $$('[data-rm]', box).forEach(y => y.onclick = () => { d.photos.splice(+y.dataset.rm, 1); drawPh(); });
-      $$('[data-view]', box).forEach(y => y.onclick = () => viewPhoto(y.src));
+      lazyImgs(box); $$('[data-view]', box).forEach(y => y.onclick = () => viewPhoto(fullOf(y)));
     };
     drawPh();
     const collect = () => { d.deviceId = q('#bD').value; d.desc = q('#bT').value.trim(); d.found = q('#bF').value || today(); d.reasonText = q('#bRT').value.trim(); d.parts = q('#bP').value.trim(); d.ordered = q('#bO').checked; d.action = q('#bA').value.trim(); };

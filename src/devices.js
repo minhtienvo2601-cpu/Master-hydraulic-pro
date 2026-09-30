@@ -4,7 +4,7 @@ import { ic } from './icons.js';
 import { esc, uid, daysTo, fmtD, $$ } from './util.js';
 import { openSheet, confirmBox, toast, viewPhoto } from './ui.js';
 import { taskCard, bindTaskCards, taskForm } from './tasks.js';
-import { fileSrc } from './platform.js';
+import { lazyImgs, fullOf } from './lazy.js';
 import { backlogForm } from './journal.js';
 
 export function viewDevices(v) {
@@ -45,12 +45,12 @@ export function viewDevice(v, id) {
     <div class="sec-h"><h2>Lịch sử bảo trì</h2><span class="muted" style="font-size:12.5px">${hist.length}</span></div>
     ${hist.length ? `<div class="card"><div class="timeline">${hist.map(t => `<div class="tl" data-task="${t.id}"><div class="d">${fmtD(t.doneAt)} · P${t.priority}</div>
       <div class="t">${esc(t.title)}</div>${t.note ? `<div class="muted" style="font-size:13px">${esc(t.note)}</div>` : ''}
-      ${t.photos?.length ? `<div class="thumbs">${t.photos.map(p => `<img data-ph="${esc(p)}">`).join('')}</div>` : ''}</div>`).join('')}</div></div>`
+      ${t.photos?.length ? `<div class="thumbs">${t.photos.map(p => `<img data-src="${esc(p)}">`).join('')}</div>` : ''}</div>`).join('')}</div></div>`
       : `<div class="card empty" style="padding:18px">Chưa có lần bảo trì nào được ghi nhận</div>`}
   </div>`;
   bindTaskCards(v);
   $$('.tl[data-task]', v).forEach(el => el.onclick = e => { if (e.target.tagName === 'IMG') return; });
-  $$('img[data-ph]', v).forEach(async im => { im.src = await fileSrc(im.dataset.ph); im.onclick = e => { e.stopPropagation(); viewPhoto(im.src); }; });
+  lazyImgs(v); $$('img[data-src]', v).forEach(im => { im.onclick = e => { e.stopPropagation(); viewPhoto(fullOf(im)); }; });
   v.querySelector('[data-a=task]').onclick = () => taskForm(null, { deviceId: id });
   v.querySelector('[data-a=bl]').onclick = () => backlogForm(null, { deviceId: id });
   $$('[data-blid]', v).forEach(el => el.onclick = () => backlogForm(S.state.backlog.find(x => x.id === el.dataset.blid)));
