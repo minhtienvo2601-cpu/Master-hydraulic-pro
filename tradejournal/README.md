@@ -25,7 +25,7 @@ tradejournal/
 │   └── e2e/smoke.cjs       ← kiểm thử end-to-end bằng Playwright
 ├── ops/backup/         ← sao lưu DB + ảnh (mã hóa age, rclone), khôi phục, diễn tập phục hồi
 ├── docs/               ← tài liệu kỹ thuật & vận hành
-└── docker-compose.yml  ← chạy thử toàn bộ stack (Postgres + MinIO + API + Web)
+└── docker-compose.yml  ← chạy toàn bộ stack trên 1 máy (Postgres + API + Web, ảnh lưu trong volume)
 ```
 
 ## Chạy nhanh bằng Docker
