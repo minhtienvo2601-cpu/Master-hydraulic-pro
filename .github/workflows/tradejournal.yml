@@ -1,0 +1,93 @@
+name: TradeJournal CI
+
+on:
+  push:
+    paths: ["tradejournal/**", ".github/workflows/tradejournal.yml"]
+  pull_request:
+    paths: ["tradejournal/**", ".github/workflows/tradejournal.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: tj, POSTGRES_PASSWORD: tj, POSTGRES_DB: tradejournal_test }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U tj" --health-interval 5s --health-retries 10
+    defaults: { run: { working-directory: tradejournal/backend } }
+    env:
+      TJ_TEST_DATABASE_URL: postgresql+psycopg://tj:tj@localhost:5432/tradejournal_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13", cache: pip, cache-dependency-path: tradejournal/backend/requirements*.txt }
+      - run: pip install -r requirements-dev.txt
+      - name: Kiểm thử công thức thống kê + API
+        run: python -m pytest -q
+      - name: Migration upgrade / downgrade / upgrade
+        env: { TJ_DATABASE_URL: "postgresql+psycopg://tj:tj@localhost:5432/tradejournal_test" }
+        run: alembic upgrade head && alembic downgrade base && alembic upgrade head && alembic check
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: tradejournal/frontend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: tradejournal/frontend/package-lock.json }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=high
+
+  e2e:
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: tj, POSTGRES_PASSWORD: tj, POSTGRES_DB: tradejournal }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U tj" --health-interval 5s --health-retries 10
+    env:
+      TJ_DATABASE_URL: postgresql+psycopg://tj:tj@localhost:5432/tradejournal
+      TJ_COOKIE_SECURE: "false"
+      TJ_STORAGE_LOCAL_DIR: /tmp/tj-uploads
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13" }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Khởi động backend
+        working-directory: tradejournal/backend
+        run: |
+          pip install -r requirements.txt
+          alembic upgrade head
+          nohup uvicorn app.main:app --port 8000 > /tmp/backend.log 2>&1 &
+      - name: Khởi động frontend
+        working-directory: tradejournal/frontend
+        run: |
+          npm ci && npm run build
+          nohup npx next start -p 3000 > /tmp/frontend.log 2>&1 &
+          npx wait-on -t 60000 http://localhost:3000/login http://localhost:8000/api/v1/health
+      - name: Chạy E2E
+        working-directory: tradejournal/frontend
+        run: |
+          npm i --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+          SCREENSHOT_DIR=/tmp/e2e node e2e/smoke.cjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: /tmp/e2e
+      - if: failure()
+        run: tail -100 /tmp/backend.log /tmp/frontend.log

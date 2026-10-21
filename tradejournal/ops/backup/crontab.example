@@ -1,0 +1,5 @@
+# /etc/cron.d/tradejournal-backup — chạy trên máy/runner TÁCH BIỆT production, chỉ có quyền đọc DB + bucket ảnh
+# và quyền ghi (không xóa) vào bucket sao lưu.
+15 2 * * *  backup  /opt/tradejournal/ops/backup/backup-db.sh    >> /var/log/tj-backup.log 2>&1
+45 */6 * * * backup  /opt/tradejournal/ops/backup/backup-files.sh >> /var/log/tj-backup.log 2>&1
+0 4 1 * *   backup  /opt/tradejournal/ops/backup/restore-drill.sh >> /var/log/tj-restore-drill.log 2>&1

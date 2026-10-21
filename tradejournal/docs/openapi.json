@@ -1,0 +1,5799 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "TradeJournal API",
+  "description": "API nhật ký giao dịch & backtest. Xác thực bằng cookie phiên httpOnly; mọi yêu cầu thay đổi dữ liệu cần header `X-Requested-With: tradejournal`.",
+  "version": "1.0.0"
+ },
+ "paths": {
+  "/api/v1/auth/register": {
+   "post": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Register",
+    "operationId": "register_api_v1_auth_register_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RegisterIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UserOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/auth/login": {
+   "post": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Login",
+    "operationId": "login_api_v1_auth_login_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LoginIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UserOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/auth/logout": {
+   "post": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Logout",
+    "operationId": "logout_api_v1_auth_logout_post",
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     }
+    }
+   }
+  },
+  "/api/v1/auth/me": {
+   "get": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Me",
+    "operationId": "me_api_v1_auth_me_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UserOut"
+        }
+       }
+      }
+     }
+    }
+   },
+   "patch": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Update Me",
+    "operationId": "update_me_api_v1_auth_me_patch",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProfileIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UserOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/auth/password": {
+   "post": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Change Password",
+    "operationId": "change_password_api_v1_auth_password_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PasswordIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/accounts": {
+   "get": {
+    "tags": [
+     "accounts"
+    ],
+    "summary": "List Accounts",
+    "operationId": "list_accounts_api_v1_accounts_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/AccountOut"
+         },
+         "type": "array",
+         "title": "Response List Accounts Api V1 Accounts Get"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "accounts"
+    ],
+    "summary": "Create Account",
+    "operationId": "create_account_api_v1_accounts_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AccountIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/accounts/{account_id}": {
+   "put": {
+    "tags": [
+     "accounts"
+    ],
+    "summary": "Update Account",
+    "operationId": "update_account_api_v1_accounts__account_id__put",
+    "parameters": [
+     {
+      "name": "account_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Account Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AccountIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "accounts"
+    ],
+    "summary": "Delete Account",
+    "operationId": "delete_account_api_v1_accounts__account_id__delete",
+    "parameters": [
+     {
+      "name": "account_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Account Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/strategies": {
+   "get": {
+    "tags": [
+     "strategies"
+    ],
+    "summary": "List Strategies",
+    "operationId": "list_strategies_api_v1_strategies_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/StrategyOut"
+         },
+         "type": "array",
+         "title": "Response List Strategies Api V1 Strategies Get"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "strategies"
+    ],
+    "summary": "Create Strategy",
+    "description": "Tạo chiến lược kèm phiên bản V1 (nháp).",
+    "operationId": "create_strategy_api_v1_strategies_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/StrategyIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/StrategyOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/strategies/{strategy_id}": {
+   "get": {
+    "tags": [
+     "strategies"
+    ],
+    "summary": "Get Strategy",
+    "operationId": "get_strategy_api_v1_strategies__strategy_id__get",
+    "parameters": [
+     {
+      "name": "strategy_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Strategy Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/StrategyOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "strategies"
+    ],
+    "summary": "Update Strategy",
+    "operationId": "update_strategy_api_v1_strategies__strategy_id__put",
+    "parameters": [
+     {
+      "name": "strategy_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Strategy Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/StrategyIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/StrategyOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "strategies"
+    ],
+    "summary": "Delete Strategy",
+    "operationId": "delete_strategy_api_v1_strategies__strategy_id__delete",
+    "parameters": [
+     {
+      "name": "strategy_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Strategy Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/strategies/{strategy_id}/versions": {
+   "post": {
+    "tags": [
+     "strategies"
+    ],
+    "summary": "Create Version",
+    "description": "Tạo phiên bản mới. Nếu có from_version_id: sao chép quy tắc của phiên bản đó (các trường trống trong body).",
+    "operationId": "create_version_api_v1_strategies__strategy_id__versions_post",
+    "parameters": [
+     {
+      "name": "strategy_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Strategy Id"
+      }
+     },
+     {
+      "name": "from_version_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "From Version Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VersionIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VersionOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/strategies/versions/{version_id}": {
+   "patch": {
+    "tags": [
+     "strategies"
+    ],
+    "summary": "Update Version",
+    "operationId": "update_version_api_v1_strategies_versions__version_id__patch",
+    "parameters": [
+     {
+      "name": "version_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Version Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VersionPatch"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VersionOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/strategies/versions/{version_id}/confirm": {
+   "post": {
+    "tags": [
+     "strategies"
+    ],
+    "summary": "Confirm Version",
+    "operationId": "confirm_version_api_v1_strategies_versions__version_id__confirm_post",
+    "parameters": [
+     {
+      "name": "version_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Version Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VersionOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/strategies/{strategy_id}/compare": {
+   "get": {
+    "tags": [
+     "strategies"
+    ],
+    "summary": "Compare Versions",
+    "description": "So sánh các phiên bản bằng CÙNG bộ công thức; luôn kèm cỡ mẫu từng phiên bản.",
+    "operationId": "compare_versions_api_v1_strategies__strategy_id__compare_get",
+    "parameters": [
+     {
+      "name": "strategy_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Strategy Id"
+      }
+     },
+     {
+      "name": "trade_type",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "pattern": "^(live|backtest)$",
+       "default": "backtest",
+       "title": "Trade Type"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/backtest-sessions": {
+   "get": {
+    "tags": [
+     "backtest"
+    ],
+    "summary": "List Sessions",
+    "operationId": "list_sessions_api_v1_backtest_sessions_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SessionWithProgress"
+         },
+         "type": "array",
+         "title": "Response List Sessions Api V1 Backtest Sessions Get"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "backtest"
+    ],
+    "summary": "Create Session",
+    "operationId": "create_session_api_v1_backtest_sessions_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SessionIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SessionOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/backtest-sessions/{session_id}": {
+   "get": {
+    "tags": [
+     "backtest"
+    ],
+    "summary": "Get Session",
+    "operationId": "get_session_api_v1_backtest_sessions__session_id__get",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SessionWithProgress"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "backtest"
+    ],
+    "summary": "Update Session",
+    "operationId": "update_session_api_v1_backtest_sessions__session_id__put",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SessionIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SessionOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "backtest"
+    ],
+    "summary": "Delete Session",
+    "operationId": "delete_session_api_v1_backtest_sessions__session_id__delete",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/backtest-sessions/{session_id}/stats": {
+   "get": {
+    "tags": [
+     "backtest"
+    ],
+    "summary": "Session Stats",
+    "description": "Thống kê của phiên theo quy ước vốn/equity của phiên. Hỗ trợ cùng bộ lọc với danh sách giao dịch.",
+    "operationId": "session_stats_api_v1_backtest_sessions__session_id__stats_get",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Session Id"
+      }
+     },
+     {
+      "name": "trade_type",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(live|backtest)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Trade Type"
+      }
+     },
+     {
+      "name": "date_from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Date From"
+      }
+     },
+     {
+      "name": "date_to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Date To"
+      }
+     },
+     {
+      "name": "account_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Account Id"
+      }
+     },
+     {
+      "name": "market",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Market"
+      }
+     },
+     {
+      "name": "strategy_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Strategy Id"
+      }
+     },
+     {
+      "name": "strategy_version_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Strategy Version Id"
+      }
+     },
+     {
+      "name": "backtest_session_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Backtest Session Id"
+      }
+     },
+     {
+      "name": "timeframe",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Timeframe"
+      }
+     },
+     {
+      "name": "direction",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(buy|sell)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Direction"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(open|closed|cancelled)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     },
+     {
+      "name": "setup",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Setup"
+      }
+     },
+     {
+      "name": "trading_session",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Trading Session"
+      }
+     },
+     {
+      "name": "market_condition",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Market Condition"
+      }
+     },
+     {
+      "name": "plan_compliance",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(followed|partial|violated)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Plan Compliance"
+      }
+     },
+     {
+      "name": "outcome",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(win|loss|breakeven)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Outcome"
+      }
+     },
+     {
+      "name": "r_min",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "string",
+         "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "R Min"
+      }
+     },
+     {
+      "name": "r_max",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "string",
+         "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "R Max"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 64
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Q"
+      }
+     },
+     {
+      "name": "tag",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tag"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/trades": {
+   "get": {
+    "tags": [
+     "trades"
+    ],
+    "summary": "List Trades",
+    "operationId": "list_trades_api_v1_trades_get",
+    "parameters": [
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "default": 1,
+       "title": "Page"
+      }
+     },
+     {
+      "name": "page_size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 100,
+       "minimum": 1,
+       "default": 25,
+       "title": "Page Size"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "pattern": "^(entry_time|exit_time|net_pnl|r_multiple|code)$",
+       "default": "entry_time",
+       "title": "Sort"
+      }
+     },
+     {
+      "name": "order",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "pattern": "^(asc|desc)$",
+       "default": "desc",
+       "title": "Order"
+      }
+     },
+     {
+      "name": "trade_type",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(live|backtest)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Trade Type"
+      }
+     },
+     {
+      "name": "date_from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Date From"
+      }
+     },
+     {
+      "name": "date_to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Date To"
+      }
+     },
+     {
+      "name": "account_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Account Id"
+      }
+     },
+     {
+      "name": "market",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Market"
+      }
+     },
+     {
+      "name": "strategy_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Strategy Id"
+      }
+     },
+     {
+      "name": "strategy_version_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Strategy Version Id"
+      }
+     },
+     {
+      "name": "backtest_session_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Backtest Session Id"
+      }
+     },
+     {
+      "name": "timeframe",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Timeframe"
+      }
+     },
+     {
+      "name": "direction",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(buy|sell)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Direction"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(open|closed|cancelled)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     },
+     {
+      "name": "setup",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Setup"
+      }
+     },
+     {
+      "name": "trading_session",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Trading Session"
+      }
+     },
+     {
+      "name": "market_condition",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Market Condition"
+      }
+     },
+     {
+      "name": "plan_compliance",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(followed|partial|violated)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Plan Compliance"
+      }
+     },
+     {
+      "name": "outcome",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(win|loss|breakeven)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Outcome"
+      }
+     },
+     {
+      "name": "r_min",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "string",
+         "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "R Min"
+      }
+     },
+     {
+      "name": "r_max",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "string",
+         "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "R Max"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 64
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Q"
+      }
+     },
+     {
+      "name": "tag",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tag"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TradePage"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "trades"
+    ],
+    "summary": "Create Trade",
+    "description": "Tạo giao dịch. Gửi header Idempotency-Key để thao tác lặp lại (do mạng chập chờn) không tạo bản ghi trùng.",
+    "operationId": "create_trade_api_v1_trades_post",
+    "parameters": [
+     {
+      "name": "idempotency-key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TradeIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TradeOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/trades/{trade_id}": {
+   "get": {
+    "tags": [
+     "trades"
+    ],
+    "summary": "Get Trade",
+    "operationId": "get_trade_api_v1_trades__trade_id__get",
+    "parameters": [
+     {
+      "name": "trade_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Trade Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TradeOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "trades"
+    ],
+    "summary": "Update Trade",
+    "description": "Cập nhật tại chỗ (không tạo bản ghi mới). row_version chống ghi đè khi sửa đồng thời trên 2 thiết bị.",
+    "operationId": "update_trade_api_v1_trades__trade_id__put",
+    "parameters": [
+     {
+      "name": "trade_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Trade Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TradeIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TradeOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "trades"
+    ],
+    "summary": "Delete Trade",
+    "description": "Xóa giao dịch và ảnh của nó. Object ảnh chỉ bị xóa khỏi storage SAU khi DB commit thành công.",
+    "operationId": "delete_trade_api_v1_trades__trade_id__delete",
+    "parameters": [
+     {
+      "name": "trade_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Trade Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/trades/meta/options": {
+   "get": {
+    "tags": [
+     "trades"
+    ],
+    "summary": "Trade Options",
+    "description": "Các giá trị đã dùng (thị trường, setup...) để gợi ý trong form và bộ lọc.",
+    "operationId": "trade_options_api_v1_trades_meta_options_get",
+    "parameters": [
+     {
+      "name": "trade_type",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(live|backtest)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Trade Type"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/trades/{trade_id}/images": {
+   "post": {
+    "tags": [
+     "images"
+    ],
+    "summary": "Upload Trade Image",
+    "operationId": "upload_trade_image_api_v1_trades__trade_id__images_post",
+    "parameters": [
+     {
+      "name": "trade_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Trade Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_upload_trade_image_api_v1_trades__trade_id__images_post"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ImageOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "tags": [
+     "images"
+    ],
+    "summary": "List Trade Images",
+    "operationId": "list_trade_images_api_v1_trades__trade_id__images_get",
+    "parameters": [
+     {
+      "name": "trade_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Trade Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ImageOut"
+         },
+         "title": "Response List Trade Images Api V1 Trades  Trade Id  Images Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/backtest-sessions/{session_id}/images": {
+   "post": {
+    "tags": [
+     "images"
+    ],
+    "summary": "Upload Session Image",
+    "operationId": "upload_session_image_api_v1_backtest_sessions__session_id__images_post",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_upload_session_image_api_v1_backtest_sessions__session_id__images_post"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ImageOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "tags": [
+     "images"
+    ],
+    "summary": "List Session Images",
+    "operationId": "list_session_images_api_v1_backtest_sessions__session_id__images_get",
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ImageOut"
+         },
+         "title": "Response List Session Images Api V1 Backtest Sessions  Session Id  Images Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/images/{image_id}/file": {
+   "get": {
+    "tags": [
+     "images"
+    ],
+    "summary": "Image File",
+    "operationId": "image_file_api_v1_images__image_id__file_get",
+    "parameters": [
+     {
+      "name": "image_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Image Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "images"
+    ],
+    "summary": "Replace Image",
+    "description": "Thay ảnh: ghi object mới, cập nhật DB, rồi mới xóa object cũ.",
+    "operationId": "replace_image_api_v1_images__image_id__file_put",
+    "parameters": [
+     {
+      "name": "image_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Image Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_replace_image_api_v1_images__image_id__file_put"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ImageOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/images/{image_id}": {
+   "patch": {
+    "tags": [
+     "images"
+    ],
+    "summary": "Update Image",
+    "operationId": "update_image_api_v1_images__image_id__patch",
+    "parameters": [
+     {
+      "name": "image_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Image Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ImagePatch"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ImageOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "images"
+    ],
+    "summary": "Delete Image",
+    "description": "Xóa 2 pha: (1) đánh dấu deleted_at và commit; (2) xóa object; (3) đánh dấu storage_purged_at.\nNếu bước 2 lỗi, bản ghi vẫn còn để `cli gc-storage` thử lại — không bao giờ mất liên kết.",
+    "operationId": "delete_image_api_v1_images__image_id__delete",
+    "parameters": [
+     {
+      "name": "image_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Image Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/dashboard": {
+   "get": {
+    "tags": [
+     "dashboard"
+    ],
+    "summary": "Dashboard",
+    "description": "Toàn bộ chỉ số dashboard tính trong MỘT lần từ cùng tập giao dịch đã lọc → luôn đồng bộ.\nLive và Backtest không bao giờ cộng chung: trade_type mặc định là live.",
+    "operationId": "dashboard_api_v1_dashboard_get",
+    "parameters": [
+     {
+      "name": "period",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "pattern": "^(day|week|month)$",
+       "default": "month",
+       "title": "Period"
+      }
+     },
+     {
+      "name": "equity_method",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(cash|r_fixed|r_compound)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Equity Method"
+      }
+     },
+     {
+      "name": "initial_capital",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "number",
+         "exclusiveMinimum": 0.0
+        },
+        {
+         "type": "string",
+         "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Initial Capital"
+      }
+     },
+     {
+      "name": "risk_per_trade_pct",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "number",
+         "maximum": 100.0,
+         "exclusiveMinimum": 0.0
+        },
+        {
+         "type": "string",
+         "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Risk Per Trade Pct"
+      }
+     },
+     {
+      "name": "trade_type",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(live|backtest)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Trade Type"
+      }
+     },
+     {
+      "name": "date_from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Date From"
+      }
+     },
+     {
+      "name": "date_to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Date To"
+      }
+     },
+     {
+      "name": "account_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Account Id"
+      }
+     },
+     {
+      "name": "market",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Market"
+      }
+     },
+     {
+      "name": "strategy_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Strategy Id"
+      }
+     },
+     {
+      "name": "strategy_version_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Strategy Version Id"
+      }
+     },
+     {
+      "name": "backtest_session_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Backtest Session Id"
+      }
+     },
+     {
+      "name": "timeframe",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Timeframe"
+      }
+     },
+     {
+      "name": "direction",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(buy|sell)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Direction"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(open|closed|cancelled)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     },
+     {
+      "name": "setup",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Setup"
+      }
+     },
+     {
+      "name": "trading_session",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Trading Session"
+      }
+     },
+     {
+      "name": "market_condition",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Market Condition"
+      }
+     },
+     {
+      "name": "plan_compliance",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(followed|partial|violated)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Plan Compliance"
+      }
+     },
+     {
+      "name": "outcome",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(win|loss|breakeven)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Outcome"
+      }
+     },
+     {
+      "name": "r_min",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "string",
+         "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "R Min"
+      }
+     },
+     {
+      "name": "r_max",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "string",
+         "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "R Max"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 64
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Q"
+      }
+     },
+     {
+      "name": "tag",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tag"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/import/trades/preview": {
+   "post": {
+    "tags": [
+     "import-export"
+    ],
+    "summary": "Import Preview",
+    "description": "Bước 1: tải CSV lên, kiểm tra từng dòng, đánh dấu dòng trùng. Chưa ghi giao dịch nào.",
+    "operationId": "import_preview_api_v1_import_trades_preview_post",
+    "requestBody": {
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_import_preview_api_v1_import_trades_preview_post"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ImportJobOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/import/jobs/{job_id}/commit": {
+   "post": {
+    "tags": [
+     "import-export"
+    ],
+    "summary": "Import Commit",
+    "description": "Bước 2: ghi các dòng hợp lệ trong một transaction. Gọi lại nhiều lần không nhập lặp.",
+    "operationId": "import_commit_api_v1_import_jobs__job_id__commit_post",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ImportJobOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/import/jobs": {
+   "get": {
+    "tags": [
+     "import-export"
+    ],
+    "summary": "List Jobs",
+    "operationId": "list_jobs_api_v1_import_jobs_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/ImportJobOut"
+         },
+         "type": "array",
+         "title": "Response List Jobs Api V1 Import Jobs Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/export/trades.csv": {
+   "get": {
+    "tags": [
+     "import-export"
+    ],
+    "summary": "Export Trades",
+    "operationId": "export_trades_api_v1_export_trades_csv_get",
+    "parameters": [
+     {
+      "name": "trade_type",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(live|backtest)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Trade Type"
+      }
+     },
+     {
+      "name": "date_from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Date From"
+      }
+     },
+     {
+      "name": "date_to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Date To"
+      }
+     },
+     {
+      "name": "account_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Account Id"
+      }
+     },
+     {
+      "name": "market",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Market"
+      }
+     },
+     {
+      "name": "strategy_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Strategy Id"
+      }
+     },
+     {
+      "name": "strategy_version_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Strategy Version Id"
+      }
+     },
+     {
+      "name": "backtest_session_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Backtest Session Id"
+      }
+     },
+     {
+      "name": "timeframe",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Timeframe"
+      }
+     },
+     {
+      "name": "direction",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(buy|sell)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Direction"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(open|closed|cancelled)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     },
+     {
+      "name": "setup",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Setup"
+      }
+     },
+     {
+      "name": "trading_session",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Trading Session"
+      }
+     },
+     {
+      "name": "market_condition",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Market Condition"
+      }
+     },
+     {
+      "name": "plan_compliance",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(followed|partial|violated)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Plan Compliance"
+      }
+     },
+     {
+      "name": "outcome",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^(win|loss|breakeven)$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Outcome"
+      }
+     },
+     {
+      "name": "r_min",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "string",
+         "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "R Min"
+      }
+     },
+     {
+      "name": "r_max",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "string",
+         "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "R Max"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 64
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Q"
+      }
+     },
+     {
+      "name": "tag",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tag"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/export/strategies.csv": {
+   "get": {
+    "tags": [
+     "import-export"
+    ],
+    "summary": "Export Strategies",
+    "operationId": "export_strategies_api_v1_export_strategies_csv_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/export/backtest-sessions.csv": {
+   "get": {
+    "tags": [
+     "import-export"
+    ],
+    "summary": "Export Sessions",
+    "operationId": "export_sessions_api_v1_export_backtest_sessions_csv_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/export/stats.json": {
+   "get": {
+    "tags": [
+     "import-export"
+    ],
+    "summary": "Export Stats",
+    "operationId": "export_stats_api_v1_export_stats_json_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/export/archive.zip": {
+   "get": {
+    "tags": [
+     "import-export"
+    ],
+    "summary": "Export Archive",
+    "operationId": "export_archive_api_v1_export_archive_zip_get",
+    "parameters": [
+     {
+      "name": "include_images",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": true,
+       "title": "Include Images"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/prices/series": {
+   "get": {
+    "tags": [
+     "prices"
+    ],
+    "summary": "List Series",
+    "operationId": "list_series_api_v1_prices_series_get",
+    "parameters": [
+     {
+      "name": "symbol",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Symbol"
+      }
+     },
+     {
+      "name": "timeframe",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Timeframe"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/prices/series/import": {
+   "post": {
+    "tags": [
+     "prices"
+    ],
+    "summary": "Import Series",
+    "description": "Nhập nến OHLC. Cột: time, open, high, low, close[, volume]. Nến trùng thời điểm sẽ được ghi đè.",
+    "operationId": "import_series_api_v1_prices_series_import_post",
+    "requestBody": {
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_import_series_api_v1_prices_series_import_post"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/prices/series/{series_id}/bars": {
+   "get": {
+    "tags": [
+     "prices"
+    ],
+    "summary": "Get Bars",
+    "operationId": "get_bars_api_v1_prices_series__series_id__bars_get",
+    "parameters": [
+     {
+      "name": "series_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Series Id"
+      }
+     },
+     {
+      "name": "start",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Start"
+      }
+     },
+     {
+      "name": "end",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "End"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 5000,
+       "minimum": 1,
+       "default": 1000,
+       "title": "Limit"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/prices/series/{series_id}": {
+   "delete": {
+    "tags": [
+     "prices"
+    ],
+    "summary": "Delete Series",
+    "operationId": "delete_series_api_v1_prices_series__series_id__delete",
+    "parameters": [
+     {
+      "name": "series_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Series Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/health": {
+   "get": {
+    "tags": [
+     "ops"
+    ],
+    "summary": "Health",
+    "operationId": "health_api_v1_health_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "AccountIn": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 120,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "broker": {
+      "type": "string",
+      "maxLength": 120,
+      "title": "Broker",
+      "default": ""
+     },
+     "currency": {
+      "type": "string",
+      "maxLength": 10,
+      "minLength": 3,
+      "title": "Currency",
+      "default": "USD"
+     },
+     "initial_balance": {
+      "anyOf": [
+       {
+        "type": "number",
+        "minimum": 0.0
+       },
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Initial Balance"
+     },
+     "is_archived": {
+      "type": "boolean",
+      "title": "Is Archived",
+      "default": false
+     }
+    },
+    "type": "object",
+    "required": [
+     "name"
+    ],
+    "title": "AccountIn"
+   },
+   "AccountOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "broker": {
+      "type": "string",
+      "title": "Broker"
+     },
+     "currency": {
+      "type": "string",
+      "title": "Currency"
+     },
+     "initial_balance": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Initial Balance"
+     },
+     "is_archived": {
+      "type": "boolean",
+      "title": "Is Archived"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "broker",
+     "currency",
+     "initial_balance",
+     "is_archived",
+     "created_at"
+    ],
+    "title": "AccountOut"
+   },
+   "Body_import_preview_api_v1_import_trades_preview_post": {
+    "properties": {
+     "file": {
+      "type": "string",
+      "format": "binary",
+      "title": "File"
+     },
+     "trade_type": {
+      "type": "string",
+      "title": "Trade Type",
+      "default": ""
+     },
+     "account_id": {
+      "type": "string",
+      "title": "Account Id",
+      "default": ""
+     },
+     "backtest_session_id": {
+      "type": "string",
+      "title": "Backtest Session Id",
+      "default": ""
+     },
+     "strategy_version_id": {
+      "type": "string",
+      "title": "Strategy Version Id",
+      "default": ""
+     },
+     "timezone_name": {
+      "type": "string",
+      "title": "Timezone Name",
+      "default": ""
+     }
+    },
+    "type": "object",
+    "required": [
+     "file"
+    ],
+    "title": "Body_import_preview_api_v1_import_trades_preview_post"
+   },
+   "Body_import_series_api_v1_prices_series_import_post": {
+    "properties": {
+     "file": {
+      "type": "string",
+      "format": "binary",
+      "title": "File"
+     },
+     "symbol": {
+      "type": "string",
+      "title": "Symbol"
+     },
+     "timeframe": {
+      "type": "string",
+      "title": "Timeframe"
+     },
+     "source": {
+      "type": "string",
+      "title": "Source"
+     },
+     "timezone_name": {
+      "type": "string",
+      "title": "Timezone Name",
+      "default": "UTC"
+     }
+    },
+    "type": "object",
+    "required": [
+     "file",
+     "symbol",
+     "timeframe",
+     "source"
+    ],
+    "title": "Body_import_series_api_v1_prices_series_import_post"
+   },
+   "Body_replace_image_api_v1_images__image_id__file_put": {
+    "properties": {
+     "file": {
+      "type": "string",
+      "format": "binary",
+      "title": "File"
+     }
+    },
+    "type": "object",
+    "required": [
+     "file"
+    ],
+    "title": "Body_replace_image_api_v1_images__image_id__file_put"
+   },
+   "Body_upload_session_image_api_v1_backtest_sessions__session_id__images_post": {
+    "properties": {
+     "file": {
+      "type": "string",
+      "format": "binary",
+      "title": "File"
+     },
+     "kind": {
+      "type": "string",
+      "title": "Kind",
+      "default": "other"
+     },
+     "caption": {
+      "type": "string",
+      "title": "Caption",
+      "default": ""
+     }
+    },
+    "type": "object",
+    "required": [
+     "file"
+    ],
+    "title": "Body_upload_session_image_api_v1_backtest_sessions__session_id__images_post"
+   },
+   "Body_upload_trade_image_api_v1_trades__trade_id__images_post": {
+    "properties": {
+     "file": {
+      "type": "string",
+      "format": "binary",
+      "title": "File"
+     },
+     "kind": {
+      "type": "string",
+      "title": "Kind",
+      "default": "other"
+     },
+     "caption": {
+      "type": "string",
+      "title": "Caption",
+      "default": ""
+     }
+    },
+    "type": "object",
+    "required": [
+     "file"
+    ],
+    "title": "Body_upload_trade_image_api_v1_trades__trade_id__images_post"
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "ImageOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "trade_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Trade Id"
+     },
+     "backtest_session_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Backtest Session Id"
+     },
+     "kind": {
+      "type": "string",
+      "title": "Kind"
+     },
+     "caption": {
+      "type": "string",
+      "title": "Caption"
+     },
+     "content_type": {
+      "type": "string",
+      "title": "Content Type"
+     },
+     "size_bytes": {
+      "type": "integer",
+      "title": "Size Bytes"
+     },
+     "original_filename": {
+      "type": "string",
+      "title": "Original Filename"
+     },
+     "sort_order": {
+      "type": "integer",
+      "title": "Sort Order"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "trade_id",
+     "backtest_session_id",
+     "kind",
+     "caption",
+     "content_type",
+     "size_bytes",
+     "original_filename",
+     "sort_order",
+     "created_at"
+    ],
+    "title": "ImageOut"
+   },
+   "ImagePatch": {
+    "properties": {
+     "caption": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Caption"
+     },
+     "kind": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "before",
+         "after",
+         "other"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Kind"
+     },
+     "sort_order": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sort Order"
+     }
+    },
+    "type": "object",
+    "title": "ImagePatch"
+   },
+   "ImportJobOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "kind": {
+      "type": "string",
+      "title": "Kind"
+     },
+     "filename": {
+      "type": "string",
+      "title": "Filename"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "total_rows": {
+      "type": "integer",
+      "title": "Total Rows"
+     },
+     "valid_rows": {
+      "type": "integer",
+      "title": "Valid Rows"
+     },
+     "duplicate_rows": {
+      "type": "integer",
+      "title": "Duplicate Rows"
+     },
+     "error_rows": {
+      "type": "integer",
+      "title": "Error Rows"
+     },
+     "imported_rows": {
+      "type": "integer",
+      "title": "Imported Rows"
+     },
+     "errors": {
+      "items": {},
+      "type": "array",
+      "title": "Errors"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     },
+     "committed_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Committed At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "kind",
+     "filename",
+     "status",
+     "total_rows",
+     "valid_rows",
+     "duplicate_rows",
+     "error_rows",
+     "imported_rows",
+     "errors",
+     "created_at",
+     "committed_at"
+    ],
+    "title": "ImportJobOut"
+   },
+   "LoginIn": {
+    "properties": {
+     "email": {
+      "type": "string",
+      "format": "email",
+      "title": "Email"
+     },
+     "password": {
+      "type": "string",
+      "maxLength": 200,
+      "title": "Password"
+     }
+    },
+    "type": "object",
+    "required": [
+     "email",
+     "password"
+    ],
+    "title": "LoginIn"
+   },
+   "PasswordIn": {
+    "properties": {
+     "current_password": {
+      "type": "string",
+      "title": "Current Password"
+     },
+     "new_password": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 10,
+      "title": "New Password"
+     }
+    },
+    "type": "object",
+    "required": [
+     "current_password",
+     "new_password"
+    ],
+    "title": "PasswordIn"
+   },
+   "ProfileIn": {
+    "properties": {
+     "display_name": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 120
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Display Name"
+     },
+     "timezone": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Timezone"
+     }
+    },
+    "type": "object",
+    "title": "ProfileIn"
+   },
+   "RegisterIn": {
+    "properties": {
+     "email": {
+      "type": "string",
+      "format": "email",
+      "title": "Email"
+     },
+     "password": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 10,
+      "title": "Password"
+     },
+     "display_name": {
+      "type": "string",
+      "maxLength": 120,
+      "title": "Display Name",
+      "default": ""
+     },
+     "timezone": {
+      "type": "string",
+      "title": "Timezone",
+      "default": "Asia/Ho_Chi_Minh"
+     }
+    },
+    "type": "object",
+    "required": [
+     "email",
+     "password"
+    ],
+    "title": "RegisterIn"
+   },
+   "SessionIn": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "strategy_version_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Strategy Version Id"
+     },
+     "market": {
+      "type": "string",
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Market"
+     },
+     "timeframe": {
+      "type": "string",
+      "maxLength": 16,
+      "minLength": 1,
+      "title": "Timeframe"
+     },
+     "data_start": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Data Start"
+     },
+     "data_end": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Data End"
+     },
+     "data_timezone": {
+      "type": "string",
+      "title": "Data Timezone",
+      "default": "UTC"
+     },
+     "entry_rules": {
+      "type": "string",
+      "title": "Entry Rules",
+      "default": ""
+     },
+     "exit_rules": {
+      "type": "string",
+      "title": "Exit Rules",
+      "default": ""
+     },
+     "risk_rules": {
+      "type": "string",
+      "title": "Risk Rules",
+      "default": ""
+     },
+     "target_trades": {
+      "type": "integer",
+      "maximum": 100000.0,
+      "minimum": 1.0,
+      "title": "Target Trades",
+      "default": 100
+     },
+     "initial_capital": {
+      "anyOf": [
+       {
+        "type": "number",
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Initial Capital"
+     },
+     "equity_method": {
+      "type": "string",
+      "enum": [
+       "cash",
+       "r_fixed",
+       "r_compound"
+      ],
+      "title": "Equity Method",
+      "default": "cash"
+     },
+     "risk_per_trade_pct": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 100.0,
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Risk Per Trade Pct"
+     },
+     "summary_notes": {
+      "type": "string",
+      "title": "Summary Notes",
+      "default": ""
+     },
+     "is_completed": {
+      "type": "boolean",
+      "title": "Is Completed",
+      "default": false
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "strategy_version_id",
+     "market",
+     "timeframe"
+    ],
+    "title": "SessionIn"
+   },
+   "SessionOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "strategy_version_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Strategy Version Id"
+     },
+     "market": {
+      "type": "string",
+      "title": "Market"
+     },
+     "timeframe": {
+      "type": "string",
+      "title": "Timeframe"
+     },
+     "data_start": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Data Start"
+     },
+     "data_end": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Data End"
+     },
+     "data_timezone": {
+      "type": "string",
+      "title": "Data Timezone"
+     },
+     "entry_rules": {
+      "type": "string",
+      "title": "Entry Rules"
+     },
+     "exit_rules": {
+      "type": "string",
+      "title": "Exit Rules"
+     },
+     "risk_rules": {
+      "type": "string",
+      "title": "Risk Rules"
+     },
+     "target_trades": {
+      "type": "integer",
+      "title": "Target Trades"
+     },
+     "initial_capital": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Initial Capital"
+     },
+     "equity_method": {
+      "type": "string",
+      "title": "Equity Method"
+     },
+     "risk_per_trade_pct": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Risk Per Trade Pct"
+     },
+     "summary_notes": {
+      "type": "string",
+      "title": "Summary Notes"
+     },
+     "is_completed": {
+      "type": "boolean",
+      "title": "Is Completed"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     },
+     "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Updated At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "strategy_version_id",
+     "market",
+     "timeframe",
+     "data_start",
+     "data_end",
+     "data_timezone",
+     "entry_rules",
+     "exit_rules",
+     "risk_rules",
+     "target_trades",
+     "initial_capital",
+     "equity_method",
+     "risk_per_trade_pct",
+     "summary_notes",
+     "is_completed",
+     "created_at",
+     "updated_at"
+    ],
+    "title": "SessionOut"
+   },
+   "SessionProgress": {
+    "properties": {
+     "recorded": {
+      "type": "integer",
+      "title": "Recorded"
+     },
+     "target": {
+      "type": "integer",
+      "title": "Target"
+     },
+     "completion_pct": {
+      "type": "number",
+      "title": "Completion Pct"
+     },
+     "incomplete": {
+      "type": "integer",
+      "title": "Incomplete"
+     },
+     "last_tested_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Tested At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "recorded",
+     "target",
+     "completion_pct",
+     "incomplete",
+     "last_tested_at"
+    ],
+    "title": "SessionProgress"
+   },
+   "SessionWithProgress": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "strategy_version_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Strategy Version Id"
+     },
+     "market": {
+      "type": "string",
+      "title": "Market"
+     },
+     "timeframe": {
+      "type": "string",
+      "title": "Timeframe"
+     },
+     "data_start": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Data Start"
+     },
+     "data_end": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Data End"
+     },
+     "data_timezone": {
+      "type": "string",
+      "title": "Data Timezone"
+     },
+     "entry_rules": {
+      "type": "string",
+      "title": "Entry Rules"
+     },
+     "exit_rules": {
+      "type": "string",
+      "title": "Exit Rules"
+     },
+     "risk_rules": {
+      "type": "string",
+      "title": "Risk Rules"
+     },
+     "target_trades": {
+      "type": "integer",
+      "title": "Target Trades"
+     },
+     "initial_capital": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Initial Capital"
+     },
+     "equity_method": {
+      "type": "string",
+      "title": "Equity Method"
+     },
+     "risk_per_trade_pct": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Risk Per Trade Pct"
+     },
+     "summary_notes": {
+      "type": "string",
+      "title": "Summary Notes"
+     },
+     "is_completed": {
+      "type": "boolean",
+      "title": "Is Completed"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     },
+     "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Updated At"
+     },
+     "progress": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/SessionProgress"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "strategy_label": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Strategy Label"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "strategy_version_id",
+     "market",
+     "timeframe",
+     "data_start",
+     "data_end",
+     "data_timezone",
+     "entry_rules",
+     "exit_rules",
+     "risk_rules",
+     "target_trades",
+     "initial_capital",
+     "equity_method",
+     "risk_per_trade_pct",
+     "summary_notes",
+     "is_completed",
+     "created_at",
+     "updated_at"
+    ],
+    "title": "SessionWithProgress"
+   },
+   "StrategyIn": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "description": {
+      "type": "string",
+      "title": "Description",
+      "default": ""
+     }
+    },
+    "type": "object",
+    "required": [
+     "name"
+    ],
+    "title": "StrategyIn"
+   },
+   "StrategyOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "description": {
+      "type": "string",
+      "title": "Description"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     },
+     "versions": {
+      "items": {
+       "$ref": "#/components/schemas/VersionOut"
+      },
+      "type": "array",
+      "title": "Versions",
+      "default": []
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "description",
+     "created_at"
+    ],
+    "title": "StrategyOut"
+   },
+   "TagOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "color": {
+      "type": "string",
+      "title": "Color"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "color"
+    ],
+    "title": "TagOut"
+   },
+   "TradeIn": {
+    "properties": {
+     "trade_type": {
+      "type": "string",
+      "enum": [
+       "live",
+       "backtest"
+      ],
+      "title": "Trade Type"
+     },
+     "code": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 64
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Code"
+     },
+     "account_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Account Id"
+     },
+     "backtest_session_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Backtest Session Id"
+     },
+     "strategy_version_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Strategy Version Id"
+     },
+     "market": {
+      "type": "string",
+      "maxLength": 40,
+      "minLength": 1,
+      "title": "Market"
+     },
+     "direction": {
+      "type": "string",
+      "enum": [
+       "buy",
+       "sell"
+      ],
+      "title": "Direction"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "open",
+       "closed",
+       "cancelled"
+      ],
+      "title": "Status",
+      "default": "open"
+     },
+     "entry_time": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Entry Time"
+     },
+     "exit_time": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Exit Time"
+     },
+     "timeframe": {
+      "type": "string",
+      "maxLength": 16,
+      "title": "Timeframe",
+      "default": ""
+     },
+     "trading_session": {
+      "type": "string",
+      "maxLength": 32,
+      "title": "Trading Session",
+      "default": ""
+     },
+     "entry_price": {
+      "anyOf": [
+       {
+        "type": "number",
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       }
+      ],
+      "title": "Entry Price"
+     },
+     "stop_loss": {
+      "anyOf": [
+       {
+        "type": "number",
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Stop Loss"
+     },
+     "take_profit": {
+      "anyOf": [
+       {
+        "type": "number",
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Take Profit"
+     },
+     "exit_price": {
+      "anyOf": [
+       {
+        "type": "number",
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Exit Price"
+     },
+     "volume": {
+      "anyOf": [
+       {
+        "type": "number",
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Volume"
+     },
+     "risk_amount": {
+      "anyOf": [
+       {
+        "type": "number",
+        "exclusiveMinimum": 0.0
+       },
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Risk Amount"
+     },
+     "gross_pnl": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gross Pnl"
+     },
+     "commission": {
+      "anyOf": [
+       {
+        "type": "number",
+        "minimum": 0.0
+       },
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       }
+      ],
+      "title": "Commission",
+      "default": "0"
+     },
+     "swap": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       }
+      ],
+      "title": "Swap",
+      "default": "0"
+     },
+     "other_fees": {
+      "anyOf": [
+       {
+        "type": "number",
+        "minimum": 0.0
+       },
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       }
+      ],
+      "title": "Other Fees",
+      "default": "0"
+     },
+     "r_manual": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "string",
+        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "R Manual"
+     },
+     "trend": {
+      "type": "string",
+      "maxLength": 32,
+      "title": "Trend",
+      "default": ""
+     },
+     "key_levels": {
+      "type": "string",
+      "title": "Key Levels",
+      "default": ""
+     },
+     "setup": {
+      "type": "string",
+      "maxLength": 120,
+      "title": "Setup",
+      "default": ""
+     },
+     "confirmation": {
+      "type": "string",
+      "title": "Confirmation",
+      "default": ""
+     },
+     "market_condition": {
+      "type": "string",
+      "maxLength": 64,
+      "title": "Market Condition",
+      "default": ""
+     },
+     "entry_reason": {
+      "type": "string",
+      "title": "Entry Reason",
+      "default": ""
+     },
+     "exit_reason": {
+      "type": "string",
+      "title": "Exit Reason",
+      "default": ""
+     },
+     "plan_compliance": {
+      "type": "string",
+      "enum": [
+       "",
+       "followed",
+       "partial",
+       "violated"
+      ],
+      "title": "Plan Compliance",
+      "default": ""
+     },
+     "mistakes": {
+      "type": "string",
+      "title": "Mistakes",
+      "default": ""
+     },
+     "emotion": {
+      "type": "string",
+      "maxLength": 64,
+      "title": "Emotion",
+      "default": ""
+     },
+     "lessons": {
+      "type": "string",
+      "title": "Lessons",
+      "default": ""
+     },
+     "notes": {
+      "type": "string",
+      "title": "Notes",
+      "default": ""
+     },
+     "chart_link": {
+      "type": "string",
+      "maxLength": 1000,
+      "title": "Chart Link",
+      "default": ""
+     },
+     "chart_config": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Chart Config"
+     },
+     "is_draft": {
+      "type": "boolean",
+      "title": "Is Draft",
+      "default": false
+     },
+     "tags": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 30,
+      "title": "Tags"
+     },
+     "row_version": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Row Version"
+     }
+    },
+    "type": "object",
+    "required": [
+     "trade_type",
+     "market",
+     "direction",
+     "entry_time",
+     "entry_price"
+    ],
+    "title": "TradeIn"
+   },
+   "TradeOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "trade_type": {
+      "type": "string",
+      "title": "Trade Type"
+     },
+     "code": {
+      "type": "string",
+      "title": "Code"
+     },
+     "account_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Account Id"
+     },
+     "backtest_session_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Backtest Session Id"
+     },
+     "strategy_version_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Strategy Version Id"
+     },
+     "market": {
+      "type": "string",
+      "title": "Market"
+     },
+     "direction": {
+      "type": "string",
+      "title": "Direction"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "entry_time": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Entry Time"
+     },
+     "exit_time": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Exit Time"
+     },
+     "timeframe": {
+      "type": "string",
+      "title": "Timeframe"
+     },
+     "trading_session": {
+      "type": "string",
+      "title": "Trading Session"
+     },
+     "entry_price": {
+      "type": "number",
+      "title": "Entry Price"
+     },
+     "stop_loss": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Stop Loss"
+     },
+     "take_profit": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Take Profit"
+     },
+     "exit_price": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Exit Price"
+     },
+     "volume": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Volume"
+     },
+     "risk_amount": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Risk Amount"
+     },
+     "gross_pnl": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gross Pnl"
+     },
+     "commission": {
+      "type": "number",
+      "title": "Commission"
+     },
+     "swap": {
+      "type": "number",
+      "title": "Swap"
+     },
+     "other_fees": {
+      "type": "number",
+      "title": "Other Fees"
+     },
+     "net_pnl": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Net Pnl"
+     },
+     "r_multiple": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "R Multiple"
+     },
+     "r_source": {
+      "type": "string",
+      "title": "R Source"
+     },
+     "r_manual": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "R Manual"
+     },
+     "outcome": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Outcome"
+     },
+     "trend": {
+      "type": "string",
+      "title": "Trend"
+     },
+     "key_levels": {
+      "type": "string",
+      "title": "Key Levels"
+     },
+     "setup": {
+      "type": "string",
+      "title": "Setup"
+     },
+     "confirmation": {
+      "type": "string",
+      "title": "Confirmation"
+     },
+     "market_condition": {
+      "type": "string",
+      "title": "Market Condition"
+     },
+     "entry_reason": {
+      "type": "string",
+      "title": "Entry Reason"
+     },
+     "exit_reason": {
+      "type": "string",
+      "title": "Exit Reason"
+     },
+     "plan_compliance": {
+      "type": "string",
+      "title": "Plan Compliance"
+     },
+     "mistakes": {
+      "type": "string",
+      "title": "Mistakes"
+     },
+     "emotion": {
+      "type": "string",
+      "title": "Emotion"
+     },
+     "lessons": {
+      "type": "string",
+      "title": "Lessons"
+     },
+     "notes": {
+      "type": "string",
+      "title": "Notes"
+     },
+     "chart_link": {
+      "type": "string",
+      "title": "Chart Link"
+     },
+     "chart_config": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Chart Config"
+     },
+     "is_draft": {
+      "type": "boolean",
+      "title": "Is Draft"
+     },
+     "row_version": {
+      "type": "integer",
+      "title": "Row Version"
+     },
+     "tags": {
+      "items": {
+       "$ref": "#/components/schemas/TagOut"
+      },
+      "type": "array",
+      "title": "Tags"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     },
+     "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Updated At"
+     },
+     "image_count": {
+      "type": "integer",
+      "title": "Image Count",
+      "default": 0
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "trade_type",
+     "code",
+     "account_id",
+     "backtest_session_id",
+     "strategy_version_id",
+     "market",
+     "direction",
+     "status",
+     "entry_time",
+     "exit_time",
+     "timeframe",
+     "trading_session",
+     "entry_price",
+     "stop_loss",
+     "take_profit",
+     "exit_price",
+     "volume",
+     "risk_amount",
+     "gross_pnl",
+     "commission",
+     "swap",
+     "other_fees",
+     "net_pnl",
+     "r_multiple",
+     "r_source",
+     "r_manual",
+     "outcome",
+     "trend",
+     "key_levels",
+     "setup",
+     "confirmation",
+     "market_condition",
+     "entry_reason",
+     "exit_reason",
+     "plan_compliance",
+     "mistakes",
+     "emotion",
+     "lessons",
+     "notes",
+     "chart_link",
+     "chart_config",
+     "is_draft",
+     "row_version",
+     "tags",
+     "created_at",
+     "updated_at"
+    ],
+    "title": "TradeOut"
+   },
+   "TradePage": {
+    "properties": {
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/TradeOut"
+      },
+      "type": "array",
+      "title": "Items"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "page": {
+      "type": "integer",
+      "title": "Page"
+     },
+     "page_size": {
+      "type": "integer",
+      "title": "Page Size"
+     }
+    },
+    "type": "object",
+    "required": [
+     "items",
+     "total",
+     "page",
+     "page_size"
+    ],
+    "title": "TradePage"
+   },
+   "UserOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "email": {
+      "type": "string",
+      "title": "Email"
+     },
+     "display_name": {
+      "type": "string",
+      "title": "Display Name"
+     },
+     "timezone": {
+      "type": "string",
+      "title": "Timezone"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "email",
+     "display_name",
+     "timezone",
+     "created_at"
+    ],
+    "title": "UserOut"
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   },
+   "VersionIn": {
+    "properties": {
+     "label": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Label"
+     },
+     "entry_rules": {
+      "type": "string",
+      "title": "Entry Rules",
+      "default": ""
+     },
+     "exit_rules": {
+      "type": "string",
+      "title": "Exit Rules",
+      "default": ""
+     },
+     "risk_rules": {
+      "type": "string",
+      "title": "Risk Rules",
+      "default": ""
+     },
+     "notes": {
+      "type": "string",
+      "title": "Notes",
+      "default": ""
+     }
+    },
+    "type": "object",
+    "title": "VersionIn"
+   },
+   "VersionOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Id"
+     },
+     "strategy_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Strategy Id"
+     },
+     "parent_version_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Parent Version Id"
+     },
+     "version_no": {
+      "type": "integer",
+      "title": "Version No"
+     },
+     "label": {
+      "type": "string",
+      "title": "Label"
+     },
+     "entry_rules": {
+      "type": "string",
+      "title": "Entry Rules"
+     },
+     "exit_rules": {
+      "type": "string",
+      "title": "Exit Rules"
+     },
+     "risk_rules": {
+      "type": "string",
+      "title": "Risk Rules"
+     },
+     "notes": {
+      "type": "string",
+      "title": "Notes"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "confirmed_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Confirmed At"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "strategy_id",
+     "parent_version_id",
+     "version_no",
+     "label",
+     "entry_rules",
+     "exit_rules",
+     "risk_rules",
+     "notes",
+     "status",
+     "confirmed_at",
+     "created_at"
+    ],
+    "title": "VersionOut"
+   },
+   "VersionPatch": {
+    "properties": {
+     "label": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Label"
+     },
+     "entry_rules": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Entry Rules"
+     },
+     "exit_rules": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Exit Rules"
+     },
+     "risk_rules": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Risk Rules"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     }
+    },
+    "type": "object",
+    "title": "VersionPatch"
+   }
+  }
+ }
+}
