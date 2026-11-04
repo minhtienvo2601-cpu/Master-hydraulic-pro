@@ -1,0 +1,23 @@
+{
+  "name": "so-viec",
+  "version": "1.0.0",
+  "description": "Sổ Việc – ghi chú công việc nhanh, có mẫu, thẻ và bộ lọc",
+  "private": true,
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --minify --format=iife --target=chrome80 --outfile=www/app.js",
+    "dev": "esbuild src/main.js --bundle --format=iife --target=chrome80 --outfile=www/app.js --servedir=www"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/camera": "^8.2.6",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/share": "^8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.0",
+    "esbuild": "^0.28.2"
+  }
+}

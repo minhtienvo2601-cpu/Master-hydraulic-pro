@@ -1,0 +1,9 @@
+{
+  "appId": "vn.tien.soviec",
+  "appName": "Sổ Việc",
+  "webDir": "www",
+  "backgroundColor": "#0E1116",
+  "plugins": {
+    "SystemBars": { "style": "DARK", "insetsHandling": "css" }
+  }
+}
