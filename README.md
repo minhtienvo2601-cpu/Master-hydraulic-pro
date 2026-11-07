@@ -19,5 +19,6 @@ File APK nằm ở mục **Releases** (bên phải trang repo).
 File `tools/boc-tach-vat-tu.html` — mở trực tiếp bằng trình duyệt (cần mạng lần đầu để tải thư viện đọc Excel/PDF).
 - Quản lý tệp theo dự án (Excel, CSV, PDF, TXT; loại khác chỉ lưu trữ), dữ liệu lưu ngay trong trình duyệt
 - Tự nhận diện dòng tiêu đề (Mã, Tên vật tư, Quy cách, ĐVT, Số lượng, Ghi chú) và bóc các dòng vật tư
+- Nhập cả **thư mục BOM** (mỗi thư mục con dạng `001 80056657-01#A HYDRAULIC EQUIPMENT`): dựng cây BOM theo Pos / Mã / Rev / Mô tả, đọc SL từ PDF `…ASSEMBLED ITEM REPORT` trong thư mục cha, nhân SL theo cụm, báo vị trí bị thiếu, mở bản vẽ ngay trong app
 - Chỉnh lại dòng tiêu đề / cột, sửa, thêm, bỏ dòng
 - Bảng tổng hợp cộng dồn theo mã + ĐVT (hoặc tên + quy cách), xuất Excel 2 sheet "Tổng hợp" và "Chi tiết"

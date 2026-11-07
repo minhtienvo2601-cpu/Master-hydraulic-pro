@@ -48,7 +48,12 @@ input:focus,select:focus{outline:2px solid var(--brand);outline-offset:-1px}
 .fitem:hover{background:var(--panel2)}
 .fitem.on{background:var(--hl-col)}
 .badge{flex:none;width:38px;height:38px;border-radius:8px;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff}
-.k-excel{background:#1d8a4b}.k-pdf{background:#c9372c}.k-text{background:#6a5acd}.k-other{background:#6b7280}.k-manual{background:#b26b00}
+.k-excel{background:#1d8a4b}.k-pdf{background:#c9372c}.k-text{background:#6a5acd}.k-other{background:#6b7280}.k-manual{background:#b26b00}.k-folder{background:#0e7490}
+.tree td.nm{white-space:nowrap}
+.tree .asm input{font-weight:700}
+.tree .lv{display:inline-block;color:var(--muted);width:14px}
+.flinks a{display:block;font-size:12px;color:var(--brand);cursor:pointer;white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+.chip{display:inline-block;font-size:11px;padding:1px 6px;border-radius:9px;background:var(--panel2);color:var(--muted);margin-left:4px}
 .fmeta{min-width:0;flex:1}
 .fname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
 .fsub{color:var(--muted);font-size:12px}
@@ -115,8 +120,10 @@ details summary{cursor:pointer;font-weight:600;margin-bottom:8px}
         <button class="sm" id="projMenu" title="Đổi tên / xoá dự án">⋯</button>
       </div>
     </div>
-    <div class="drop" id="drop">Kéo thả tệp vào đây hoặc <b>bấm để chọn</b><br><small>Excel, CSV, PDF, TXT… (loại khác chỉ lưu trữ)</small></div>
+    <div class="drop" id="drop">Kéo thả tệp vào đây hoặc <b>bấm để chọn</b><br><small>Excel, CSV, PDF, TXT… hoặc kéo cả <b>thư mục BOM</b></small></div>
     <input type="file" id="pick" multiple hidden>
+    <input type="file" id="pickDir" webkitdirectory multiple hidden>
+    <div style="padding:0 14px 8px"><button style="width:100%" id="dirBtn">📁 Nhập thư mục BOM</button></div>
     <div class="side-tools">
       <input type="search" id="ffilter" placeholder="Tìm tệp…">
       <button class="sm" id="newList" title="Tạo danh sách nhập tay">+ Nhập tay</button>
@@ -162,8 +169,8 @@ const DB = {
   db: null,
   open() {
     return new Promise((res, rej) => {
-      const r = indexedDB.open('boc-tach-vat-tu', 1);
-      r.onupgradeneeded = () => { const d = r.result; d.createObjectStore('projects', { keyPath: 'id' }); d.createObjectStore('files', { keyPath: 'id' }); d.createObjectStore('blobs', { keyPath: 'id' }); };
+      const r = indexedDB.open('boc-tach-vat-tu', 2);
+      r.onupgradeneeded = () => { const d = r.result; for (const n of ['projects', 'files', 'blobs', 'handles']) if (!d.objectStoreNames.contains(n)) d.createObjectStore(n, { keyPath: 'id' }); };
       r.onsuccess = () => res(this.db = r.result);
       r.onerror = () => rej(r.error);
     });
@@ -183,10 +190,12 @@ const DB = {
 /* ---------- trạng thái ---------- */
 const S = { projects: [], files: [], projectId: null, fileId: null, view: 'home', sheet: null, parsed: {}, draft: {}, fileFilter: '', sumFilter: '', itemFilter: '' };
 const STATUS = { new: 'Chưa bóc tách', done: 'Đã bóc tách', checked: 'Đã kiểm tra' };
-const KIND_LABEL = { excel: 'XLS', pdf: 'PDF', text: 'TXT', other: 'FILE', manual: 'TAY' };
+const KIND_LABEL = { excel: 'XLS', pdf: 'PDF', text: 'TXT', other: 'FILE', manual: 'TAY', folder: 'BOM' };
 const FIELDS = [
-  { k: 'code', label: 'Mã vật tư', kw: ['ma vt', 'ma vat tu', 'ma hang', 'ma hieu', 'ma so', 'ma sp', 'ky hieu', 'part no', 'part number', 'p/n', 'code', 'item code', 'ma'] },
-  { k: 'name', label: 'Tên vật tư', kw: ['ten vat tu', 'ten hang', 'ten thiet bi', 'ten', 'vat tu', 'mo ta', 'description', 'dien giai', 'noi dung', 'hang muc', 'chung loai', 'item', 'name'] },
+  { k: 'pos', label: 'Vị trí / STT', kw: ['pos', 'pos.', 'position', 'item', 'find no', 'stt', 'vi tri', 'no.', 'no'] },
+  { k: 'code', label: 'Mã vật tư', kw: ['ma vt', 'ma vat tu', 'ma hang', 'ma hieu', 'ma so', 'ma sp', 'ky hieu', 'part no', 'part number', 'p/n', 'code', 'item code', 'item no', 'item number', 'article', 'article no', 'id no', 'drawing no', 'ma'] },
+  { k: 'rev', label: 'Rev', kw: ['rev', 'rev.', 'revision', 'ver', 'phien ban'] },
+  { k: 'name', label: 'Tên vật tư', kw: ['ten vat tu', 'ten hang', 'ten thiet bi', 'ten', 'vat tu', 'mo ta', 'description', 'dien giai', 'noi dung', 'hang muc', 'chung loai', 'designation', 'title', 'name'] },
   { k: 'spec', label: 'Quy cách', kw: ['quy cach', 'thong so', 'kich thuoc', 'thong so ky thuat', 'spec', 'specification', 'model', 'size', 'vat lieu', 'material'] },
   { k: 'unit', label: 'ĐVT', kw: ['dvt', 'd.v.t', 'don vi', 'don vi tinh', 'unit', 'uom', 'dv'] },
   { k: 'qty', label: 'Số lượng', kw: ['so luong', 'sl', 'khoi luong', 'kl', 'qty', "q'ty", 'q.ty', 'quantity'] },
@@ -316,7 +325,7 @@ function extractSheet(sheet, rows, cfg) {
     if (nn === headName || /^(tong|cong|total|sum|sub ?total)\b/.test(nn)) continue;
     const qty = m.qty == null ? null : parseQty(row[m.qty]);
     if (cfg.requireQty && m.qty != null && !(qty > 0)) continue;
-    out.push({ id: uid(), auto: true, on: true, code, name, spec: g('spec'), unit: g('unit'), qty: qty ?? 0, note: g('note'), src: { sheet, row: r + 1 } });
+    out.push({ id: uid(), auto: true, on: true, pos: g('pos'), code, rev: g('rev'), name, spec: g('spec'), unit: g('unit'), qty: qty ?? 0, note: g('note'), src: { sheet, row: r + 1 } });
   }
   return out;
 }
@@ -401,16 +410,226 @@ async function projectMenu() {
   render();
 }
 
+/* ---------- BOM dạng thư mục ----------
+   Mỗi thư mục con: "<vị trí> <mã>#<rev> <mô tả>", vd "001 80056657-01#A HYDRAULIC EQUIPMENT",
+   "014  (See Order Spec) HYDRAULIC CYLINDER". Báo cáo PDF (…ITEM REPORT / BOM / PARTS LIST) trong
+   thư mục cha được đọc để lấy số lượng của các mục con. */
+const REPORT_RE = /report|\bbom\b|parts? ?list|item ?list|st[uü]ckliste|danh m[uụ]c/i;
+S.mem = {};
+function parseFolderName(n) {
+  const s = n.replace(/\s+/g, ' ').trim();
+  let m = s.match(/^(\d{1,4}[a-z]?)\s+(\([^)]*\)|[^\s#]+)(?:#([A-Za-z0-9]+|-))?(?:\s+(.*))?$/i);
+  if (m) {
+    let code = m[2], note = '';
+    if (code.startsWith('(')) { note = code; code = ''; }
+    return { pos: m[1], code, rev: m[3] && m[3] !== '-' ? m[3] : '', name: (m[4] || '').replace(/^-\s*/, '').trim(), note };
+  }
+  m = s.match(/^([^\s#]+)#([A-Za-z0-9]+|-)\s*(.*)$/);
+  if (m) return { pos: '', code: m[1], rev: m[2] !== '-' ? m[2] : '', name: m[3].trim(), note: '' };
+  return { pos: '', code: '', rev: '', name: s, note: '' };
+}
+const byName = (a, b) => a.name.localeCompare(b.name, 'vi', { numeric: true });
+async function walkHandle(dir, path = '') {
+  const node = { name: dir.name, path, dirs: [], files: [] };
+  for await (const [name, h] of dir.entries()) {
+    const p = path ? path + '/' + name : name;
+    if (h.kind === 'directory') node.dirs.push(await walkHandle(h, p));
+    else node.files.push({ name, path: p, get: () => h.getFile() });
+  }
+  node.dirs.sort(byName); node.files.sort(byName);
+  return node;
+}
+async function walkEntry(ent, path = '') {
+  const node = { name: ent.name, path, dirs: [], files: [] };
+  const rd = ent.createReader(); let batch;
+  do {
+    batch = await new Promise((res, rej) => rd.readEntries(res, rej));
+    for (const c of batch) {
+      const p = path ? path + '/' + c.name : c.name;
+      if (c.isDirectory) node.dirs.push(await walkEntry(c, p));
+      else node.files.push({ name: c.name, path: p, get: () => new Promise((res, rej) => c.file(res, rej)) });
+    }
+  } while (batch.length);
+  node.dirs.sort(byName); node.files.sort(byName);
+  return node;
+}
+function treeFromFileList(list) {
+  const root = { name: list[0].webkitRelativePath.split('/')[0], path: '', dirs: [], files: [] };
+  for (const file of list) {
+    const segs = file.webkitRelativePath.split('/').slice(1); let node = root;
+    for (let i = 0; i < segs.length - 1; i++) {
+      let d = node.dirs.find(x => x.name === segs[i]);
+      if (!d) node.dirs.push(d = { name: segs[i], path: segs.slice(0, i + 1).join('/'), dirs: [], files: [] });
+      node = d;
+    }
+    node.files.push({ name: file.name, path: segs.join('/'), get: async () => file });
+  }
+  const sort = n => { n.dirs.sort(byName); n.files.sort(byName); n.dirs.forEach(sort); }; sort(root);
+  root.fromList = true;
+  return root;
+}
+/* Đọc số lượng các mục con từ PDF báo cáo của cụm */
+async function qtyFromReport(file, children) {
+  const parsed = await pdfParse(await file.arrayBuffer());
+  const rows = parsed.sheets.PDF; let hits = 0;
+  const det = detectHeader(rows);
+  const grid = det && det.map.qty != null ? gridRows(parsed, 'PDF', det.row) : null;
+  const posEq = (a, b) => a !== '' && b !== '' && parseInt(a, 10) === parseInt(b, 10);
+  for (const ch of children) {
+    let q = null;
+    const code = norm(ch.code);
+    if (grid) {
+      const m = det.map;
+      for (let r = det.row + 1; r < grid.length && q == null; r++) {
+        const row = grid[r] || [];
+        const okCode = code && m.code != null && norm(row[m.code]).includes(code);
+        const okPos = m.pos != null && posEq(cellStr(row[m.pos]), ch.pos) && (!code || m.code == null || !cellStr(row[m.code]) || okCode);
+        if (okCode || okPos) q = parseQty(row[m.qty]);
+      }
+    }
+    if (q == null) {
+      for (const cells of rows) {
+        const txt = norm(cells.join(' '));
+        const hit = code ? txt.includes(code) : posEq(cells[0], ch.pos) && ch.name && txt.includes(norm(ch.name).split(' ')[0]);
+        if (!hit) continue;
+        const cand = cells.filter((c, i) => !(i === 0 && posEq(c, ch.pos)) && !norm(c).includes(code || '\u0000'))
+          .map(c => c.match(/^(\d+(?:[.,]\d+)?)\s*(pcs|pc|st|ea|stk|cai|cái|m|kg|set)?\.?$/i)).filter(Boolean);
+        if (cand.length) { q = parseQty(cand[0][1]); break; }
+      }
+    }
+    if (q > 0) { ch.qty = q; ch.qtySrc = file.name; hits++; }
+  }
+  return hits;
+}
+async function buildFolderItems(root, old) {
+  const items = [], warns = [], prev = new Map((old || []).map(i => [i.path, i]));
+  let reports = 0, hits = 0;
+  const visit = async (node, level, parent) => {
+    const kids = [];
+    for (const d of node.dirs) {
+      const p = parseFolderName(d.name);
+      const it = { id: uid(), auto: true, on: true, ...p, spec: '', unit: 'cái', qty: 1, level, path: d.path, parent: parent ? parent.path : '',
+        files: d.files.map(x => ({ name: x.name, path: x.path })), hasChildren: d.dirs.length > 0 };
+      items.push(it); kids.push(it);
+      await visit(d, level + 1, it);
+    }
+    const nums = kids.map(k => parseInt(k.pos, 10)).filter(n => !isNaN(n)).sort((a, b) => a - b);
+    if (nums.length > 1) {
+      const miss = []; for (let n = nums[0]; n < nums[nums.length - 1] && miss.length < 20; n++) if (!nums.includes(n)) miss.push(String(n).padStart(3, '0'));
+      if (miss.length) warns.push(`Thiếu vị trí trong "${node.name}": ${miss.join(', ')}`);
+    }
+    const reps = node.files.filter(x => /\.pdf$/i.test(x.name) && REPORT_RE.test(x.name));
+    for (const r of reps) {
+      try { reports++; hits += await qtyFromReport(await r.get(), kids.filter(k => !k.qtySrc)); }
+      catch (e) { console.error(e); warns.push(`Không đọc được báo cáo "${r.name}" (cần mạng để tải thư viện PDF).`); }
+    }
+  };
+  await visit(root, 0, null);
+  for (const it of items) {  // giữ lại phần người dùng đã sửa khi quét lại
+    const o = prev.get(it.path); if (!o) continue;
+    it.id = o.id; it.on = o.on; it.note = o.note || it.note; it.unit = o.unit || it.unit;
+    if (o.qtyEdited) { it.qty = o.qty; it.qtyEdited = true; }
+  }
+  return { items, warns, reports, hits };
+}
+async function importFolder(root, handle) {
+  toast(`Đang đọc thư mục "${root.name}"…`);
+  const { items, warns, reports, hits } = await buildFolderItems(root);
+  if (!items.length) return toast('Thư mục không có thư mục con nào để bóc tách');
+  const rootInfo = parseFolderName(root.name);
+  if (root.fromList) warns.push('Trình duyệt này không thấy các thư mục rỗng. Dùng Chrome/Edge và nút "Nhập thư mục BOM" để đọc đủ.');
+  const f = { id: uid(), projectId: S.projectId, name: root.name, size: 0, kind: 'folder', addedAt: Date.now(), status: 'done', sheets: {}, items,
+    leafOnly: true, root: rootInfo, rootFiles: root.files.map(x => ({ name: x.name, path: x.path })), warns, reports, hits, hasHandle: !!handle };
+  if (handle) await DB.put('handles', { id: f.id, handle }).catch(() => { f.hasHandle = false; });
+  S.mem[f.id] = indexFiles(root);
+  await saveFile(f); S.files.push(f); openFile(f.id);
+  toast(`Đã nhập ${items.length} mục từ thư mục${reports ? ` · lấy SL cho ${hits} mục từ ${reports} báo cáo` : ''}`);
+}
+function indexFiles(root) { const m = new Map(); const v = n => { n.files.forEach(x => m.set(x.path, x.get)); n.dirs.forEach(v); }; v(root); return m; }
+async function getRootHandle(f) {
+  const rec = f.hasHandle && await DB.get('handles', f.id).catch(() => null);
+  const h = rec && rec.handle; if (!h) return null;
+  if ((await h.queryPermission({ mode: 'read' })) !== 'granted' && (await h.requestPermission({ mode: 'read' })) !== 'granted') return null;
+  return h;
+}
+async function openPathFile(f, path) {
+  let get = S.mem[f.id] && S.mem[f.id].get(path);
+  if (!get) {
+    const h = await getRootHandle(f).catch(() => null);
+    if (h) get = async () => { const segs = path.split('/'); let d = h; for (const s of segs.slice(0, -1)) d = await d.getDirectoryHandle(s); return (await d.getFileHandle(segs[segs.length - 1])).getFile(); };
+  }
+  if (!get) return toast('Không mở được: hãy bấm "Quét lại thư mục" và chọn lại thư mục gốc');
+  try {
+    const file = await get(); const url = URL.createObjectURL(file);
+    const w = window.open(url, '_blank'); if (!w) { const a = document.createElement('a'); a.href = url; a.download = file.name; a.click(); }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (e) { console.error(e); toast('Không tìm thấy tệp (thư mục đã đổi?)'); }
+}
+async function rescanFolder(f) {
+  let root = null, handle = await getRootHandle(f).catch(() => null);
+  if (!handle && window.showDirectoryPicker) { try { handle = await showDirectoryPicker({ mode: 'read' }); } catch (e) { return; } }
+  if (handle) root = await walkHandle(handle);
+  else return toast('Trình duyệt không hỗ trợ quét lại — hãy nhập lại thư mục');
+  if (root.name !== f.name && !confirm(`Thư mục đã chọn là "${root.name}", khác "${f.name}". Vẫn quét?`)) return;
+  const r = await buildFolderItems(root, f.items);
+  Object.assign(f, { items: r.items, warns: r.warns, reports: r.reports, hits: r.hits, rootFiles: root.files.map(x => ({ name: x.name, path: x.path })), hasHandle: true });
+  await DB.put('handles', { id: f.id, handle }).catch(() => {});
+  S.mem[f.id] = indexFiles(root); await saveFile(f); render();
+  toast(`Đã quét lại: ${r.items.length} mục`);
+}
+/* SL tổng = SL/cụm × SL các cụm cha */
+function withTotals(f) {
+  const byPath = new Map(f.items.map(i => [i.path, i]));
+  const tot = new Map();
+  const total = it => { if (tot.has(it.path)) return tot.get(it.path); const p = it.parent && byPath.get(it.parent); const v = (Number(it.qty) || 0) * (p ? total(p) : 1); tot.set(it.path, v); return v; };
+  return f.items.map(it => ({ ...it, total: total(it), parentOff: (() => { let p = byPath.get(it.parent); while (p) { if (p.on === false) return true; p = byPath.get(p.parent); } return false; })() }));
+}
+function countedItems(f) {
+  if (f.kind !== 'folder') return (f.items || []).filter(i => i.on !== false).map(i => ({ ...i, total: Number(i.qty) || 0 }));
+  return withTotals(f).filter(i => i.on !== false && !i.parentOff && !(f.leafOnly && i.hasChildren));
+}
+function folderPanel(f) {
+  const all = withTotals(f), q = norm(S.itemFilter);
+  const list = all.filter(it => !q || norm([it.pos, it.code, it.rev, it.name, it.note].join(' ')).includes(q));
+  const asm = all.filter(i => i.hasChildren).length, counted = countedItems(f).length;
+  const fileLinks = fs => fs.map(x => `<a data-openpath="${esc(x.path)}" title="${esc(x.name)}">📄 ${esc(x.name)}</a>`).join('');
+  return `<div class="card">
+    <h2>Cụm gốc: ${esc([f.root?.code, f.root?.rev && '#' + f.root.rev, f.root?.name].filter(Boolean).join(' ') || f.name)}</h2>
+    <div class="row muted">${all.length} mục · ${asm} cụm lắp · ${all.length - asm} chi tiết · ${f.reports ? `lấy SL cho ${f.hits}/${all.length} mục từ ${f.reports} báo cáo PDF` : 'không thấy báo cáo PDF số lượng — mặc định SL = 1'}</div>
+    ${(f.warns || []).map(w => `<div class="warn">⚠ ${esc(w)}</div>`).join('')}
+    ${f.rootFiles?.length ? `<div class="flinks" style="margin-top:8px">${fileLinks(f.rootFiles)}</div>` : ''}
+    <div class="row" style="margin-top:10px"><label><input type="checkbox" data-act="leafOnly"${f.leafOnly ? ' checked' : ''}> Chỉ tính chi tiết lá vào tổng hợp (không tính dòng cụm lắp có thư mục con)</label>
+      <span class="muted">· đang tính ${counted} dòng</span></div>
+  </div>
+  <div class="card">
+    <div class="hdr" style="margin-bottom:8px"><h2 style="margin:0">Cây BOM</h2>
+      <div class="row"><input type="search" placeholder="Lọc mã, tên…" data-act="ifilter" value="${esc(S.itemFilter)}"></div></div>
+    <div class="tbl-wrap" style="max-height:75vh"><table class="items tree"><thead><tr><th>✓</th><th>Pos</th><th>Mã vật tư</th><th>Rev</th><th>Tên / mô tả</th><th>ĐVT</th><th class="num">SL/cụm</th><th class="num">SL tổng</th><th>Ghi chú</th><th>Tệp</th></tr></thead><tbody>
+    ${list.map(it => `<tr class="${it.on === false || it.parentOff ? 'off' : ''} ${it.hasChildren ? 'asm' : ''}" data-id="${it.id}">
+      <td><input type="checkbox" data-f="on"${it.on !== false ? ' checked' : ''} style="width:auto"></td>
+      <td class="nm" style="padding-left:${4 + it.level * 16}px"><span class="lv">${it.hasChildren ? '▾' : '·'}</span>${esc(it.pos)}</td>
+      <td><input data-f="code" value="${esc(it.code)}" style="min-width:110px"></td>
+      <td><input data-f="rev" value="${esc(it.rev)}" style="width:44px"></td>
+      <td><input data-f="name" value="${esc(it.name)}" style="min-width:200px"></td>
+      <td><input data-f="unit" value="${esc(it.unit)}" style="width:54px"></td>
+      <td><input class="q" data-f="qty" value="${esc(fmtNum(Number(it.qty) || 0))}" title="${it.qtySrc ? 'Lấy từ ' + esc(it.qtySrc) : it.qtyEdited ? 'Đã sửa tay' : 'Mặc định'}" style="width:70px${it.qtySrc || it.qtyEdited ? '' : ';color:var(--muted)'}"></td>
+      <td class="num"><b>${fmtNum(it.total)}</b></td>
+      <td><input data-f="note" value="${esc(it.note)}" style="min-width:110px"></td>
+      <td class="flinks">${fileLinks(it.files || [])}</td></tr>`).join('')}
+    </tbody></table></div>
+    <p class="muted" style="font-size:12px">SL màu xám = mặc định 1 (chưa có trong báo cáo). Sửa SL/cụm để cập nhật SL tổng của các mục con.</p>
+  </div>`;
+}
+
 /* ---------- tổng hợp ---------- */
 function aggregate() {
   const groups = new Map();
-  for (const f of projFiles()) for (const it of f.items || []) {
-    if (it.on === false) continue;
+  for (const f of projFiles()) for (const it of countedItems(f)) {
     const c = norm(it.code);
-    const key = c ? 'c:' + c + '|' + norm(it.unit) : 'n:' + norm(it.name) + '|' + norm(it.spec) + '|' + norm(it.unit);
+    const key = c ? 'c:' + c + '#' + norm(it.rev) + '|' + norm(it.unit) : 'n:' + norm(it.name) + '|' + norm(it.spec) + '|' + norm(it.unit);
     let g = groups.get(key);
-    if (!g) groups.set(key, g = { code: it.code, name: it.name, spec: it.spec, unit: it.unit, qty: 0, files: new Set(), lines: 0 });
-    g.qty += Number(it.qty) || 0; g.files.add(f.name); g.lines++;
+    if (!g) groups.set(key, g = { code: it.code, rev: it.rev || '', name: it.name, spec: it.spec, unit: it.unit, qty: 0, files: new Set(), lines: 0 });
+    g.qty += it.total; g.files.add(f.name); g.lines++;
     if (!g.name && it.name) g.name = it.name; if (!g.spec && it.spec) g.spec = it.spec;
   }
   const list = [...groups.values()];
@@ -421,13 +640,13 @@ function aggregate() {
 }
 function exportXlsx() {
   const p = curProject(), agg = aggregate();
-  const sum = [['STT', 'Mã vật tư', 'Tên vật tư', 'Quy cách', 'ĐVT', 'Tổng số lượng', 'Số dòng gộp', 'Nguồn']];
-  agg.forEach((g, i) => sum.push([i + 1, g.code, g.name, g.spec, g.unit, g.qty, g.lines, [...g.files].join('; ')]));
-  const det = [['Tệp', 'Sheet', 'Dòng', 'Mã vật tư', 'Tên vật tư', 'Quy cách', 'ĐVT', 'Số lượng', 'Ghi chú']];
-  for (const f of projFiles()) for (const it of f.items || []) if (it.on !== false) det.push([f.name, it.src?.sheet || '', it.src?.row || '', it.code, it.name, it.spec, it.unit, Number(it.qty) || 0, it.note]);
+  const sum = [['STT', 'Mã vật tư', 'Rev', 'Tên vật tư', 'Quy cách', 'ĐVT', 'Tổng số lượng', 'Số dòng gộp', 'Nguồn']];
+  agg.forEach((g, i) => sum.push([i + 1, g.code, g.rev, g.name, g.spec, g.unit, g.qty, g.lines, [...g.files].join('; ')]));
+  const det = [['Tệp', 'Vị trí / Sheet', 'Dòng / Cấp', 'Pos', 'Mã vật tư', 'Rev', 'Tên vật tư', 'Quy cách', 'ĐVT', 'SL / cụm', 'SL tổng', 'Ghi chú']];
+  for (const f of projFiles()) for (const it of countedItems(f)) det.push([f.name, it.path || it.src?.sheet || '', it.level ?? it.src?.row ?? '', it.pos || '', it.code, it.rev || '', it.name, it.spec, it.unit, Number(it.qty) || 0, it.total, it.note]);
   const wb = XLSX.utils.book_new();
-  const ws1 = XLSX.utils.aoa_to_sheet(sum); ws1['!cols'] = [6, 16, 40, 24, 8, 14, 10, 40].map(w => ({ wch: w }));
-  const ws2 = XLSX.utils.aoa_to_sheet(det); ws2['!cols'] = [30, 14, 6, 16, 40, 24, 8, 12, 24].map(w => ({ wch: w }));
+  const ws1 = XLSX.utils.aoa_to_sheet(sum); ws1['!cols'] = [6, 16, 5, 40, 24, 8, 14, 10, 40].map(w => ({ wch: w }));
+  const ws2 = XLSX.utils.aoa_to_sheet(det); ws2['!cols'] = [30, 40, 8, 6, 16, 5, 40, 24, 8, 10, 10, 24].map(w => ({ wch: w }));
   XLSX.utils.book_append_sheet(wb, ws1, 'Tổng hợp'); XLSX.utils.book_append_sheet(wb, ws2, 'Chi tiết');
   const d = new Date().toISOString().slice(0, 10);
   XLSX.writeFile(wb, `${(p?.name || 'du-an').replace(/[\\/:*?"<>|]/g, '_')}-boc-tach-${d}.xlsx`);
@@ -481,11 +700,12 @@ async function renderFile(m, f) {
       <select data-act="status">${Object.entries(STATUS).map(([k, v]) => `<option value="${k}"${k === f.status ? ' selected' : ''}>${v}</option>`).join('')}</select>
       ${S.projects.length > 1 ? `<select data-act="move" title="Chuyển sang dự án">${S.projects.map(p => `<option value="${p.id}"${p.id === f.projectId ? ' selected' : ''}>→ ${esc(p.name)}</option>`).join('')}</select>` : ''}
       <button class="sm" data-act="rename">Đổi tên</button>
-      ${f.kind !== 'manual' ? '<button class="sm" data-act="download">Tải tệp gốc</button>' : ''}
+      ${f.kind === 'folder' ? '<button class="sm" data-act="rescan">Quét lại thư mục</button>' : f.kind !== 'manual' ? '<button class="sm" data-act="download">Tải tệp gốc</button>' : ''}
       ${sheetNames.length ? '<button class="sm" data-act="reauto">Tự bóc tách lại</button>' : ''}
       <button class="sm danger" data-act="delete">Xoá</button>
     </div></div>`;
   let cfgHtml = '';
+  if (f.kind === 'folder') { m.innerHTML = `<div class="wrap">${head}${folderPanel(f)}</div>`; return; }
   if (f.kind === 'other') cfgHtml = `<div class="card muted">Loại tệp này không đọc tự động được (bản vẽ, ảnh, Word…). Tệp vẫn được lưu để quản lý — hãy nhập vật tư thủ công ở bảng bên dưới.</div>`;
   else if (sheetNames.length) {
     m.innerHTML = `<div class="wrap">${head}<div class="card muted">Đang đọc tệp…</div></div>`;
@@ -560,11 +780,11 @@ function renderSummary(m) {
   const agg = aggregate(), fs = projFiles();
   const q = norm(S.sumFilter);
   const list = agg.filter(g => !q || norm([g.code, g.name, g.spec, g.unit].join(' ')).includes(q));
-  const lines = fs.reduce((a, f) => a + (f.items || []).filter(i => i.on !== false).length, 0);
+  const lines = fs.reduce((a, f) => a + countedItems(f).length, 0);
   const warn = agg.filter(g => g.unitWarn).length;
   m.innerHTML = `<div class="wrap">
     <div class="hdr"><div><button class="sm back" data-act="back">← Danh sách</button><h1>Bảng tổng hợp — ${esc(curProject()?.name)}</h1>
-      <div class="muted">Gộp theo mã vật tư + ĐVT; dòng không có mã gộp theo tên + quy cách + ĐVT.</div></div>
+      <div class="muted">Gộp theo mã vật tư + Rev + ĐVT (BOM thư mục: SL nhân theo cụm cha); dòng không có mã gộp theo tên + quy cách + ĐVT.</div></div>
       <div class="row"><input type="search" placeholder="Tìm vật tư…" data-act="sfilter" value="${esc(S.sumFilter)}"><button class="pri" data-act="export"${agg.length ? '' : ' disabled'}>Xuất Excel</button></div></div>
     <div class="stats">
       <div class="stat"><b>${fs.length}</b><span class="muted">tệp (${fs.filter(f => f.status === 'checked').length} đã kiểm tra)</span></div>
@@ -572,8 +792,8 @@ function renderSummary(m) {
       <div class="stat"><b>${agg.length}</b><span class="muted">loại vật tư sau gộp</span></div>
       <div class="stat"><b style="color:${warn ? 'var(--warn)' : 'inherit'}">${warn}</b><span class="muted">mã có nhiều ĐVT</span></div>
     </div>
-    ${list.length ? `<div class="card" style="padding:0"><div class="tbl-wrap" style="max-height:none;border:0"><table><thead><tr><th class="num">STT</th><th>Mã VT</th><th>Tên vật tư</th><th>Quy cách</th><th>ĐVT</th><th class="num">Tổng SL</th><th class="num">Dòng</th><th>Nguồn</th></tr></thead><tbody>
-      ${list.map((g, i) => `<tr><td class="num">${i + 1}</td><td>${esc(g.code)}</td><td>${esc(g.name)}</td><td>${esc(g.spec)}</td><td>${esc(g.unit)}${g.unitWarn ? ' <span class="warn" title="Cùng mã nhưng khác ĐVT">⚠</span>' : ''}</td><td class="num"><b>${fmtNum(g.qty)}</b></td><td class="num">${g.lines}</td><td class="src" style="white-space:normal">${esc([...g.files].join('; '))}</td></tr>`).join('')}
+    ${list.length ? `<div class="card" style="padding:0"><div class="tbl-wrap" style="max-height:none;border:0"><table><thead><tr><th class="num">STT</th><th>Mã VT</th><th>Rev</th><th>Tên vật tư</th><th>Quy cách</th><th>ĐVT</th><th class="num">Tổng SL</th><th class="num">Dòng</th><th>Nguồn</th></tr></thead><tbody>
+      ${list.map((g, i) => `<tr><td class="num">${i + 1}</td><td>${esc(g.code)}</td><td>${esc(g.rev)}</td><td>${esc(g.name)}</td><td>${esc(g.spec)}</td><td>${esc(g.unit)}${g.unitWarn ? ' <span class="warn" title="Cùng mã nhưng khác ĐVT">⚠</span>' : ''}</td><td class="num"><b>${fmtNum(g.qty)}</b></td><td class="num">${g.lines}</td><td class="src" style="white-space:normal">${esc([...g.files].join('; '))}</td></tr>`).join('')}
     </tbody></table></div></div>` : `<div class="empty">${q ? 'Không có vật tư phù hợp.' : 'Chưa có vật tư nào. Hãy thêm tệp để bóc tách.'}</div>`}
   </div>`;
 }
@@ -581,8 +801,9 @@ function renderSummary(m) {
 /* ---------- sự kiện ---------- */
 const main = $('#main');
 main.addEventListener('click', async e => {
-  const t = e.target.closest('[data-act],[data-sheet],[data-hrow],[data-del]'); if (!t) return;
+  const t = e.target.closest('[data-act],[data-sheet],[data-hrow],[data-del],[data-openpath]'); if (!t) return;
   const f = curFile();
+  if (t.dataset.openpath) return openPathFile(f, t.dataset.openpath);
   if (t.dataset.sheet != null) { S.sheet = t.dataset.sheet; return render(); }
   if (t.dataset.hrow != null) {
     const key = f.id + '|' + S.sheet, r = +t.dataset.hrow;
@@ -621,10 +842,12 @@ main.addEventListener('click', async e => {
     case 'addItem': f.items.push({ id: uid(), auto: false, on: true, code: '', name: '', spec: '', unit: '', qty: 0, note: '', src: { sheet: 'Nhập tay' } }); S.itemFilter = ''; await saveFile(f); render(); { const ins = main.querySelectorAll('.items tr:last-child input[data-f="code"]'); ins[0]?.focus(); } return;
     case 'toggleAll': { const on = !f.items.every(i => i.on !== false); f.items.forEach(i => i.on = on); await saveFile(f); return render(); }
     case 'export': return exportXlsx();
+    case 'rescan': return rescanFolder(f);
   }
 });
 main.addEventListener('change', async e => {
   const t = e.target, f = curFile();
+  if (t.dataset.act === 'leafOnly') { f.leafOnly = t.checked; await saveFile(f); return render(); }
   if (t.dataset.act === 'status') { f.status = t.value; await saveFile(f); return renderSide(); }
   if (t.dataset.act === 'move') { f.projectId = t.value; await saveFile(f); S.projectId = t.value; try { localStorage.setItem('btvt.project', t.value); } catch (er) {} return render(); }
   if (t.dataset.cfg || t.dataset.map) {
@@ -639,9 +862,10 @@ main.addEventListener('change', async e => {
   if (tr && t.dataset.f) {
     const it = f.items.find(i => i.id === tr.dataset.id); if (!it) return;
     if (t.dataset.f === 'on') { it.on = t.checked; tr.classList.toggle('off', !t.checked); }
-    else if (t.dataset.f === 'qty') { it.qty = parseQty(t.value) ?? 0; t.value = fmtNum(it.qty); }
+    else if (t.dataset.f === 'qty') { it.qty = parseQty(t.value) ?? 0; it.qtyEdited = true; t.value = fmtNum(it.qty); }
     else it[t.dataset.f] = t.value.trim();
-    await saveFile(f); renderSide();
+    await saveFile(f);
+    if (f.kind === 'folder') render(); else renderSide();
   }
 });
 main.addEventListener('input', e => {
@@ -668,7 +892,30 @@ drop.addEventListener('click', () => pick.click());
 pick.addEventListener('change', () => { addFiles([...pick.files]); pick.value = ''; });
 ['dragenter', 'dragover'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
 ['dragleave', 'drop'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); if (ev === 'drop' || !e.relatedTarget) drop.classList.remove('over'); }));
-document.addEventListener('drop', e => { if (e.dataTransfer?.files?.length) addFiles([...e.dataTransfer.files]); });
+document.addEventListener('drop', async e => {
+  const items = [...(e.dataTransfer?.items || [])].filter(i => i.kind === 'file');
+  const files = [...(e.dataTransfer?.files || [])];
+  // phải lấy handle/entry ngay, trước mọi await
+  const hs = items.map(i => i.getAsFileSystemHandle ? i.getAsFileSystemHandle() : null);
+  const ents = items.map(i => i.webkitGetAsEntry ? i.webkitGetAsEntry() : null);
+  const loose = [];
+  for (let i = 0; i < items.length; i++) {
+    const h = hs[i] ? await hs[i].catch(() => null) : null;
+    if (h && h.kind === 'directory') { await importFolder(await walkHandle(h), h); continue; }
+    if (!h && ents[i] && ents[i].isDirectory) { await importFolder(await walkEntry(ents[i])); continue; }
+    if (files[i]) loose.push(files[i]);
+  }
+  if (!items.length) loose.push(...files);
+  if (loose.length) addFiles(loose);
+});
+$('#dirBtn').addEventListener('click', async () => {
+  if (window.showDirectoryPicker) {
+    let h; try { h = await showDirectoryPicker({ mode: 'read' }); } catch (er) { return; }
+    return importFolder(await walkHandle(h), h);
+  }
+  $('#pickDir').click();
+});
+$('#pickDir').addEventListener('change', e => { const fl = [...e.target.files]; e.target.value = ''; if (fl.length) importFolder(treeFromFileList(fl)); });
 
 /* ---------- khởi động ---------- */
 (async function init() {
