@@ -263,7 +263,10 @@ a.lnk:hover{border-bottom-style:solid}
 .dropz b{color:var(--text)}
 .lenbad{color:var(--bad);font-weight:600} .lenwarn{color:var(--warn);font-weight:600}
 .basebox{display:flex;gap:6px;align-items:center;margin:4px 0 10px} .basebox input{flex:1;min-width:0;font-family:var(--mono);font-size:12px}
-body.gdrag::after{content:'Thả file PDF vào đây để nạp thay cho file BOM / bản vẽ bị lỗi';position:fixed;inset:10px;border:3px dashed var(--accent);border-radius:12px;background:rgba(20,80,160,.12);display:grid;place-items:center;font-size:18px;font-weight:600;color:var(--text);z-index:90;pointer-events:none}
+body.gdrag::after{content:'Thả THƯ MỤC hồ sơ để mở, hoặc thả file PDF để nạp thay cho file BOM / bản vẽ bị lỗi';position:fixed;inset:10px;border:3px dashed var(--accent);border-radius:12px;background:rgba(20,80,160,.12);display:grid;place-items:center;font-size:18px;font-weight:600;color:var(--text);z-index:90;pointer-events:none}
+.foldwarn{background:var(--mark-y);border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);border-radius:8px;padding:10px 12px;margin:0 0 12px;line-height:1.6}
+.foldbad{background:var(--mark-r);border:1px solid color-mix(in srgb,var(--bad) 40%,transparent);border-radius:8px;padding:10px 12px;margin:0 0 12px;line-height:1.6}
+.tn .ghost{font-style:italic}
 .kfix{margin-top:4px;display:flex;gap:4px;flex-wrap:nowrap} .kfix .btn{padding:0 6px;height:22px;font-size:11px;gap:3px}
 .dstat{padding:8px 10px;border-radius:6px;background:var(--surface-2);border:1px solid var(--border);margin:8px 0 10px;font-size:12px;display:flex;align-items:center;gap:8px}
 #toast{position:fixed;right:16px;bottom:16px;z-index:70;display:flex;flex-direction:column;gap:6px;pointer-events:none}
@@ -282,8 +285,9 @@ body.gdrag::after{content:'Thả file PDF vào đây để nạp thay cho file B
   <button class="gsearch" id="btnSearch" title="Tìm nhanh mã vật tư, cụm, bản vẽ, BOM (Ctrl+K)"><span data-ic="search" data-s="14"></span><span>Tìm mã vật tư, model, cụm, bản vẽ…</span><kbd>Ctrl K</kbd></button>
   <div class="tb-actions">
     <span class="dictstat" id="dictStat"></span>
-    <label class="btn primary" title="Chọn thư mục gốc của bộ hồ sơ"><span data-ic="folder"></span>Chọn thư mục gốc
-      <input id="dirInput" type="file" webkitdirectory directory multiple hidden></label>
+    <button class="btn primary" id="btnDir" title="Chọn thư mục gốc của bộ hồ sơ (đọc trực tiếp cả thư mục rỗng)"><span data-ic="folder"></span>Chọn thư mục gốc</button>
+    <input id="dirInput" type="file" webkitdirectory directory multiple hidden>
+    <button class="btn" id="btnReopen" hidden><span data-ic="refresh"></span><span id="reopenTxt">Mở lại</span></button>
     <button class="btn" id="btnDict" title="Nạp file Excel mã vật tư công ty để tự dò"><span data-ic="db"></span>File mã vật tư</button>
     <button class="btn" id="btnBackup" title="Lưu toàn bộ tiến độ, đánh dấu, danh sách ra file"><span data-ic="download"></span>Sao lưu</button>
     <label class="btn" title="Khôi phục từ file sao lưu"><span data-ic="upload"></span>Khôi phục<input id="restoreInput" type="file" accept=".json" hidden></label>
@@ -500,22 +504,34 @@ function codeChip(r){
 
 /* ================= folder tree ================= */
 function parseFolderName(name){
-  let m=name.match(/^(\d{2,4})\s+([^#]+?)#(\S*)\s*(.*)$/);
-  if(m) return {pos:m[1],item:m[2],rev:m[3]==='-'?'':m[3],title:m[4].replace(/^-\s*/,'').trim()};
-  m=name.match(/^([^#\s]+)#(\S*)\s*(.*)$/);
-  if(m) return {pos:'',item:m[1],rev:m[2]==='-'?'':m[2],title:m[3].replace(/^-\s*/,'').trim()};
-  return {pos:'',item:'',rev:'',title:name};
+  const s=String(name).replace(/\s+/g,' ').trim();
+  let m=s.match(/^(\d{2,4})\s+([^#()]+?)#(\S*)\s*(.*)$/);
+  if(m) return {pos:m[1],item:m[2].trim(),rev:m[3]==='-'?'':m[3],title:m[4].replace(/^-\s*/,'').trim(),osp:''};
+  /* "014  (See Order Spec) HYDRAULIC CYLINDER": có vị trí nhưng không có mã */
+  m=s.match(/^(\d{2,4})\s+\(([^)]*)\)\s*(.*)$/);
+  if(m) return {pos:m[1],item:'',rev:'',title:m[3].replace(/^-\s*/,'').trim()||m[2],osp:m[2].trim()};
+  m=s.match(/^(\d{2,4})\s+(.+)$/);
+  if(m) return {pos:m[1],item:'',rev:'',title:m[2].replace(/^-\s*/,'').trim(),osp:''};
+  m=s.match(/^([^#\s]+)#(\S*)\s*(.*)$/);
+  if(m) return {pos:'',item:m[1],rev:m[2]==='-'?'':m[2],title:m[3].replace(/^-\s*/,'').trim(),osp:''};
+  return {pos:'',item:'',rev:'',title:s,osp:''};
 }
+/* so sánh vị trí theo số: "014" = "14" */
+const posEq=(a,b)=>a!==''&&b!==''&&a!=null&&b!=null&&/^\d+$/.test(a)&&/^\d+$/.test(b)&&+a===+b;
+const posNum=p=>/^\d+$/.test(p||'')?+p:1e9;
 const nodeKey=n=>n.item?n.item+'#'+(n.rev||'-'):n.path;
 const getProg=n=>P.progress[nodeKey(n)]||{s:'todo',note:''};
 function setProg(n,patch){P.progress[nodeKey(n)]=Object.assign({},getProg(n),patch);save();}
 const lbl=c=>(c.pos?c.pos+' ':'')+(c.title||c.name);
 function where(node){const a=[];let p=node;while(p&&p.parent){a.unshift(p.pos||p.title);p=p.parent;}return a.join(' › ')||'(gốc)';}
 
-function buildTree(fileList){
-  const files=[...fileList]; if(!files.length) return;
-  flush(); rowIndex.clear();
-  const map=new Map(), rootName=files[0].webkitRelativePath.split('/')[0];
+let loadMode='', rootHandle=null;
+function buildTree(fileList,opt={}){
+  const files=[...fileList].sort((a,b)=>a.webkitRelativePath.localeCompare(b.webkitRelativePath));
+  if(!files.length&&!(opt.dirs&&opt.dirs.length)){toast('Thư mục trống');return;}
+  flush(); rowIndex.clear(); closeModal();
+  loadMode=opt.mode||'input'; rootHandle=opt.handle||null;
+  const map=new Map(), rootName=opt.rootName||files[0].webkitRelativePath.split('/')[0];
   function ensure(parts){
     const path=parts.join('/'); if(map.has(path)) return map.get(path);
     const n=Object.assign({name:parts[parts.length-1],path,children:[],others:[],drawing:null,report:null,bom:null,bomP:null,parent:null,depth:parts.length-1},parseFolderName(parts[parts.length-1]));
@@ -531,8 +547,11 @@ function buildTree(fileList){
     else n.others.push(f);
     if(!n.item){const p=parseFolderName(fn.replace(/\.pdf$/i,''));if(p.item){n.item=p.item;n.rev=p.rev;}}
   }
+  ensure([rootName]);
+  for(const d of opt.dirs||[]) ensure(d.split('/'));          // thư mục rỗng vẫn được đưa vào cây
+  for(const e of opt.errs||[]){const n=ensure(e.path.split('/'));n.listErr=e;}
   root=map.get(rootName);
-  const sortRec=n=>{n.children.sort((a,b)=>(a.pos||'').localeCompare(b.pos||'')||a.name.localeCompare(b.name));n.children.forEach(sortRec);};
+  const sortRec=n=>{n.children.sort((a,b)=>posNum(a.pos)-posNum(b.pos)||a.name.localeCompare(b.name,undefined,{numeric:true}));n.children.forEach(sortRec);};
   sortRec(root);
   allNodes=[];(function dfs(n){allNodes.push(n);n.children.forEach(dfs);})(root);
   projKey='bocvt2:'+(root.item||rootName);
@@ -542,8 +561,12 @@ function buildTree(fileList){
   P.lists.forEach(l=>{l.items=l.items||{};l.meta=l.meta||{};});
   const old=ls.get('bocvt:'+(root.item||rootName),null); if(old&&!Object.keys(P.progress).length) P.progress=old;
   root.open=true; selected=null;
-  $('#projName').textContent=(root.item?root.item+' · ':'')+(root.title||root.name)+`  —  ${allNodes.length} cụm`;
-  renderTree(); renderKPI(); renderTabs(); select(root);
+  $('#projName').textContent=(root.item?root.item+' · ':'')+(root.title||root.name)+`  —  ${allNodes.length} thư mục`;
+  renderTree(); renderKPI(); renderTabs(); select(root); updReopen();
+  if(rootHandle) idb.set('lastRoot',{handle:rootHandle,name:rootName}).catch(()=>{});
+  const nErr=(opt.errs||[]).length;
+  if(nErr) toast(`⚠ ${nErr} thư mục không mở được – bấm ô THƯ MỤC để xem`);
+  else if(loadMode==='input') toast('Đang dùng cách chọn cũ: thư mục rỗng sẽ không hiện. Bấm ô THƯ MỤC để biết thêm.');
   if(curView==='vSum') renderSummary(); if(curView==='vList') renderListView();
   scanAll();
 }
@@ -560,12 +583,13 @@ const relLen=f=>(f.webkitRelativePath||f.name).length;
 const MAXP=259;
 function baseKey(){return 'bocvt:base:'+(root?(root.item||root.name):'');}
 function getBase(){return root?ls.get(baseKey(),''):'';}
-function fullLen(f){
-  const b0=getBase(); if(!b0||!f||!f.webkitRelativePath) return null;
+function fullLen(f){return f&&f.webkitRelativePath?fullLenRel(f.webkitRelativePath):null;}
+function fullLenRel(rel){
+  const b0=getBase(); if(!b0||!rel) return null;
   let b=b0.trim().replace(/^"|"$/g,'').replace(/[\\\/]+$/,'');
-  const rn=f.webkitRelativePath.split('/')[0], seg=b.split(/[\\\/]/).pop();
+  const rn=rel.split('/')[0], seg=b.split(/[\\\/]/).pop();
   if(seg===rn) b=b.slice(0,b.length-seg.length).replace(/[\\\/]+$/,'');
-  return b.length+1+relLen(f);
+  return b.length+1+rel.length;
 }
 function lenTag(f){
   const L=fullLen(f); if(L==null) return '';
@@ -627,7 +651,7 @@ const STOP_RE=/Copyright|CONFIDENTIAL|Unauthorized|Weight\s*KG|Drawn\s*By|Checke
 async function parseReport(file){
   await pdfReady;
   const pdf=await pdfjsLib.getDocument({data:await readFileBuf(file)}).promise;
-  const rows=[];
+  const rows=[]; let lastCols=null;
   for(let p=1;p<=pdf.numPages;p++){
     const page=await pdf.getPage(p); const tc=await page.getTextContent();
     const items=tc.items.filter(t=>t.str&&t.str.trim()).map(t=>({s:t.str,x:t.transform[4],y:t.transform[5],w:t.width}));
@@ -637,9 +661,12 @@ async function parseReport(file){
     lines.forEach(l=>l.items.sort((a,b)=>a.x-b.x)); lines.sort((a,b)=>b.y-a.y);
     const txt=l=>l.items.map(i=>i.s).join(' ');
     const hi=lines.findIndex(l=>/\bPos\b/.test(txt(l))&&/Item\s*No/i.test(txt(l)));
-    if(hi<0) continue;
-    const H=lines[hi].items, colX=k=>{const it=H.find(i=>new RegExp(k,'i').test(i.s));return it?it.x:null;};
-    const xItem=colX('^Item'),xQty=colX('^Qty'),xDesc=colX('^Desc'),xNotes=colX('^Notes'),xW=colX('^Weight');
+    if(hi<0&&!lastCols) continue;
+    /* trang tiếp theo không lặp lại tiêu đề cột: dùng vị trí cột của trang trước */
+    let xItem,xQty,xDesc,xNotes,xW;
+    if(hi>=0){const H=lines[hi].items, colX=k=>{const it=H.find(i=>new RegExp(k,'i').test(i.s));return it?it.x:null;};
+      xItem=colX('^Item');xQty=colX('^Qty');xDesc=colX('^Desc');xNotes=colX('^Notes');xW=colX('^Weight');lastCols={xItem,xQty,xDesc,xNotes,xW};}
+    else ({xItem,xQty,xDesc,xNotes,xW}=lastCols);
     const body=[];
     for(let i=hi+1;i<lines.length;i++){
       const t=txt(lines[i]); if(STOP_RE.test(t)) break;
@@ -656,7 +683,7 @@ async function parseReport(file){
       r.desc=dp.join('').replace(/\s+/g,' ').trim();
       if(r.pos||r.item||r.desc||r.qty) body.push(r);
     }
-    const posLines=body.filter(r=>/^\d{2,4}$/.test(r.pos)); if(!posLines.length) continue;
+    const posLines=body.filter(r=>/^\d{1,4}$/.test(r.pos)&&(r.item||r.desc||r.qty)); if(!posLines.length) continue;
     const gaps=[];for(let i=1;i<body.length;i++)gaps.push(body[i-1].y-body[i].y);
     const sp=gaps.length?gaps.slice().sort((a,b)=>a-b)[Math.floor(gaps.length*.25)]:10;
     const blocks=[];let cur=[];
@@ -682,14 +709,18 @@ async function parseReport(file){
   return rows;
 }
 function childFor(node,row){
-  return node.children.find(c=>c.pos===row.pos&&(!c.item||!row.item||c.item.split('-')[0]===row.item.split('-')[0]))
-      ||node.children.find(c=>c.item&&c.item===row.item);
+  return node.children.find(c=>posEq(c.pos,row.pos)&&(!c.item||!row.item||c.item.split('-')[0]===row.item.split('-')[0]))
+      ||node.children.find(c=>c.item&&row.item&&c.item===row.item)
+      ||node.children.find(c=>posEq(c.pos,row.pos)&&!c.item);
 }
 function ensureBom(node){
   if(!node.report) return Promise.resolve(null);
   if(!node.bomP) node.bomP=parseReport(node.report).then(rows=>{
     rows.forEach(r=>{
-      r.node=node; r.key=nodeKey(node)+'|'+r.pos+'|'+r.item; r.child=childFor(node,r)||null;
+      r.node=node; r.key=nodeKey(node)+'|'+r.pos+'|'+r.item;
+      /* r.folder: thư mục khớp dòng BOM (kể cả thư mục chi tiết chỉ có bản vẽ / rỗng);
+         r.child: chỉ khi thư mục đó là CỤM thật (có BOM riêng hoặc có thư mục con) */
+      r.folder=childFor(node,r)||null; r.child=r.folder&&isAsmNode(r.folder)?r.folder:null;
       r.cat=r.child?CAT_ASM:classify(r); r.brand=detectBrand(r);
       r.hose=/HOSE/.test((r.type||'').toUpperCase())?decodeHose(r):null;
       r.tokens=tokStr(r.item+' '+r.type+' '+r.spec+' '+(r.hose&&!r.hose.incomplete?r.hose.short.replace(/^.*?,\s*/,''):'')); rowIndex.set(r.key,r);
@@ -698,9 +729,10 @@ function ensureBom(node){
   }).catch(e=>{node.bom=[];node.bomErr={msg:(e&&e.message)||String(e),nf:isNotFound(e)};throw e;});
   return node.bomP;
 }
+const isAsmNode=n=>!!(n.report||n.children.length||n.listErr);  // thư mục không mở được: coi như cụm (chưa biết bên trong)
 function getMult(node){
   if(!node.parent) return 1;
-  const row=(node.parent.bom||[]).find(r=>r.child===node);
+  const row=(node.parent.bom||[]).find(r=>r.folder===node);
   return getMult(node.parent)*(row&&row.qty?row.qty:1);
 }
 async function scanAll(){
@@ -715,8 +747,10 @@ async function scanAll(){
   scanning=false; renderKPI(); renderTree();
   if(curView==='vSum') renderSummary(); if(curView==='vList') renderListView();
   const err=list.filter(n=>n.bomErr).length;
-  toast(`Đã đọc xong ${list.length} BOM`+(err?`, ${err} file lỗi (bấm ô BOM ĐÃ ĐỌC để xem)`:''));
+  const fc=folderCheck();
+  toast(`Đã đọc xong ${list.length} BOM`+(err?`, ${err} file lỗi (bấm ô BOM ĐÃ ĐỌC để xem)`:'')+(fc.missing.length?` · ${fc.missing.length} dòng BOM không thấy thư mục`:''));
   if(err&&$('#modal').hidden) openErrModal();
+  else if(fc.listErr.length&&$('#modal').hidden) openFolderModal();
 }
 
 /* ================= row state, lists ================= */
@@ -820,7 +854,7 @@ function descCell(r,q){
 const catCell=r=>`<span class="badge" style="--c:${r.cat.c}">${esc(r.cat.n)}</span>${r.brand?`<div class="brandt">${esc(r.brand)}</div>`:''}`;
 function itemCell(r,picked,q,indet){
   const code=r.item?hl(r.item,q):'<span class="muted">—</span>';
-  return `<div class="itemc"><span class="mono">${r.child?`<a class="lnk" data-child="1" title="Mở cụm con">${code}</a>`:code}</span><input type="checkbox" class="pick" ${picked?'checked':''} ${indet?'data-indet="1"':''} title="Tích để đưa vào danh sách (giữ Shift để chọn một dải)"></div>${codeChip(r)}`;
+  return `<div class="itemc"><span class="mono">${r.folder?`<a class="lnk" data-child="1" title="${r.child?'Mở cụm con':'Mở thư mục của chi tiết này (bản vẽ)'}">${code}</a>`:code}</span><input type="checkbox" class="pick" ${picked?'checked':''} ${indet?'data-indet="1"':''} title="Tích để đưa vào danh sách (giữ Shift để chọn một dải)"></div>${codeChip(r)}`;
 }
 function tableHead(mode){
   if(mode==='group') return ['Item No ☐','Mô tả','Loại / Hãng','SL tổng','ĐVT','Vị trí (cụm › pos × SL)'];
@@ -871,7 +905,7 @@ function bindTable(wrap,rows,o){
     }
     if(t.closest('.revbtn')){setRev(r,!(P.rows[r.key]||{}).rev);refresh(i);afterChange();return;}
     const mb=t.closest('.markbtn'); if(mb){openMarkPop(mb,m=>{setMark(r,m);refresh(i);afterChange();});return;}
-    if(t.closest('[data-child]')){select(r.child);return;}
+    if(t.closest('[data-child]')){select(r.folder||r.child);return;}
     const ln=t.closest('[data-node]'); if(ln){switchView('vTree');select(allNodes.find(n=>n.path===ln.dataset.node));}
   };
 }
@@ -940,6 +974,9 @@ function renderKPI(){
   el.innerHTML=`
    <div class="kpi" style="--c:var(--ok)"><div class="k">Cụm đã bóc</div><div class="v">${c.done}<small> / ${allNodes.length}</small></div><div class="bar"><i style="width:${pct(c.done,allNodes.length)}%"></i></div><div class="s">${pct(c.done,allNodes.length)}% · đang ${c.doing} · chưa ${c.todo}</div></div>
    <div class="kpi ${errN?'click':''}" ${errN?'data-kerr="1" title="Bấm để xem file lỗi và cách khắc phục"':''} style="--c:${errN?'var(--bad)':'var(--accent)'}"><div class="k">BOM đã đọc ${scanning?'<span class="spin"></span>':''}</div><div class="v">${parsed}<small> / ${withRep.length}</small></div><div class="s ${errN?'err':''}">${errN?`⚠ ${errN} file không đọc được · bấm xem`:rows.length+' dòng vật tư'}</div>${errN&&!scanning?`<div class="kfix"><button class="btn sm" data-kretry title="Đọc lại tất cả cụm lỗi (sau khi đã chuyển thư mục / tải OneDrive)">${ic('refresh',12)} Đọc lại</button><button class="btn sm" data-kload title="Chọn các file PDF lỗi đã chép ra chỗ khác">${ic('upload',12)} Nạp file</button></div>`:''}</div>
+   ${(()=>{const fc=folderCheck(),bad=fc.listErr.length,mis=fc.missing.length,old=loadMode==='input';
+      const col=bad?'var(--bad)':(mis||old)?'var(--warn)':'var(--ok)';
+      return `<div class="kpi click" data-kfold="1" style="--c:${col}" title="Bấm để kiểm tra thư mục bị thiếu"><div class="k">Thư mục</div><div class="v">${allNodes.length}</div><div class="s ${bad?'err':''}">${bad?`⚠ ${bad} không mở được`:mis?`⚠ ${mis} dòng BOM thiếu thư mục`:old?'⚠ cách chọn cũ, bấm xem':'đầy đủ theo BOM'}</div></div>`;})()}
    <div class="kpi" style="--c:var(--warn)"><div class="k">Dòng đã xử lý</div><div class="v">${handled}<small> / ${rows.length}</small></div><div class="bar"><i style="width:${pct(handled,rows.length)}%;background:var(--warn)"></i></div><div class="s">đã xem hoặc đã chọn</div></div>
    ${['Ống mềm','Van','Lọc / lõi lọc','Bình tích áp'].map(k=>`<div class="kpi click" data-kcat="${k}" style="--c:${catColor(k)}" title="Bấm để xem tất cả ${k.toLowerCase()}"><div class="k">${k}</div><div class="v">${cc(k)}</div><div class="s">dòng · bấm để lọc</div></div>`).join('')}
    <div class="kpi click" data-klist="1" style="--c:#7a52cc"><div class="k">Đã chọn</div><div class="v">${listCount(L)}<small> mã</small></div><div class="s">${esc(L.name)}</div></div>`;
@@ -950,6 +987,7 @@ $('#kpis').addEventListener('click',e=>{
   if(e.target.closest('[data-kretry]')){retryFailed();return;}
   if(e.target.closest('[data-kload]')){pickPdf(true,fs=>attachFiles(fs));return;}
   if(e.target.closest('[data-kerr]')) openErrModal();
+  if(e.target.closest('[data-kfold]')) openFolderModal();
 });
 function renderTabs(){$('#listCnt').textContent=root?listCount(activeList()):0;}
 function subtreeStat(n){let tot=0,done=0;for(const c of n.children){tot++;if(getProg(c).s==='done')done++;const s=subtreeStat(c);tot+=s.tot;done+=s.done;}return {tot,done};}
@@ -963,16 +1001,16 @@ function renderTree(){
     if(filtering&&!n._v&&!n._s) return '';
     const open=filtering?n._s:n.open, kids=n.children.length, p=getProg(n).s;
     const sb=kids?subtreeStat(n):null;
-    const hc=n.bom?n.bom.filter(r=>r.cat.n==='Ống mềm').length:0, vc=n.bom?n.bom.filter(r=>r.cat.n==='Van').length:0;
+    const hc=n.bom?n.bom.filter(r=>r.cat.n==='Ống mềm').length:0, vc=n.bom?n.bom.filter(r=>r.cat.n==='Van').length:0, mc=missOf(n).length;
     return `<li><div class="tn ${selected===n?'sel':''}" data-path="${esc(n.path)}">
       <span class="caret ${open?'open':''}" data-toggle="1">${kids?ic('chev',12):''}</span>
       <span class="st ${p}" title="${STATUS[p][0]}"></span>
       ${n.pos?`<span class="pos">${esc(n.pos)}</span>`:''}
       <span class="tt" title="${esc(n.name)}">${esc(n.title||n.name)}</span>
-      <span class="mini">${hc?`<span style="--c:#d4433b" title="${hc} dòng ống mềm">${hc} ÔM</span>`:''}${vc?`<span style="--c:#2f6fdf" title="${vc} dòng van">${vc} V</span>`:''}</span>
+      <span class="mini">${mc?`<span style="--c:var(--warn)" title="${mc} dòng trong BOM của cụm này không thấy thư mục tương ứng">thiếu ${mc}</span>`:''}${hc?`<span style="--c:#d4433b" title="${hc} dòng ống mềm">${hc} ÔM</span>`:''}${vc?`<span style="--c:#2f6fdf" title="${vc} dòng van">${vc} V</span>`:''}</span>
       ${sb?`<span class="pbar" title="${sb.done}/${sb.tot} cụm con đã bóc"><i style="width:${sb.tot?100*sb.done/sb.tot:0}%"></i></span>`:''}
-      <span class="it">${esc(n.item)}${n.rev?'#'+esc(n.rev):''}</span>
-      <span class="files"><span class="${n.drawing?'has':''}" title="${n.drawing?'Có bản vẽ':'Không có bản vẽ'}">${ic('draw',12)}</span><span class="${n.report?'has':''}" title="${n.report?'Có BOM':'Không có BOM'}">${ic('file',12)}</span>${n.bomErr?`<span style="color:var(--bad)" title="Không đọc được file BOM${fullLen(n.report)!=null?' · đường dẫn đầy đủ ~'+fullLen(n.report)+' ký tự':''}">${ic('warn',12)}</span>`:''}${n.repLocal?`<span style="color:var(--ok)" title="Đang dùng file BOM nạp tay">${ic('upload',12)}</span>`:''}</span>
+      <span class="it">${n.item?esc(n.item):n.osp?`<i>${esc(n.osp)}</i>`:''}${n.rev?'#'+esc(n.rev):''}</span>
+      <span class="files"><span class="${n.drawing?'has':''}" title="${n.drawing?'Có bản vẽ':'Không có bản vẽ'}">${ic('draw',12)}</span><span class="${n.report?'has':''}" title="${n.report?'Có BOM':'Không có BOM'}">${ic('file',12)}</span>${n.bomErr?`<span style="color:var(--bad)" title="Không đọc được file BOM${fullLen(n.report)!=null?' · đường dẫn đầy đủ ~'+fullLen(n.report)+' ký tự':''}">${ic('warn',12)}</span>`:''}${n.listErr?`<span style="color:var(--bad)" title="Không mở được thư mục này (${esc(n.listErr.msg)}) – nội dung bên trong bị thiếu">${ic('warn',12)}</span>`:''}${n.repLocal?`<span style="color:var(--ok)" title="Đang dùng file BOM nạp tay">${ic('upload',12)}</span>`:''}</span>
     </div>${kids&&open?'<ul>'+n.children.map(li).join('')+'</ul>':''}</li>`;
   };
   const st0=T.scrollTop; T.innerHTML='<ul>'+li(root)+'</ul>'; T.scrollTop=st0;
@@ -1005,7 +1043,7 @@ function renderDetail(n){
   d.innerHTML=`<div class="dhead">
     <div class="crumb">${chain.map((c,i)=>i===chain.length-1?`<span>${esc(lbl(c))}</span>`:`<a data-path="${esc(c.path)}">${esc(lbl(c))}</a>${ic('chev',11)}`).join('')}</div>
     <div class="dtitle">${n.pos?`<span class="pos">${esc(n.pos)}</span>`:''}<h2>${esc(n.title||n.name)}</h2>
-      <span class="tag">${esc(n.item||'—')}${n.rev?' · Rev '+esc(n.rev):''}</span>${n.children.length?`<span class="tag">${n.children.length} cụm con</span>`:''}<span class="tag" id="dRowCnt" hidden></span>
+      <span class="tag">${esc(n.item||'—')}${n.rev?' · Rev '+esc(n.rev):''}</span>${n.osp?`<span class="tag">${esc(n.osp)}</span>`:''}${n.children.length?`<span class="tag">${n.children.length} cụm con</span>`:''}${missOf(n).length?`<span class="tag" style="color:var(--warn);cursor:pointer" data-fold title="Bấm để xem">⚠ ${missOf(n).length} dòng BOM không thấy thư mục</span>`:''}<span class="tag" id="dRowCnt" hidden></span>
       ${n.parent?`<span class="tag" title="Số lượng cụm này trong toàn bộ thiết bị">× ${fmt(getMult(n))}</span>`:''}</div>
     <div class="actions">
       <button class="btn" id="bDraw" ${n.drawing?'':'disabled'}>${ic('ext')} Mở bản vẽ</button>
@@ -1020,12 +1058,19 @@ function renderDetail(n){
   d.querySelectorAll('.crumb a').forEach(a=>a.onclick=()=>select(allNodes.find(x=>x.path===a.dataset.path)));
   $('#bDraw').onclick=()=>window.open(drawUrl(n),'_blank');
   $('#bRep').onclick=()=>window.open(URL.createObjectURL(n.report),'_blank');
+  d.querySelectorAll('[data-fold]').forEach(b=>b.onclick=openFolderModal);
   $('#bSplit').onclick=()=>{splitOn=!splitOn;ls.set('bocvt:split',splitOn);renderDetail(n);};
   if($('#bOther')) $('#bOther').onchange=e=>{if(e.target.value!=='')window.open(URL.createObjectURL(n.others[+e.target.value]),'_blank');e.target.value='';};
   $('#seg').onclick=e=>{const b=e.target.closest('[data-s]');if(!b)return;setProg(n,{s:b.dataset.s});afterChange();};
   $('#bNote').oninput=e=>setProg(n,{note:e.target.value});
   if(split) dragDivider($('#divPdf'),ev=>{const rc=$('#dbody').getBoundingClientRect();const w=clamp((ev.clientX-rc.left)/rc.width*100,20,80);$('#pdfPane').style.width=w+'%';ls.set('bocvt:pdfw',w);});
   bomArea=null; const bp=$('#bomPane');
+  if(n.listErr){bp.innerHTML=`<div class="empty"><div class="big err">${ic('warn',16)} Không mở được thư mục này</div>
+      <div class="mono" style="font-size:11.5px;word-break:break-all">${esc(n.path)}</div>
+      <div class="muted" style="font-size:12px">Đường dẫn tính từ thư mục gốc: <b>${n.path.length}</b> ký tự${fullLenRel(n.path)!=null?` · đầy đủ ước tính: <b>${fullLenRel(n.path)}</b> / ${MAXP}`:''} · Lỗi: ${esc(n.listErr.msg)}</div>
+      <p style="max-width:640px;margin:10px auto">Mọi file và thư mục con bên trong đều không đọc được, nên cây bị thiếu từ đây trở xuống. Thường do <b>đường dẫn quá dài</b> (Windows ~260 ký tự) hoặc OneDrive chưa tải về.</p>
+      <button class="btn primary" data-fold>${ic('warn',14)} Xem cách khắc phục</button></div>`;
+    bp.querySelector('[data-fold]').onclick=openFolderModal; return;}
   if(!n.report){bp.innerHTML=`<div class="empty"><div class="big">Không có BOM</div>Thư mục này không có file ASSEMBLED ITEM REPORT.${n.children.length?'<br>Chọn cụm con bên trái để xem tiếp.':''}</div>`;return;}
   bp.innerHTML='<div class="empty"><span class="spin"></span> Đang đọc BOM…</div>';
   ensureBom(n).then(()=>{
@@ -1274,6 +1319,139 @@ async function retryFailed(){
   toast(still?`Vẫn còn ${still} file không đọc được`:`Đã đọc được ${bad.length} file`);
 }
 
+/* ================= đọc thư mục: đầy đủ, kể cả thư mục rỗng ================= */
+const errMsg=e=>(e&&(e.name&&e.name!=='Error'?e.name+': ':'')+(e.message||''))||String(e);
+function brokenFile(name,err){
+  const f=new File([],name);
+  Object.defineProperty(f,'arrayBuffer',{value:()=>Promise.reject(err)});
+  f._broken=err; return f;
+}
+function setRel(f,rel){try{Object.defineProperty(f,'webkitRelativePath',{value:rel,configurable:true});}catch(e){}return f;}
+function scanMsg(t){$('#tree').innerHTML=`<div class="empty"><span class="spin"></span> ${t}</div>`;}
+/* File System Access API (Edge/Chrome): liệt kê cả thư mục rỗng, báo lỗi rõ thư mục nào không mở được */
+async function walkDirHandle(h){
+  const files=[],dirs=[],errs=[]; let last=0;
+  const tick=()=>{if(Date.now()-last>250){last=Date.now();scanMsg(`Đang quét thư mục… ${dirs.length} thư mục, ${files.length} file`);}};
+  async function walk(dh,path){
+    dirs.push(path); tick();
+    const subs=[],fps=[];
+    try{for await(const [name,ch] of dh.entries())(ch.kind==='directory'?subs:fps).push([name,ch]);}
+    catch(e){errs.push({path,msg:errMsg(e)});}
+    await Promise.all(fps.map(async([name,fh])=>{
+      let f; try{f=await fh.getFile();}catch(e){f=brokenFile(name,e);}
+      files.push(setRel(f,path+'/'+name));
+    }));
+    for(const [name,ch] of subs) await walk(ch,path+'/'+name);
+  }
+  await walk(h,h.name);
+  return {files,dirs,errs,rootName:h.name};
+}
+/* kéo thả thư mục (dự phòng khi không có File System Access) */
+async function walkEntry(de){
+  const files=[],dirs=[],errs=[]; let last=0;
+  const readAll=r=>new Promise((res,rej)=>{const out=[];const step=()=>r.readEntries(b=>{if(!b.length)res(out);else{out.push(...b);step();}},e=>{e.partial=out;rej(e);});step();});
+  async function walk(d,path){
+    dirs.push(path); if(Date.now()-last>250){last=Date.now();scanMsg(`Đang quét thư mục… ${dirs.length} thư mục, ${files.length} file`);}
+    let ents=[]; try{ents=await readAll(d.createReader());}catch(e){errs.push({path,msg:errMsg(e)});ents=e.partial||[];}
+    for(const c of ents){
+      const rel=path+'/'+c.name;
+      if(c.isDirectory) await walk(c,rel);
+      else{let f;try{f=await new Promise((res,rej)=>c.file(res,rej));}catch(e){f=brokenFile(c.name,e);}files.push(setRel(f,rel));}
+    }
+  }
+  await walk(de,de.name);
+  return {files,dirs,errs,rootName:de.name};
+}
+async function openDirHandle(h){
+  scanId++; scanMsg('Đang quét thư mục…');
+  try{const r=await walkDirHandle(h);buildTree(r.files,{dirs:r.dirs,errs:r.errs,rootName:r.rootName,handle:h,mode:'fsa'});}
+  catch(e){toast('Không quét được thư mục: '+errMsg(e));renderTree();}
+}
+async function openDirEntry(de){
+  scanId++; scanMsg('Đang quét thư mục…');
+  try{const r=await walkEntry(de);buildTree(r.files,{dirs:r.dirs,errs:r.errs,rootName:r.rootName,mode:'drop'});}
+  catch(e){toast('Không quét được thư mục: '+errMsg(e));renderTree();}
+}
+async function pickRoot(){
+  if(window.showDirectoryPicker){
+    let h;
+    try{h=await showDirectoryPicker({id:'bocvt',mode:'read'});}
+    catch(e){if(e&&e.name==='AbortError')return; $('#dirInput').click(); return;}
+    return openDirHandle(h);
+  }
+  $('#dirInput').click();
+}
+async function updReopen(){
+  const b=$('#btnReopen'); let last=null;
+  try{last=await idb.get('lastRoot');}catch(e){}
+  if(rootHandle){b.hidden=false;$('#reopenTxt').textContent='Quét lại';b.title='Quét lại thư mục hồ sơ đang mở (sau khi thêm / sửa thư mục)';return;}
+  if(last&&last.handle&&!root){b.hidden=false;$('#reopenTxt').textContent='Mở lại: '+last.name;b.title='Mở lại hồ sơ lần trước, không cần chọn lại thư mục';return;}
+  b.hidden=true;
+}
+$('#btnReopen').onclick=async()=>{
+  let h=rootHandle;
+  if(!h){try{const l=await idb.get('lastRoot');h=l&&l.handle;}catch(e){}}
+  if(!h){updReopen();return;}
+  try{
+    let p=await h.queryPermission({mode:'read'}); if(p!=='granted') p=await h.requestPermission({mode:'read'});
+    if(p!=='granted'){toast('Chưa được cấp quyền đọc thư mục');return;}
+  }catch(e){toast('Không mở lại được, hãy chọn thư mục gốc');return;}
+  openDirHandle(h);
+};
+/* ================= kiểm tra thư mục bị thiếu ================= */
+/* Bộ hồ sơ tạo một thư mục cho mỗi dòng BOM. Cụm nào đã có thư mục con khớp BOM thì các dòng còn lại chưa khớp = thiếu thư mục. */
+function missOf(n){
+  if(!n.bom||!n.bom.length||!n.children.length) return [];
+  if(!n.bom.some(r=>r.folder)) return [];
+  return n.bom.filter(r=>!r.folder);
+}
+function folderCheck(){
+  const listErr=allNodes.filter(n=>n.listErr), missing=[], orphans=[];
+  for(const n of allNodes){
+    for(const r of missOf(n)) missing.push({n,r});
+    if(n.bom&&n.bom.length&&n.bom.some(r=>r.folder)) for(const c of n.children) if(!n.bom.some(r=>r.folder===c)) orphans.push(c);
+  }
+  return {listErr,missing,orphans};
+}
+function openFolderModal(){
+  if(!root){toast('Chưa chọn hồ sơ');return;}
+  const fc=folderCheck(), hasBase=!!getBase(), canFsa=!!window.showDirectoryPicker;
+  const pre=t=>`<span class="mono" style="display:inline-block;margin-top:4px;padding:4px 8px;background:var(--surface-2);border:1px solid var(--border);border-radius:5px">${t}</span>`;
+  const maxLen=allNodes.reduce((a,n)=>Math.max(a,n.path.length),0);
+  openModal(`<h3>${ic('folder',18)} Kiểm tra thư mục hồ sơ</h3>
+    <p>Đã đọc <b>${allNodes.length}</b> thư mục, sâu nhất <b>${Math.max(...allNodes.map(n=>n.depth))}</b> cấp, đường dẫn dài nhất (tính từ thư mục gốc) <b>${maxLen}</b> ký tự.
+      Cách đọc: <b>${loadMode==='fsa'?'đọc trực tiếp (đầy đủ)':loadMode==='drop'?'kéo thả thư mục':'chọn kiểu tải file lên (cũ)'}</b>.</p>
+    ${loadMode==='input'?`<div class="foldwarn"><b>⚠ Cách chọn thư mục này hay làm thiếu thư mục.</b> Trình duyệt chỉ gửi danh sách <i>file</i>, nên:<br>
+      • thư mục <b>không có file</b> (ví dụ thư mục bulông, long đen chỉ có tên) sẽ <b>không hiện</b>;<br>
+      • thư mục có <b>đường dẫn quá dài</b> bị <b>bỏ qua mà không báo lỗi</b>, mất luôn mọi cụm con bên trong.<br>
+      ${canFsa?`Bấm nút dưới để đọc lại bằng cách đọc trực tiếp: hiện đủ cả thư mục rỗng và báo rõ thư mục nào không mở được.<br><button class="btn primary" id="fPick" style="margin-top:6px">${ic('folder',14)} Chọn lại thư mục gốc (đọc đầy đủ)</button>`:`Trình duyệt này không hỗ trợ đọc trực tiếp. Hãy dùng <b>Edge</b> hoặc <b>Chrome</b> bản mới, hoặc <b>kéo thả thư mục</b> hồ sơ vào cửa sổ ứng dụng.`}</div>`:''}
+    ${fc.listErr.length?`<div class="foldbad"><b>${ic('warn',14)} ${fc.listErr.length} thư mục không mở được</b>: mọi thứ bên trong bị thiếu. Thường do <b>đường dẫn đầy đủ quá dài</b> (Windows giới hạn ~260 ký tự) hoặc thư mục OneDrive chưa tải về.</div>
+      <p style="margin-bottom:2px"><b>Kiểm tra độ dài đầy đủ:</b> dán đường dẫn thư mục gốc (copy từ thanh địa chỉ File Explorer):</p>
+      <div class="basebox"><input type="text" id="fBase" placeholder="vd. C:\\Users\\tien\\OneDrive\\Ho so\\K8817" value="${esc(getBase())}"><button class="btn sm" id="fBaseOk">Tính</button></div>
+      <div style="max-height:180px;overflow:auto;border:1px solid var(--border);border-radius:6px;font-size:11.5px;margin-bottom:10px">
+      <table class="grid"><thead><tr><th>Thư mục không mở được</th><th class="num">Tương đối</th>${hasBase?'<th class="num">Đầy đủ</th>':''}<th></th></tr></thead><tbody>
+      ${fc.listErr.slice(0,300).map((n,i)=>{const L=fullLenRel(n.path);return `<tr><td class="mono" style="word-break:break-all">${esc(n.path)}<div class="muted">${esc(n.listErr.msg)}</div></td><td class="num">${n.path.length}</td>${hasBase?`<td class="num"><span class="${L>MAXP-12?'lenbad':L>MAXP-30?'lenwarn':''}">${L}</span></td>`:''}<td><button class="btn sm ghost" data-gon="${i}">Mở</button></td></tr>`;}).join('')}
+      </tbody></table></div>
+      <p><b>Cách khắc phục:</b> tạo ổ đĩa ảo trỏ thẳng tới thư mục chứa hồ sơ để đường dẫn ngắn lại (mở <i>Command Prompt</i>):<br>${pre(`subst H: "C:\\đường dẫn\\tới thư mục chứa hồ sơ"`)}<br>rồi bấm <b>Chọn thư mục gốc</b> và chọn hồ sơ trong ổ <b>H:</b>. Hoặc chép cả hồ sơ ra chỗ ngắn:<br>${pre(`robocopy "C:\\đường dẫn\\thư mục hồ sơ" "D:\\HS\\${esc(root.name)}" /E`)}<br>
+      Với OneDrive: chuột phải thư mục → <i>Always keep on this device</i>, chờ tải xong rồi bấm <b>Quét lại</b>.</p>`:''}
+    ${fc.missing.length?`<p style="margin-top:6px"><b>${fc.missing.length} dòng BOM không thấy thư mục tương ứng</b>${scanning?' <span class="spin"></span> (đang đọc BOM, số liệu chưa đủ)':''}. Bộ hồ sơ thường có một thư mục cho mỗi dòng BOM. Các dòng dưới đây có trong file ASSEMBLED ITEM REPORT của cụm cha nhưng không thấy thư mục${loadMode==='input'?' (có thể chỉ vì thư mục rỗng – hãy đọc lại bằng cách đầy đủ ở trên)':''}:</p>
+      <div style="display:flex;gap:6px;margin-bottom:6px"><button class="btn sm" id="fCopy">${ic('file',13)} Sao chép danh sách (dán vào Excel)</button></div>
+      <div style="max-height:260px;overflow:auto;border:1px solid var(--border);border-radius:6px;font-size:11.5px">
+      <table class="grid"><thead><tr><th>Cụm cha</th><th>Pos</th><th>Item No</th><th>Mô tả</th><th></th></tr></thead><tbody>
+      ${fc.missing.slice(0,500).map((x,i)=>`<tr><td>${esc(lbl(x.n))}<div class="muted mono">${esc(x.n.item||'')}</div></td><td class="mono">${esc(x.r.pos)}</td><td class="mono">${esc(x.r.item)}</td><td>${esc(x.r.type)}</td><td><button class="btn sm ghost" data-gom="${i}">Mở</button></td></tr>`).join('')}
+      </tbody></table></div>`:(!fc.listErr.length&&loadMode!=='input'?`<p style="color:var(--ok)"><b>✓ Không thấy thư mục nào bị thiếu so với các BOM đã đọc.</b></p>`:'')}
+    ${fc.orphans.length?`<p class="muted" style="font-size:12px;margin-top:10px">${fc.orphans.length} thư mục không khớp dòng nào trong BOM của cụm cha (tên thư mục khác Pos/Item No trong BOM): ${fc.orphans.slice(0,12).map(n=>`<span class="mono">${esc(n.path.split('/').slice(-2).join(' › '))}</span>`).join(', ')}${fc.orphans.length>12?'…':''}</p>`:''}
+    <div class="mfoot">${rootHandle?`<button class="btn" id="fRescan">${ic('refresh',14)} Quét lại</button>`:''}<button class="btn primary" data-close>Đóng</button></div>`,box=>{
+      if($('#fPick',box)) $('#fPick',box).onclick=()=>{closeModal();pickRoot();};
+      if($('#fRescan',box)) $('#fRescan',box).onclick=()=>{closeModal();$('#btnReopen').click();};
+      if($('#fBaseOk',box)){const setB=()=>{ls.set(baseKey(),$('#fBase',box).value.trim());openFolderModal();renderTree();};$('#fBaseOk',box).onclick=setB;$('#fBase',box).onkeydown=e=>{if(e.key==='Enter')setB();};}
+      if($('#fCopy',box)) $('#fCopy',box).onclick=()=>{const t=['Cụm cha\tMã cụm cha\tPos\tItem No\tMô tả\tĐường dẫn cụm cha',...fc.missing.map(x=>[lbl(x.n),x.n.item||'',x.r.pos,x.r.item,x.r.type,x.n.path].join('\t'))].join('\r\n');navigator.clipboard.writeText(t).then(()=>toast('Đã sao chép'),()=>toast('Không sao chép được'));};
+      const go=n=>{closeModal();if(curView!=='vTree')switchView('vTree');select(n);};
+      box.querySelectorAll('[data-gon]').forEach(b=>b.onclick=()=>go(fc.listErr[+b.dataset.gon]));
+      box.querySelectorAll('[data-gom]').forEach(b=>b.onclick=()=>{const x=fc.missing[+b.dataset.gom];focusKey=x.r.key;go(x.n);});
+    });
+}
+
 /* ================= global search (Ctrl+K) ================= */
 let focusKey=null, palItems=[], palSel=0, palQ='';
 const squash=s=>String(s||'').toLowerCase().replace(/[\s\-_.\/]/g,'');
@@ -1384,16 +1562,35 @@ function switchView(id){
   if(id==='vTree'&&bomArea) bomArea.draw();
 }
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>switchView(t.dataset.view));
-$('#dirInput').onchange=e=>{buildTree(e.target.files);e.target.value='';};
+$('#btnDir').onclick=pickRoot;
+$('#dirInput').onchange=e=>{const fs=[...e.target.files];e.target.value='';if(fs.length)buildTree(fs,{mode:'input'});};
+updReopen();
 (()=>{let dc=0; const hasF=e=>e.dataTransfer&&[...e.dataTransfer.types].includes('Files');
-  window.addEventListener('dragenter',e=>{if(!hasF(e)||!root||!$('#modal').hidden)return;dc++;document.body.classList.add('gdrag');});
+  window.addEventListener('dragenter',e=>{if(!hasF(e)||!$('#modal').hidden)return;dc++;document.body.classList.add('gdrag');});
   window.addEventListener('dragleave',e=>{if(!hasF(e))return;if(--dc<=0){dc=0;document.body.classList.remove('gdrag');}});
   window.addEventListener('dragover',e=>{if(hasF(e))e.preventDefault();});
-  window.addEventListener('drop',e=>{if(!hasF(e))return;e.preventDefault();dc=0;document.body.classList.remove('gdrag');if(root&&$('#modal').hidden)attachFiles(e.dataTransfer.files);});
+  window.addEventListener('drop',e=>{
+    if(!hasF(e))return;e.preventDefault();dc=0;document.body.classList.remove('gdrag');
+    if(!$('#modal').hidden) return;
+    /* phải lấy handle / entry ngay trong sự kiện, trước mọi await */
+    const items=[...(e.dataTransfer.items||[])].filter(i=>i.kind==='file');
+    const hs=items.map(i=>i.getAsFileSystemHandle?i.getAsFileSystemHandle():null);
+    const ents=items.map(i=>i.webkitGetAsEntry?i.webkitGetAsEntry():null);
+    const files=[...e.dataTransfer.files];
+    (async()=>{
+      for(let i=0;i<items.length;i++){
+        if(!(ents[i]&&ents[i].isDirectory)) continue;
+        const h=hs[i]?await hs[i].catch(()=>null):null;
+        if(h&&h.kind==='directory') return openDirHandle(h);
+        return openDirEntry(ents[i]);
+      }
+      if(root) attachFiles(files); else toast('Hãy thả cả thư mục hồ sơ, hoặc bấm Chọn thư mục gốc');
+    })();
+  });
 })();
 renderTree();
 $('#detail').innerHTML=`<div class="empty"><div class="big">Bóc tách vật tư từ hồ sơ thiết bị</div>
-  1. Bấm <b>Chọn thư mục gốc</b> → chọn thư mục hồ sơ (Edge hỏi thì bấm <i>Upload</i>, dữ liệu chỉ đọc trên máy).<br>
+  1. Bấm <b>Chọn thư mục gốc</b> → chọn thư mục hồ sơ (Edge hỏi quyền xem thì bấm <i>Xem tệp / View files</i>, dữ liệu chỉ đọc trên máy), hoặc <b>kéo thả thư mục</b> vào cửa sổ.<br>
   2. Chọn cụm bên trái để xem BOM. Tích ô <input type="checkbox" checked disabled style="vertical-align:-3px"> sau mã vật tư để đưa vào danh sách.<br>
   3. Sang tab <b>Danh sách đã chọn</b> để nhập mã công ty, tên ngắn/dài và <b>Xuất Excel</b>.</div>`;
 renderSummary(); renderListView();
