@@ -1138,14 +1138,14 @@ function renderSummary(){
   const v=$('#vSum');
   if(!root){v.innerHTML=`<div class="empty"><div class="big">Chưa có hồ sơ</div>Hãy chọn thư mục gốc trước.</div>`;return;}
   const sw=document.createElement('div'); sw.style.cssText='display:flex;flex-direction:column;flex:1;min-height:0'; v.innerHTML=''; v.appendChild(sw);
-  sumArea=tableArea(sw,{rows:allRows,f:fS,summary:true,extra:`<span class="sp"></span>${scanning?'<span class="muted"><span class="spin"></span> đang đọc BOM…</span>':''}<button class="btn sm primary" data-x="xlsx">${ic('download',13)} Xuất Excel bảng này</button><button class="btn sm" data-x="zip" title="Một file ZIP gồm Excel (kèm danh mục BOM) + bản vẽ lắp + file BOM dạng PDF">${ic('download',13)} Xuất ZIP (Excel + BOM + bản vẽ)</button>`});
+  sumArea=tableArea(sw,{rows:allRows,f:fS,summary:true,extra:`<span class="sp"></span>${scanning?'<span class="muted"><span class="spin"></span> đang đọc BOM…</span>':''}<button class="btn sm primary" data-x="xlsx">${ic('download',13)} Xuất Excel bảng này</button><button class="btn sm" data-x="zip" title="Excel có liên kết bấm mở bản vẽ lắp / BOM, kèm các file PDF – lưu vào thư mục hoặc ZIP">${ic('download',13)} Xuất Excel + bản vẽ + BOM</button>`});
   sw.querySelector('[data-x=xlsx]').onclick=exportSummary;
   sw.querySelector('[data-x=zip]').onclick=()=>openPackModal('sum');
 }
 function exportSummary(){
   if(!window.XLSX){toast('Không tải được thư viện Excel (cần mạng Internet).');return;}
-  writeXlsx(sumSheets(plainLk),sumFname());
-  toast('Đã xuất Excel kèm danh mục BOM');
+  writeXlsx(plainCols(sumSheets(plainLk)),sumFname());
+  toast('Đã xuất Excel kèm danh mục BOM · muốn bấm mở bản vẽ/BOM: dùng nút Xuất Excel + bản vẽ + BOM');
 }
 const sumFname=()=>`TongHop_${safeName(root.item||'hoso')}${fS.cats.size?'_'+safeName([...fS.cats].join('_')):''}.xlsx`;
 const sumRows=()=>(sumArea?sumArea.disp:[]).flatMap(r=>r.group?r.rows:[r]);
@@ -1153,12 +1153,15 @@ function sumSheets(lk,o={}){
   const rows=sumArea.disp, grp=sumArea.mode==='group';
   const data=rows.map((r,i)=>{const c=codeInfo(r);const code=c&&(c.kind==='manual'||c.kind==='exact')?c.code:'';
     return grp?{'STT':i+1,'Item No':r.item,'Mã vật tư công ty':code,'Loại vật tư':r.type,'Thông số':(r.spec||'').replace(/\n/g,' | '),'Phân loại':r.cat.n,'Hãng':r.brand,'SL tổng':r.total,'ĐVT':r.unit,'Gợi ý tên ngắn':r.hose?r.hose.short:'','Vị trí':r.rows.map(x=>where(x.node)+' › '+x.pos).join('; ')}
-    :{'STT':i+1,'Cụm':where(r.node),'Tên cụm':r.node.title,'Mã cụm':r.node.item,'Pos':r.pos,'Item No':r.item,'Mã vật tư công ty':code,'Loại vật tư':r.type,'Thông số':(r.spec||'').replace(/\n/g,' | '),'Phân loại':r.cat.n,'Hãng':r.brand,'SL/BOM':r.qty,'× cụm':getMult(r.node),'SL tổng':r.qty!=null?r.qty*getMult(r.node):null,'ĐVT':r.unit,'KL (kg)':r.weight,'Gợi ý tên ngắn':r.hose?r.hose.short:'','Trạng thái cụm':STATUS[getProg(r.node).s][0],'Bản vẽ lắp':lk(r.node,'draw')};});
+    :{'STT':i+1,'Cụm':where(r.node),'Tên cụm':r.node.title,'Mã cụm':r.node.item,'Pos':r.pos,'Item No':r.item,'Mã vật tư công ty':code,'Loại vật tư':r.type,'Thông số':(r.spec||'').replace(/\n/g,' | '),'Phân loại':r.cat.n,'Hãng':r.brand,'SL/BOM':r.qty,'× cụm':getMult(r.node),'SL tổng':r.qty!=null?r.qty*getMult(r.node):null,'ĐVT':r.unit,'KL (kg)':r.weight,'Gợi ý tên ngắn':r.hose?r.hose.short:'','Trạng thái cụm':STATUS[getProg(r.node).s][0],[LK_D]:lk(r.node,'draw'),[LK_B]:lk(r.node,'bom')};});
   const sel=sumRows().filter(r=>inAnyList(r.key));
   return [['Tong hop',data],...bomSheets(relNodes(sel),{picked:r=>inAnyList(r.key),lk,full:o.full})];
 }
 /* ô có liên kết mở file: {__l: đường dẫn tương đối, t: chữ hiển thị} */
 const XL=(t,l)=>({__l:l,t});
+const LK_D='Bản vẽ lắp (bấm để mở)', LK_B='File BOM (bấm để mở)';
+/* Excel không kèm PDF: cột chỉ ghi tên file, bỏ chữ "bấm để mở" */
+const plainCols=sheets=>sheets.map(([n,rows])=>[n,rows.map(r=>{const o={};for(const k in r)o[k===LK_D?'Bản vẽ lắp':k===LK_B?'File BOM':k]=r[k];return o;})]);
 function writeXlsx(sheets,fname,o={}){
   const wb=XLSX.utils.book_new();
   for(const [name,data0] of sheets){
@@ -1196,12 +1199,12 @@ function bomSheets(nodes,o){
     const rows=n.bom||[], m=getMult(n);
     cum.push({'STT':i+1,'Cụm':where(n),'Pos':n.pos,'Mã cụm':n.item,'Rev':n.rev,'Tên cụm':n.title||n.name,'Cấp':n.depth,'× cụm':m,
       'Số dòng BOM':n.bom&&!n.bomErr?rows.length:n.report?(n.bomErr?'lỗi đọc BOM':'chưa đọc'):'không có BOM',
-      'Số dòng đã chọn':rows.filter(o.picked).length,'Bản vẽ lắp':o.lk(n,'draw'),'File BOM':o.lk(n,'bom'),'Trạng thái bóc':STATUS[getProg(n).s][0],'Đường dẫn':n.path});
+      'Số dòng đã chọn':rows.filter(o.picked).length,[LK_D]:o.lk(n,'draw'),[LK_B]:o.lk(n,'bom'),'Trạng thái bóc':STATUS[getProg(n).s][0],'Đường dẫn':n.path});
     rows.filter(r=>o.full||o.picked(r)).forEach(r=>{const c=codeInfo(r);
       bom.push({'Cụm':where(n),'Mã cụm':n.item,'Tên cụm':n.title||n.name,'× cụm':m,'Pos':r.pos,'Item No':r.item,'Loại vật tư':r.type,
         'Thông số':(r.spec||'').replace(/\n/g,' | '),'SL/BOM':r.qty,'SL tổng':r.qty!=null?r.qty*m:null,'ĐVT':r.unit,'Ghi chú BOM':r.notes,'KL (kg)':r.weight,
         'Phân loại':r.cat.n,'Hãng':r.brand||'','Mã vật tư công ty':c&&(c.kind==='manual'||c.kind==='exact')?c.code:'',
-        'Đã chọn':o.picked(r)?'x':'','Là cụm con':r.child?'x':'','Bản vẽ lắp':o.lk(n,'draw'),'File BOM':o.lk(n,'bom')});});
+        'Đã chọn':o.picked(r)?'x':'','Là cụm con':r.child?'x':'',[LK_D]:o.lk(n,'draw'),[LK_B]:o.lk(n,'bom')});});
   });
   return [['Danh muc cum',cum],['Danh muc BOM',bom]];
 }
@@ -1235,7 +1238,7 @@ function openPackModal(kind){
   const ctx=packCtx(kind);
   if(!ctx.rows.length&&!ctx.nodes.length){toast(kind==='list'?'Danh sách đang trống':'Chưa chọn mã nào trong bảng đang hiển thị – hãy tích ô sau mã vật tư trước');return;}
   const o={draw:true,bom:true,anc:false,part:false,full:false,xlsx:true};
-  openModal(`<h3>${ic('download',18)} Xuất gói ZIP: Excel + BOM + bản vẽ (PDF)</h3>
+  openModal(`<h3>${ic('download',18)} Xuất Excel + bản vẽ lắp + BOM (bấm liên kết mở PDF)</h3>
     <p>Chỉ xuất BOM và bản vẽ lắp liên quan tới <b>${esc(ctx.label)}</b>: <b>${ctx.nodes.length}</b> cụm.</p>
     <div style="max-height:120px;overflow:auto;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;margin-bottom:8px">${ctx.nodes.map(n=>`<div><span class="mono">${esc(n.item||'—')}</span> · ${esc(lbl(n))} <span class="muted">(${esc(where(n))})</span>${n.drawing?'':' <span style="color:var(--warn)">không có bản vẽ</span>'}${n.report?'':' <span style="color:var(--warn)">không có BOM</span>'}</div>`).join('')}</div>
     <div style="display:flex;flex-direction:column;gap:6px;margin:4px 0 10px">
@@ -1247,13 +1250,22 @@ function openPackModal(kind){
       <label><input type="checkbox" data-o="part"> Bản vẽ chi tiết của từng mã đã chọn (nếu có thư mục riêng) → <span class="mono">BanVe_ChiTiet</span></label>
     </div>
     <p id="pkEst" class="muted"></p>
-    <p class="muted" style="font-size:12px">Sau khi tải về: chuột phải file ZIP → <i>Extract All</i> (Giải nén) rồi mới mở Excel, để các liên kết mở PDF hoạt động. Ký tự <span class="mono">#</span> trong tên file được đổi thành <span class="mono">_</span> vì Excel không mở được liên kết có dấu #.</p>
-    <div class="mfoot"><button class="btn" data-close>Hủy</button><button class="btn primary" id="pkGo">${ic('download',14)} Xuất ZIP</button></div>`,box=>{
+    <div class="foldwarn" style="font-size:12.5px"><b>Để bấm vào tên bản vẽ / BOM trong Excel là mở được PDF:</b><br>
+      ${window.showDirectoryPicker?`• <b>Lưu vào thư mục</b> (nên dùng): chọn hoặc tạo một thư mục, ví dụ <span class="mono">Desktop\\XuatBOM</span> (Edge không cho chọn thẳng Desktop / Downloads, hãy bấm <i>New folder</i> tạo thư mục con). Ứng dụng ghi Excel + bản vẽ + BOM vào đó, mở Excel là bấm được ngay.<br>`:''}
+      • <b>Tải file ZIP</b>: phải chuột phải file ZIP → <i>Extract All</i> (giải nén) rồi mới mở Excel; mở Excel ngay trong ZIP thì liên kết không chạy.<br>
+      • Excel có thể hỏi <i>"Bạn có chắc muốn mở file này?"</i> → bấm <b>Yes</b>. Nếu Excel hiện thanh vàng <i>Protected View</i>, bấm <b>Enable Editing</b> trước.<br>
+      <span class="muted">Ký tự <span class="mono">#</span> trong tên file được đổi thành <span class="mono">_</span> vì Excel không mở được liên kết có dấu # (nên không thể liên kết thẳng tới file gốc trong hồ sơ).</span></div>
+    <div class="mfoot"><button class="btn" data-close>Hủy</button><button class="btn ${window.showDirectoryPicker?'':'primary'}" id="pkGo">${ic('download',14)} Tải file ZIP</button>${window.showDirectoryPicker?`<button class="btn primary" id="pkDir">${ic('folder',14)} Lưu vào thư mục (mở được ngay)</button>`:''}</div>`,box=>{
       const est=()=>{const pl=packPlan(ctx,o);const bad=pl.items.filter(x=>!okFile(x.f)).length;
         $('#pkEst',box).innerHTML=`Sẽ đóng gói <b>${pl.nFiles}</b> file PDF của <b>${pl.nodes.length}</b> cụm, khoảng <b>${fmtMB(pl.size)}</b>${bad?` · <span style="color:var(--warn)">${bad} file trình duyệt không đọc được sẽ bị bỏ qua</span>`:''}.`;};
       box.querySelectorAll('[data-o]').forEach(c=>c.onchange=()=>{o[c.dataset.o]=c.checked;est();});
       est();
-      $('#pkGo',box).onclick=()=>buildPack(ctx,Object.assign({},o));
+      $('#pkGo',box).onclick=()=>buildPack(ctx,Object.assign({},o),null);
+      if($('#pkDir',box)) $('#pkDir',box).onclick=async()=>{
+        let dh; try{dh=await showDirectoryPicker({id:'bocvt-out',mode:'readwrite',startIn:'desktop'});}
+        catch(e){if(e&&e.name!=='AbortError')toast('Không chọn được thư mục: '+errMsg(e)+' – hãy dùng Tải file ZIP');return;}
+        buildPack(ctx,Object.assign({},o),dh);
+      };
     });
 }
 let jszipP=null;
@@ -1261,11 +1273,10 @@ function loadJSZip(){
   if(window.JSZip) return Promise.resolve();
   return jszipP||(jszipP=new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';sc.onload=res;sc.onerror=()=>{jszipP=null;rej(new Error('Không tải được thư viện nén ZIP (cần mạng Internet).'));};document.head.appendChild(sc);}));
 }
-async function buildPack(ctx,o){
-  const box=$('#modal .modal-box'), say=t=>{if(box)box.innerHTML=`<h3><span class="spin"></span> Đang tạo gói ZIP…</h3><p>${t}</p>`;};
+async function buildPack(ctx,o,dirHandle){
+  const box=$('#modal .modal-box'), say=t=>{if(box)box.innerHTML=`<h3><span class="spin"></span> ${dirHandle?'Đang lưu vào thư mục':'Đang tạo gói ZIP'}…</h3><p>${t}</p>`;};
   try{
-    say('Đang tải thư viện nén…'); await loadJSZip();
-    const zip=new JSZip(), pl=packPlan(ctx,o), at=new Map(), names=new Map(), fail=[];
+    const pl=packPlan(ctx,o), at=new Map(), names=new Map(), fail=[], out=[];
     let i=0;
     for(const x of pl.items){
       i++; if(i%5===1) say(`Đang đọc file ${i}/${pl.items.length}…`);
@@ -1276,27 +1287,49 @@ async function buildPack(ctx,o){
       const prev=names.get(key);
       if(prev&&prev.size!==x.f.size){let j=2;while(names.has(x.dir+'/'+nm.replace(/(\.pdf)?$/i,` (${j})$1`).toLowerCase()))j++;nm=nm.replace(/(\.pdf)?$/i,` (${j})$1`);key=x.dir+'/'+nm.toLowerCase();}
       const path=x.dir+'/'+nm;
-      if(!names.has(key)){names.set(key,x.f);zip.file(path,x.f,{binary:true});}
+      if(!names.has(key)){names.set(key,x.f);out.push({path,data:x.f});}
       at.set(x.f,path);
     }
     const lk=(n,k)=>{const f=k==='draw'?n.drawing:n.report;if(!f)return '';const p=at.get(f);return p?XL(p.split('/').pop(),encodeURI(p)):f.name+(o[k==='draw'?'draw':'bom']?' (không xuất được)':'');};
     const xname=ctx.fname+'.xlsx';
-    if(o.xlsx){say('Đang tạo file Excel…');zip.file(xname,writeXlsx(ctx.sheets(lk,o),xname,{array:true}));}
-    zip.file('HUONG_DAN.txt',['Gói xuất từ ứng dụng Bóc tách vật tư — '+new Date().toLocaleString('vi-VN'),'Hồ sơ: '+root.name,'',
-      '1. Giải nén cả file ZIP (chuột phải → Extract All) rồi mới mở file Excel.',
-      '2. Trong Excel, bấm vào tên file ở cột "Bản vẽ lắp" / "File BOM" để mở PDF.',
+    if(o.xlsx){say('Đang tạo file Excel…');out.push({path:xname,data:new Uint8Array(writeXlsx(ctx.sheets(lk,o),xname,{array:true}))});}
+    out.push({path:'HUONG_DAN.txt',data:['Xuất từ ứng dụng Bóc tách vật tư — '+new Date().toLocaleString('vi-VN'),'Hồ sơ: '+root.name,'',
+      dirHandle?'1. Mở file Excel trong thư mục này.':'1. Giải nén cả file ZIP (chuột phải → Extract All) rồi mới mở file Excel.',
+      '2. Bấm vào tên file ở cột "Bản vẽ lắp (bấm để mở)" / "File BOM (bấm để mở)" để mở PDF.',
+      '   Excel hỏi có chắc muốn mở không → bấm Yes. Nếu có thanh vàng Protected View → bấm Enable Editing trước.',
       '3. Ký tự # trong tên file được đổi thành _ (Excel không mở được liên kết có dấu #).','',
       'BanVe_Lap: bản vẽ lắp của các cụm · BOM: file ASSEMBLED ITEM REPORT · BanVe_ChiTiet: bản vẽ của từng vật tư',
-      `Số file PDF: ${names.size}`].join('\r\n'));
-    if(fail.length) zip.file('KHONG_XUAT_DUOC.txt',['Các file sau không đọc được nên không có trong gói:','',...fail.map(f=>f.join('\t'))].join('\r\n'));
+      `Số file PDF: ${names.size}`].join('\r\n')});
+    if(fail.length) out.push({path:'KHONG_XUAT_DUOC.txt',data:['Các file sau không đọc được nên không được xuất:','',...fail.map(f=>f.join('\t'))].join('\r\n')});
+    const tail=`${names.size} file PDF${o.xlsx?' + Excel':''}${fail.length?` · ${fail.length} file không đọc được, xem KHONG_XUAT_DUOC.txt`:''}`;
+    if(dirHandle){
+      const dest=await dirHandle.getDirectoryHandle(ctx.fname,{create:true}), dirs=new Map();
+      const dirOf=async parts=>{let d=dest,k='';for(const p of parts){k+='/'+p;if(!dirs.has(k))dirs.set(k,await d.getDirectoryHandle(p,{create:true}));d=dirs.get(k);}return d;};
+      let j=0;
+      for(const e of out){
+        j++; if(j%3===1) say(`Đang lưu file ${j}/${out.length}…`);
+        const parts=e.path.split('/'), d=await dirOf(parts.slice(0,-1));
+        const w=await (await d.getFileHandle(parts[parts.length-1],{create:true})).createWritable();
+        await w.write(e.data); await w.close();
+      }
+      if(box) box.innerHTML=`<h3 style="color:var(--ok)">${ic('check',18)} Đã lưu xong</h3>
+        <p>Đã lưu ${esc(tail)} vào thư mục <b class="mono">${esc(dirHandle.name)}\\${esc(ctx.fname)}</b>.</p>
+        <p>Mở file <b class="mono">${esc(xname)}</b> trong thư mục đó, bấm vào tên file ở cột <b>Bản vẽ lắp / File BOM</b> để mở PDF.</p>
+        <div class="mfoot"><button class="btn primary" data-close>Đóng</button></div>`;
+      box&&box.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeModal);
+      toast('Đã lưu vào thư mục: '+tail);
+      return;
+    }
+    say('Đang tải thư viện nén…'); await loadJSZip();
+    const zip=new JSZip(); for(const e of out) zip.file(e.path,e.data,{binary:typeof e.data!=='string'});
     const blob=await zip.generateAsync({type:'blob',compression:'STORE',streamFiles:true},m=>say(`Đang nén… ${Math.round(m.percent)}%`));
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=ctx.fname+'.zip';document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(a.href),120000);
     closeModal();
-    toast(`Đã xuất ZIP: ${names.size} file PDF${o.xlsx?' + Excel':''} (${fmtMB(blob.size)})${fail.length?` · ${fail.length} file không đọc được, xem KHONG_XUAT_DUOC.txt`:''}`);
+    toast(`Đã xuất ZIP: ${tail} (${fmtMB(blob.size)}) – nhớ giải nén trước khi mở Excel`);
   }catch(e){
     console.error(e);
-    if(box) box.innerHTML=`<h3 class="err">${ic('warn',18)} Không tạo được gói ZIP</h3><p>${esc(errMsg(e))}</p><div class="mfoot"><button class="btn primary" data-close>Đóng</button></div>`;
+    if(box) box.innerHTML=`<h3 class="err">${ic('warn',18)} Không xuất được</h3><p>${esc(errMsg(e))}</p>${dirHandle?'<p>Hãy thử lại với thư mục khác, hoặc dùng <b>Tải file ZIP</b>.</p>':''}<div class="mfoot"><button class="btn primary" data-close>Đóng</button></div>`;
     box&&box.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeModal);
   }
 }
@@ -1322,7 +1355,7 @@ function renderListView(){
      <span class="sp"></span>
      <span class="muted"><b>${gs.length}</b> mã · ${Object.keys(L.items).length} dòng nguồn</span>
      <button class="btn primary" data-l="xlsx" ${gs.length?'':'disabled'}>${ic('download',14)} Xuất Excel</button>
-     <button class="btn" data-l="zip" ${gs.length?'':'disabled'} title="Một file ZIP gồm Excel (kèm danh mục BOM) + bản vẽ lắp + file BOM dạng PDF">${ic('download',14)} Xuất ZIP (Excel + BOM + bản vẽ)</button></div>
+     <button class="btn" data-l="zip" ${gs.length?'':'disabled'} title="Excel có liên kết bấm mở bản vẽ lắp / BOM, kèm các file PDF – lưu vào thư mục hoặc ZIP">${ic('download',14)} Xuất Excel + bản vẽ + BOM</button></div>
      <div class="hint">Mã vật tư, tên ngắn, tên dài nhập ở đây được nhớ theo Item No và tự dùng lại ở mọi cụm. Ô viền nét đứt là giá trị gợi ý tự động (từ file mã hoặc giải mã ống mềm), cần kiểm tra trước khi dùng.</div></div>
    <div class="tablewrap">${gs.length?`<table class="grid lst"><thead><tr>
      <th>#</th><th>Item No</th><th style="min-width:200px">Mô tả</th><th>Loại / Hãng</th><th>SL BOM</th><th style="width:70px">SL đặt</th><th>ĐVT</th>
@@ -1368,15 +1401,15 @@ function renderListView(){
 function exportList(){
   if(!window.XLSX){toast('Không tải được thư viện Excel (cần mạng Internet).');return;}
   const L=activeList();
-  writeXlsx(listSheets(L,plainLk),`DS_${safeName(L.name)}_${safeName(root.item||'hoso')}.xlsx`);
-  toast('Đã xuất Excel '+listGroups(L).length+' mã, kèm danh mục BOM');
+  writeXlsx(plainCols(listSheets(L,plainLk)),`DS_${safeName(L.name)}_${safeName(root.item||'hoso')}.xlsx`);
+  toast('Đã xuất Excel '+listGroups(L).length+' mã, kèm danh mục BOM · muốn bấm mở bản vẽ/BOM: dùng nút Xuất Excel + bản vẽ + BOM');
 }
 function listSheets(L,lk,o={}){
   const gs=listGroups(L), nodeAt=p=>allNodes.find(n=>n.path===p);
-  const drawOf=s=>{const n=nodeAt(s.path);return n?lk(n,'draw'):'';};
+  const drawOf=s=>{const n=nodeAt(s.path);return n?lk(n,'draw'):'';}, bomOf=s=>{const n=nodeAt(s.path);return n?lk(n,'bom'):'';};
   const d1=gs.map((g,i)=>{const v=matVals(g),mt=L.meta[g.mk]||{};const q=mt.qty!=null&&mt.qty!==''?num(mt.qty):g.total;
-    return {'STT':i+1,'Mã vật tư':v.code,'Item No':g.item,'Loại vật tư':g.type,'Thông số':(g.spec||'').replace(/\n/g,' | '),'Phân loại':g.cat.n,'Hãng':g.brand||'','SL theo BOM':g.total,'SL đặt':q,'ĐVT':g.unit,'Tên ngắn':v.short,'Tên dài':v.long,'Vị trí':g.srcs.map(s=>s.where+' › '+s.pos).join('; '),'Ghi chú':mt.note||'','Bản vẽ lắp':g.srcs.length?drawOf(g.srcs[0]):''};});
-  const d2=[]; gs.forEach(g=>g.srcs.forEach(s=>d2.push({'Item No':g.item,'Cụm':s.where,'Tên cụm':s.asmTitle,'Pos':s.pos,'SL/BOM':s.qty,'× cụm':s.mult,'SL tổng':(s.qty||0)*(s.mult||1),'ĐVT':s.unit,'Mô tả':s.type,'Bản vẽ lắp':drawOf(s)})));
+    return {'STT':i+1,'Mã vật tư':v.code,'Item No':g.item,'Loại vật tư':g.type,'Thông số':(g.spec||'').replace(/\n/g,' | '),'Phân loại':g.cat.n,'Hãng':g.brand||'','SL theo BOM':g.total,'SL đặt':q,'ĐVT':g.unit,'Tên ngắn':v.short,'Tên dài':v.long,'Vị trí':g.srcs.map(s=>s.where+' › '+s.pos).join('; '),'Ghi chú':mt.note||'',[LK_D]:g.srcs.length?drawOf(g.srcs[0]):'',[LK_B]:g.srcs.length?bomOf(g.srcs[0]):''};});
+  const d2=[]; gs.forEach(g=>g.srcs.forEach(s=>d2.push({'Item No':g.item,'Cụm':s.where,'Tên cụm':s.asmTitle,'Pos':s.pos,'SL/BOM':s.qty,'× cụm':s.mult,'SL tổng':(s.qty||0)*(s.mult||1),'ĐVT':s.unit,'Mô tả':s.type,[LK_D]:drawOf(s),[LK_B]:bomOf(s)})));
   return [['Danh sach',d1],['Chi tiet vi tri',d2],...bomSheets(listNodes(L),{picked:r=>!!L.items[r.key],lk,full:o.full})];
 }
 
