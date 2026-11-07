@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bóc Tách Vật Tư</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f4f6fb; --panel:#ffffff; --panel2:#eef2f9; --line:#dbe2ee; --text:#14213d; --muted:#5f6b85;
+  --brand:#1E6FFF; --brand-ink:#ffffff; --ok:#14945a; --warn:#c77700; --bad:#d23b3b; --hl:#fff6d6;
+  --hl-col:#e7f0ff;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#081225; --panel:#0f1d36; --panel2:#15274a; --line:#24375c; --text:#e6ecf7; --muted:#93a1bd;
+    --brand:#3d84ff; --ok:#3cc584; --warn:#f0a73a; --bad:#ff6b6b; --hl:#3a3315; --hl-col:#17305c;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#081225; --panel:#0f1d36; --panel2:#15274a; --line:#24375c; --text:#e6ecf7; --muted:#93a1bd;
+  --brand:#3d84ff; --ok:#3cc584; --warn:#f0a73a; --bad:#ff6b6b; --hl:#3a3315; --hl-col:#17305c;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 12px}
+button:hover{border-color:var(--brand)}
+button.pri{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+button.danger{color:var(--bad)}
+button.sm{padding:3px 8px;font-size:13px}
+input[type=text],input[type=number],input[type=search],select{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:0}
+input:focus,select:focus{outline:2px solid var(--brand);outline-offset:-1px}
+.app{display:grid;grid-template-columns:320px 1fr;height:100vh}
+.side{border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+.side-head{padding:14px 14px 10px;border-bottom:1px solid var(--line)}
+.brand{font-weight:700;font-size:17px;display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.brand i{width:26px;height:26px;border-radius:7px;background:var(--brand);display:inline-grid;place-items:center;color:#fff;font-style:normal;font-size:13px}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.row>select{flex:1}
+.drop{margin:10px 14px;border:2px dashed var(--line);border-radius:10px;padding:14px;text-align:center;color:var(--muted);cursor:pointer}
+.drop.over,.drop:hover{border-color:var(--brand);color:var(--brand)}
+.side-tools{padding:0 14px 8px;display:flex;gap:6px}
+.side-tools input{flex:1}
+.files{overflow:auto;flex:1;padding:0 8px 12px}
+.fitem{display:flex;gap:10px;align-items:center;padding:8px;border-radius:8px;cursor:pointer}
+.fitem:hover{background:var(--panel2)}
+.fitem.on{background:var(--hl-col)}
+.badge{flex:none;width:38px;height:38px;border-radius:8px;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff}
+.k-excel{background:#1d8a4b}.k-pdf{background:#c9372c}.k-text{background:#6a5acd}.k-other{background:#6b7280}.k-manual{background:#b26b00}
+.fmeta{min-width:0;flex:1}
+.fname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.fsub{color:var(--muted);font-size:12px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.st-new{background:var(--muted)}.st-done{background:var(--warn)}.st-checked{background:var(--ok)}
+.sumbtn{margin:8px 14px 14px;width:calc(100% - 28px)}
+.main{overflow:auto;min-width:0}
+.wrap{padding:18px 22px 60px;max-width:1400px}
+.hdr{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}
+.hdr h1{font-size:20px;margin:0;word-break:break-word}
+.muted{color:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 10px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tabs button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.map{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin:10px 0}
+.map label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.tbl-wrap{overflow:auto;max-height:65vh;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%}
+th,td{border-bottom:1px solid var(--line);padding:5px 7px;text-align:left;vertical-align:top}
+th{position:sticky;top:0;background:var(--panel2);font-size:12px;z-index:1;white-space:nowrap}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.prev td{white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+.prev td.rn{color:var(--muted);cursor:pointer;user-select:none}
+.prev td.rn:hover{color:var(--brand);text-decoration:underline}
+.prev tr.head td{background:var(--hl);font-weight:700}
+.prev .mcol{background:var(--hl-col)}
+.prev th small{display:block;color:var(--brand);font-weight:700}
+.items input{border:1px solid transparent;background:transparent;width:100%;padding:3px 5px;border-radius:6px}
+.items input:hover{border-color:var(--line)}
+.items input.q{text-align:right;width:90px}
+.items tr.off{opacity:.45}
+.items td{padding:2px 4px}
+.src{font-size:11px;color:var(--muted);white-space:nowrap}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.stat b{display:block;font-size:22px}
+.warn{color:var(--warn);font-size:12px}
+.empty{padding:50px 20px;text-align:center;color:var(--muted)}
+.empty h1{color:var(--text);font-size:22px}
+.steps{max-width:560px;margin:18px auto;text-align:left;line-height:1.8}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:9px 16px;border-radius:9px;opacity:0;transition:.2s;pointer-events:none;z-index:9;max-width:90vw}
+.toast.on{opacity:1}
+.back{display:none}
+details summary{cursor:pointer;font-weight:600;margin-bottom:8px}
+@media (max-width:860px){
+  .app{grid-template-columns:1fr}
+  .side{border-right:0}
+  body.detail .side{display:none}
+  body:not(.detail) .main{display:none}
+  .back{display:inline-block}
+  .wrap{padding:14px 16px 60px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="side-head">
+      <div class="brand"><i>BT</i>Bóc Tách Vật Tư</div>
+      <div class="row">
+        <select id="proj" aria-label="Dự án"></select>
+        <button class="sm" id="projNew" title="Dự án mới">+</button>
+        <button class="sm" id="projMenu" title="Đổi tên / xoá dự án">⋯</button>
+      </div>
+    </div>
+    <div class="drop" id="drop">Kéo thả tệp vào đây hoặc <b>bấm để chọn</b><br><small>Excel, CSV, PDF, TXT… (loại khác chỉ lưu trữ)</small></div>
+    <input type="file" id="pick" multiple hidden>
+    <div class="side-tools">
+      <input type="search" id="ffilter" placeholder="Tìm tệp…">
+      <button class="sm" id="newList" title="Tạo danh sách nhập tay">+ Nhập tay</button>
+    </div>
+    <div class="files" id="files"></div>
+    <button class="pri sumbtn" id="sumBtn">Bảng tổng hợp vật tư</button>
+  </aside>
+  <main class="main" id="main"></main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* ---------- tiện ích ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const norm = s => String(s ?? '').replace(/[đĐ]/g, 'd').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+const fmtSize = n => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(0) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
+const fmtNum = n => (Math.round(n * 1000) / 1000).toLocaleString('vi-VN');
+const fmtDate = t => new Date(t).toLocaleDateString('vi-VN');
+const colName = i => { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
+const cellStr = v => v == null ? '' : typeof v === 'number' ? String(v) : String(v).replace(/\s+/g, ' ').trim();
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2600); }
+function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Không tải được ' + src)); document.head.appendChild(s); }); }
+
+/* Số kiểu Việt Nam: dấu phẩy là thập phân, dấu chấm là hàng nghìn */
+function parseQty(v) {
+  if (typeof v === 'number') return isFinite(v) ? v : null;
+  let t = (String(v ?? '').replace(/\s/g, '').match(/-?\d[\d.,]*/) || [])[0];
+  if (!t) return null;
+  t = t.replace(/[.,]$/, '');
+  const c = t.includes(','), d = t.includes('.');
+  if (c && d) t = t.lastIndexOf(',') > t.lastIndexOf('.') ? t.replace(/\./g, '').replace(',', '.') : t.replace(/,/g, '');
+  else if (c) t = t.split(',').length > 2 ? t.replace(/,/g, '') : t.replace(',', '.');
+  else if (d && /^-?\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');
+  const n = parseFloat(t);
+  return isFinite(n) ? n : null;
+}
+
+/* ---------- lưu trữ IndexedDB ---------- */
+const DB = {
+  db: null,
+  open() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open('boc-tach-vat-tu', 1);
+      r.onupgradeneeded = () => { const d = r.result; d.createObjectStore('projects', { keyPath: 'id' }); d.createObjectStore('files', { keyPath: 'id' }); d.createObjectStore('blobs', { keyPath: 'id' }); };
+      r.onsuccess = () => res(this.db = r.result);
+      r.onerror = () => rej(r.error);
+    });
+  },
+  run(store, mode, fn) {
+    return new Promise((res, rej) => {
+      const t = this.db.transaction(store, mode); const req = fn(t.objectStore(store));
+      t.oncomplete = () => res(req ? req.result : undefined); t.onerror = () => rej(t.error);
+    });
+  },
+  all: s => DB.run(s, 'readonly', o => o.getAll()),
+  get: (s, k) => DB.run(s, 'readonly', o => o.get(k)),
+  put: (s, v) => DB.run(s, 'readwrite', o => o.put(v)),
+  del: (s, k) => DB.run(s, 'readwrite', o => o.delete(k)),
+};
+
+/* ---------- trạng thái ---------- */
+const S = { projects: [], files: [], projectId: null, fileId: null, view: 'home', sheet: null, parsed: {}, draft: {}, fileFilter: '', sumFilter: '', itemFilter: '' };
+const STATUS = { new: 'Chưa bóc tách', done: 'Đã bóc tách', checked: 'Đã kiểm tra' };
+const KIND_LABEL = { excel: 'XLS', pdf: 'PDF', text: 'TXT', other: 'FILE', manual: 'TAY' };
+const FIELDS = [
+  { k: 'code', label: 'Mã vật tư', kw: ['ma vt', 'ma vat tu', 'ma hang', 'ma hieu', 'ma so', 'ma sp', 'ky hieu', 'part no', 'part number', 'p/n', 'code', 'item code', 'ma'] },
+  { k: 'name', label: 'Tên vật tư', kw: ['ten vat tu', 'ten hang', 'ten thiet bi', 'ten', 'vat tu', 'mo ta', 'description', 'dien giai', 'noi dung', 'hang muc', 'chung loai', 'item', 'name'] },
+  { k: 'spec', label: 'Quy cách', kw: ['quy cach', 'thong so', 'kich thuoc', 'thong so ky thuat', 'spec', 'specification', 'model', 'size', 'vat lieu', 'material'] },
+  { k: 'unit', label: 'ĐVT', kw: ['dvt', 'd.v.t', 'don vi', 'don vi tinh', 'unit', 'uom', 'dv'] },
+  { k: 'qty', label: 'Số lượng', kw: ['so luong', 'sl', 'khoi luong', 'kl', 'qty', "q'ty", 'q.ty', 'quantity'] },
+  { k: 'note', label: 'Ghi chú', kw: ['ghi chu', 'note', 'notes', 'remark', 'remarks', 'chu thich'] },
+];
+const curProject = () => S.projects.find(p => p.id === S.projectId);
+const curFile = () => S.files.find(f => f.id === S.fileId);
+const projFiles = () => S.files.filter(f => f.projectId === S.projectId).sort((a, b) => b.addedAt - a.addedAt);
+const saveFile = f => DB.put('files', f);
+
+function kindOf(name) {
+  const e = (name.split('.').pop() || '').toLowerCase();
+  if (['xlsx', 'xls', 'xlsm', 'xlsb', 'ods', 'csv'].includes(e)) return 'excel';
+  if (e === 'pdf') return 'pdf';
+  if (['txt', 'tsv'].includes(e)) return 'text';
+  return 'other';
+}
+
+/* ---------- nhận diện tiêu đề cột ---------- */
+function scoreCell(cell, f) {
+  const c = norm(cell); if (!c || c.length > 45) return 0;
+  let best = 0;
+  for (const kw of f.kw) {
+    if (c === kw) best = Math.max(best, 3);
+    else if (kw.length >= 4 && c.includes(kw)) best = Math.max(best, 2);
+    else if (c.split(/[^a-z0-9/']+/).filter(Boolean)[0] === kw) best = Math.max(best, 1);
+  }
+  return best;
+}
+function mapRow(row) {
+  const cands = [];
+  (row || []).forEach((cell, ci) => { if (typeof cell === 'number') return; FIELDS.forEach(f => { const s = scoreCell(cell, f); if (s) cands.push({ f: f.k, ci, s }); }); });
+  cands.sort((a, b) => b.s - a.s || a.ci - b.ci);
+  const map = {}, used = new Set(); let total = 0;
+  for (const c of cands) { if (map[c.f] != null || used.has(c.ci)) continue; map[c.f] = c.ci; used.add(c.ci); total += c.s; }
+  return { map, total };
+}
+function detectHeader(rows) {
+  let best = null;
+  for (let r = 0; r < Math.min(rows.length, 60); r++) {
+    const { map, total } = mapRow(rows[r]);
+    if ((map.name != null || map.code != null) && Object.keys(map).length >= 2 && total >= 4 && (!best || total > best.total)) best = { row: r, map, total };
+  }
+  return best;
+}
+
+/* ---------- đọc tệp ---------- */
+async function loadPdfJs() {
+  if (window.pdfjsLib) return;
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+async function pdfParse(buf) {
+  await loadPdfJs();
+  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buf.slice(0)) }).promise;
+  const raw = [];
+  for (let p = 1; p <= doc.numPages; p++) {
+    const tc = await (await doc.getPage(p)).getTextContent();
+    const its = tc.items.filter(i => i.str && i.str.trim()).map(i => ({ x: i.transform[4], y: i.transform[5], w: i.width, s: i.str, h: Math.abs(i.transform[3]) || 8 }));
+    const groups = [];
+    for (const it of its) {
+      const g = groups.find(g => Math.abs(g.y - it.y) <= Math.max(2, it.h * 0.4));
+      if (g) g.items.push(it); else groups.push({ y: it.y, items: [it] });
+    }
+    groups.sort((a, b) => b.y - a.y);
+    for (const g of groups) {
+      g.items.sort((a, b) => a.x - b.x);
+      const cells = []; let cur = null;
+      for (const it of g.items) {
+        if (cur && it.x - cur.x1 < it.h * 1.2) { cur.s += (it.x - cur.x1 > it.h * 0.15 ? ' ' : '') + it.s; cur.x1 = it.x + it.w; }
+        else { if (cur) cells.push(cur); cur = { s: it.s, x0: it.x, x1: it.x + it.w }; }
+      }
+      if (cur) cells.push(cur);
+      cells.forEach(c => c.s = c.s.replace(/\s+/g, ' ').trim());
+      raw.push(cells);
+    }
+  }
+  return { sheets: { PDF: raw.map(r => r.map(c => c.s)) }, raw: { PDF: raw } };
+}
+async function parseFile(f) {
+  if (S.parsed[f.id]) return S.parsed[f.id];
+  let res = { sheets: {} };
+  if (f.kind === 'excel' || f.kind === 'pdf' || f.kind === 'text') {
+    const blob = await DB.get('blobs', f.id);
+    const buf = blob.data;
+    if (f.kind === 'excel') {
+      const isCsv = /\.csv$/i.test(f.name);
+      const wb = isCsv ? XLSX.read(new TextDecoder('utf-8').decode(buf), { type: 'string', raw: false }) : XLSX.read(buf, { type: 'array' });
+      for (const n of wb.SheetNames) res.sheets[n] = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '', blankrows: true }).slice(0, 20000);
+    } else if (f.kind === 'pdf') {
+      res = await pdfParse(buf);
+    } else {
+      const txt = new TextDecoder('utf-8').decode(buf);
+      res.sheets.TXT = txt.split(/\r?\n/).map(l => l.split(/\t|;|\s{2,}/).map(s => s.trim()));
+    }
+  }
+  S.parsed[f.id] = res;
+  return res;
+}
+/* Với PDF: gióng lại các ô theo vị trí cột của dòng tiêu đề */
+function gridRows(parsed, sheet, headerRow) {
+  const rows = parsed.sheets[sheet] || [];
+  const raw = parsed.raw && parsed.raw[sheet];
+  if (!raw || headerRow < 0 || !raw[headerRow]) return rows;
+  const hc = raw[headerRow].map(c => (c.x0 + c.x1) / 2);
+  const bounds = hc.map((c, i) => i < hc.length - 1 ? (c + hc[i + 1]) / 2 : Infinity);
+  return raw.map((cells, r) => {
+    if (r <= headerRow) return rows[r];
+    const out = new Array(hc.length).fill('');
+    for (const c of cells) { const mid = (c.x0 + c.x1) / 2; let i = bounds.findIndex(b => mid < b); if (i < 0) i = hc.length - 1; out[i] = out[i] ? out[i] + ' ' + c.s : c.s; }
+    return out;
+  });
+}
+
+/* ---------- bóc tách ---------- */
+function extractSheet(sheet, rows, cfg) {
+  const out = [], m = cfg.map || {};
+  if (cfg.headerRow < 0 || (m.name == null && m.code == null)) return out;
+  const head = rows[cfg.headerRow] || [];
+  const headName = norm(head[m.name ?? m.code]);
+  for (let r = cfg.headerRow + 1; r < rows.length; r++) {
+    const row = rows[r] || [];
+    const g = k => m[k] == null ? '' : cellStr(row[m[k]]);
+    const code = g('code'), name = g('name');
+    if (!code && !name) continue;
+    const nn = norm(name || code);
+    if (nn === headName || /^(tong|cong|total|sum|sub ?total)\b/.test(nn)) continue;
+    const qty = m.qty == null ? null : parseQty(row[m.qty]);
+    if (cfg.requireQty && m.qty != null && !(qty > 0)) continue;
+    out.push({ id: uid(), auto: true, on: true, code, name, spec: g('spec'), unit: g('unit'), qty: qty ?? 0, note: g('note'), src: { sheet, row: r + 1 } });
+  }
+  return out;
+}
+const UNITS = 'cái|cai|bộ|bo|chiếc|chiec|cây|cay|tấm|tam|ống|ong|cuộn|cuon|mét|met|md|m2|m3|m|kg|tấn|tan|lít|lit|l|hộp|hop|thùng|thung|bao|đôi|doi|cặp|cap|pcs|pc|set|ea|nos|roll|unit';
+const RE_A = new RegExp(`^(.+?)\\s+(${UNITS})\\.?\\s+(-?\\d[\\d.,]*)(?=\\s|$)`, 'i');
+const RE_B = new RegExp(`^(.+?)\\s+(-?\\d[\\d.,]*)\\s*(${UNITS})\\.?(?=\\s|$)`, 'i');
+function extractLines(sheet, rows) {
+  const out = [];
+  rows.forEach((cells, r) => {
+    const line = cells.join(' ').replace(/\s+/g, ' ').trim(); if (!line) return;
+    let m = line.match(RE_A), name, unit, qty;
+    if (m) { name = m[1]; unit = m[2]; qty = parseQty(m[3]); }
+    else if ((m = line.match(RE_B))) { name = m[1]; qty = parseQty(m[2]); unit = m[3]; }
+    else return;
+    name = name.replace(/^\d+([.)]\d+)*[.)]?\s+/, '').trim();
+    if (!/[a-zà-ỹ]/i.test(name) || name.length < 2 || !(qty > 0)) return;
+    out.push({ id: uid(), auto: true, on: true, code: '', name, spec: '', unit, qty, note: '', src: { sheet, row: r + 1, guess: true } });
+  });
+  return out;
+}
+async function autoExtract(f) {
+  const parsed = await parseFile(f);
+  f.sheets = {}; f.items = (f.items || []).filter(i => !i.auto);
+  for (const [name, rows] of Object.entries(parsed.sheets)) {
+    const det = detectHeader(rows);
+    const cfg = { headerRow: det ? det.row : -1, map: det ? det.map : {}, enabled: !!det, requireQty: true };
+    f.sheets[name] = cfg;
+    if (det) f.items.push(...extractSheet(name, gridRows(parsed, name, cfg.headerRow), cfg));
+  }
+  if ((f.kind === 'pdf' || f.kind === 'text') && !f.items.some(i => i.auto)) {
+    for (const [name, rows] of Object.entries(parsed.sheets)) f.items.push(...extractLines(name, rows));
+  }
+  if (f.items.length && f.status === 'new') f.status = 'done';
+}
+
+/* ---------- thao tác tệp ---------- */
+async function addFiles(list) {
+  if (!list.length) return;
+  toast(`Đang xử lý ${list.length} tệp…`);
+  let last = null, n = 0;
+  for (const file of list) {
+    try {
+      const buf = await file.arrayBuffer();
+      const f = { id: uid(), projectId: S.projectId, name: file.name, size: file.size, kind: kindOf(file.name), addedAt: Date.now(), status: 'new', sheets: {}, items: [] };
+      await DB.put('blobs', { id: f.id, data: buf, type: file.type });
+      try { await autoExtract(f); } catch (e) { console.error(e); toast('Không đọc được nội dung: ' + file.name); }
+      await saveFile(f); S.files.push(f); last = f; n += f.items.length;
+    } catch (e) { console.error(e); toast('Lỗi khi thêm ' + file.name); }
+  }
+  if (last) { openFile(last.id); toast(`Đã thêm ${list.length} tệp · bóc được ${n} dòng vật tư`); }
+}
+function openFile(id) { S.fileId = id; S.view = 'file'; const f = curFile(); S.sheet = f && Object.keys(f.sheets || {})[0] || null; S.itemFilter = ''; document.body.classList.add('detail'); render(); $('#main').scrollTop = 0; }
+async function deleteFile(f) {
+  if (!confirm(`Xoá tệp "${f.name}" và toàn bộ vật tư đã bóc tách?`)) return;
+  await DB.del('files', f.id); await DB.del('blobs', f.id);
+  S.files = S.files.filter(x => x.id !== f.id); delete S.parsed[f.id];
+  S.fileId = null; S.view = 'home'; document.body.classList.remove('detail'); render();
+}
+async function downloadOriginal(f) {
+  const b = await DB.get('blobs', f.id); if (!b) return toast('Không có tệp gốc');
+  const url = URL.createObjectURL(new Blob([b.data], { type: b.type || 'application/octet-stream' }));
+  const a = document.createElement('a'); a.href = url; a.download = f.name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+/* ---------- dự án ---------- */
+async function newProject(name) {
+  const p = { id: uid(), name, createdAt: Date.now() };
+  await DB.put('projects', p); S.projects.push(p); S.projectId = p.id;
+  try { localStorage.setItem('btvt.project', p.id); } catch (e) {}
+}
+async function projectMenu() {
+  const p = curProject(); if (!p) return;
+  const act = prompt(`Dự án "${p.name}"\nNhập tên mới để đổi tên, hoặc gõ XOA để xoá dự án và toàn bộ tệp.`, p.name);
+  if (act == null || act.trim() === '' || act === p.name) return;
+  if (act.trim().toUpperCase() === 'XOA') {
+    if (S.projects.length < 2) return toast('Cần giữ lại ít nhất một dự án');
+    for (const f of projFiles()) { await DB.del('files', f.id); await DB.del('blobs', f.id); }
+    S.files = S.files.filter(f => f.projectId !== p.id);
+    await DB.del('projects', p.id); S.projects = S.projects.filter(x => x.id !== p.id);
+    S.projectId = S.projects[0].id; S.view = 'home'; S.fileId = null;
+  } else { p.name = act.trim(); await DB.put('projects', p); }
+  render();
+}
+
+/* ---------- tổng hợp ---------- */
+function aggregate() {
+  const groups = new Map();
+  for (const f of projFiles()) for (const it of f.items || []) {
+    if (it.on === false) continue;
+    const c = norm(it.code);
+    const key = c ? 'c:' + c + '|' + norm(it.unit) : 'n:' + norm(it.name) + '|' + norm(it.spec) + '|' + norm(it.unit);
+    let g = groups.get(key);
+    if (!g) groups.set(key, g = { code: it.code, name: it.name, spec: it.spec, unit: it.unit, qty: 0, files: new Set(), lines: 0 });
+    g.qty += Number(it.qty) || 0; g.files.add(f.name); g.lines++;
+    if (!g.name && it.name) g.name = it.name; if (!g.spec && it.spec) g.spec = it.spec;
+  }
+  const list = [...groups.values()];
+  const codeUnits = {};
+  list.forEach(g => { const c = norm(g.code); if (c) (codeUnits[c] = codeUnits[c] || new Set()).add(g.unit || '—'); });
+  list.forEach(g => { const c = norm(g.code); g.unitWarn = c && codeUnits[c].size > 1; });
+  return list.sort((a, b) => (a.code || '~').localeCompare(b.code || '~', 'vi', { numeric: true }) || a.name.localeCompare(b.name, 'vi'));
+}
+function exportXlsx() {
+  const p = curProject(), agg = aggregate();
+  const sum = [['STT', 'Mã vật tư', 'Tên vật tư', 'Quy cách', 'ĐVT', 'Tổng số lượng', 'Số dòng gộp', 'Nguồn']];
+  agg.forEach((g, i) => sum.push([i + 1, g.code, g.name, g.spec, g.unit, g.qty, g.lines, [...g.files].join('; ')]));
+  const det = [['Tệp', 'Sheet', 'Dòng', 'Mã vật tư', 'Tên vật tư', 'Quy cách', 'ĐVT', 'Số lượng', 'Ghi chú']];
+  for (const f of projFiles()) for (const it of f.items || []) if (it.on !== false) det.push([f.name, it.src?.sheet || '', it.src?.row || '', it.code, it.name, it.spec, it.unit, Number(it.qty) || 0, it.note]);
+  const wb = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.aoa_to_sheet(sum); ws1['!cols'] = [6, 16, 40, 24, 8, 14, 10, 40].map(w => ({ wch: w }));
+  const ws2 = XLSX.utils.aoa_to_sheet(det); ws2['!cols'] = [30, 14, 6, 16, 40, 24, 8, 12, 24].map(w => ({ wch: w }));
+  XLSX.utils.book_append_sheet(wb, ws1, 'Tổng hợp'); XLSX.utils.book_append_sheet(wb, ws2, 'Chi tiết');
+  const d = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `${(p?.name || 'du-an').replace(/[\\/:*?"<>|]/g, '_')}-boc-tach-${d}.xlsx`);
+}
+
+/* ---------- giao diện ---------- */
+function renderSide() {
+  $('#proj').innerHTML = S.projects.map(p => `<option value="${p.id}"${p.id === S.projectId ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
+  const q = norm(S.fileFilter);
+  const list = projFiles().filter(f => !q || norm(f.name).includes(q));
+  $('#files').innerHTML = list.length ? list.map(f => {
+    const on = (f.items || []).filter(i => i.on !== false).length;
+    return `<div class="fitem${f.id === S.fileId && S.view === 'file' ? ' on' : ''}" data-open="${f.id}">
+      <div class="badge k-${f.kind}">${KIND_LABEL[f.kind]}</div>
+      <div class="fmeta"><div class="fname" title="${esc(f.name)}">${esc(f.name)}</div>
+      <div class="fsub"><span class="dot st-${f.status}"></span>${STATUS[f.status]} · ${on} dòng${f.size ? ' · ' + fmtSize(f.size) : ''}</div></div></div>`;
+  }).join('') : `<p class="muted" style="padding:10px">${q ? 'Không có tệp phù hợp.' : 'Chưa có tệp nào trong dự án.'}</p>`;
+  $('#sumBtn').classList.toggle('on', S.view === 'summary');
+}
+function render() {
+  renderSide();
+  const m = $('#main');
+  if (S.view === 'file' && curFile()) renderFile(m, curFile());
+  else if (S.view === 'summary') renderSummary(m);
+  else renderHome(m);
+}
+function renderHome(m) {
+  const fs = projFiles();
+  m.innerHTML = `<div class="wrap"><div class="empty">
+    <h1>${esc(curProject()?.name || '')}</h1>
+    <p>${fs.length} tệp · ${fs.reduce((a, f) => a + (f.items || []).length, 0)} dòng vật tư</p>
+    <div class="steps">
+      <b>Cách dùng</b><br>
+      1. Thêm tệp dự toán / bảng khối lượng / BOM (Excel, CSV, PDF có lớp chữ, TXT).<br>
+      2. Ứng dụng tự tìm dòng tiêu đề (Mã, Tên vật tư, Quy cách, ĐVT, Số lượng…) và bóc các dòng vật tư.<br>
+      3. Mở từng tệp để kiểm tra: chọn lại dòng tiêu đề / cột nếu nhận sai, sửa hoặc bỏ dòng.<br>
+      4. Vào <b>Bảng tổng hợp</b> để cộng dồn theo mã (hoặc tên + quy cách) và xuất Excel.
+    </div>
+    <button class="pri" onclick="$('#pick').click()">Thêm tệp</button>
+  </div></div>`;
+}
+
+async function renderFile(m, f) {
+  const sheetNames = Object.keys(f.sheets || {});
+  if (!S.sheet || !f.sheets[S.sheet]) S.sheet = sheetNames[0] || null;
+  const head = `<div class="hdr">
+    <div><button class="sm back" data-act="back">← Danh sách</button>
+      <h1>${esc(f.name)}</h1>
+      <div class="muted">${f.size ? fmtSize(f.size) + ' · ' : ''}Thêm ngày ${fmtDate(f.addedAt)}</div></div>
+    <div class="row">
+      <select data-act="status">${Object.entries(STATUS).map(([k, v]) => `<option value="${k}"${k === f.status ? ' selected' : ''}>${v}</option>`).join('')}</select>
+      ${S.projects.length > 1 ? `<select data-act="move" title="Chuyển sang dự án">${S.projects.map(p => `<option value="${p.id}"${p.id === f.projectId ? ' selected' : ''}>→ ${esc(p.name)}</option>`).join('')}</select>` : ''}
+      <button class="sm" data-act="rename">Đổi tên</button>
+      ${f.kind !== 'manual' ? '<button class="sm" data-act="download">Tải tệp gốc</button>' : ''}
+      ${sheetNames.length ? '<button class="sm" data-act="reauto">Tự bóc tách lại</button>' : ''}
+      <button class="sm danger" data-act="delete">Xoá</button>
+    </div></div>`;
+  let cfgHtml = '';
+  if (f.kind === 'other') cfgHtml = `<div class="card muted">Loại tệp này không đọc tự động được (bản vẽ, ảnh, Word…). Tệp vẫn được lưu để quản lý — hãy nhập vật tư thủ công ở bảng bên dưới.</div>`;
+  else if (sheetNames.length) {
+    m.innerHTML = `<div class="wrap">${head}<div class="card muted">Đang đọc tệp…</div></div>`;
+    let parsed;
+    try { parsed = await parseFile(f); } catch (e) { console.error(e); parsed = null; }
+    if (S.fileId !== f.id || S.view !== 'file') return;
+    cfgHtml = parsed ? sheetPanel(f, parsed) : `<div class="card warn">Không đọc được tệp (cần kết nối mạng để tải thư viện đọc PDF).</div>`;
+  }
+  m.innerHTML = `<div class="wrap">${head}${cfgHtml}${itemsPanel(f)}</div>`;
+}
+
+function sheetPanel(f, parsed) {
+  const names = Object.keys(f.sheets);
+  const key = f.id + '|' + S.sheet;
+  const cfg = S.draft[key] || f.sheets[S.sheet];
+  const rows = gridRows(parsed, S.sheet, cfg.headerRow);
+  const ncol = Math.min(40, rows.reduce((a, r) => Math.max(a, (r || []).length), 0));
+  const counts = n => (f.items || []).filter(i => i.src?.sheet === n).length;
+  const tabs = names.length > 1 ? `<div class="tabs">${names.map(n => `<button class="sm${n === S.sheet ? ' on' : ''}" data-sheet="${esc(n)}">${esc(n)} (${counts(n)})</button>`).join('')}</div>` : '';
+  const colOpts = sel => `<option value="">— không có —</option>` + Array.from({ length: ncol }, (_, i) => {
+    const h = cellStr((rows[cfg.headerRow] || [])[i]);
+    return `<option value="${i}"${sel === i ? ' selected' : ''}>${colName(i)}${h ? ': ' + esc(h.slice(0, 28)) : ''}</option>`;
+  }).join('');
+  const mapped = {}; Object.entries(cfg.map || {}).forEach(([k, v]) => mapped[v] = FIELDS.find(x => x.k === k).label);
+  const start = Math.max(0, cfg.headerRow - 3), end = Math.min(rows.length, Math.max(start, cfg.headerRow) + 80);
+  let grid = '';
+  for (let r = start; r < end; r++) {
+    const row = rows[r] || [];
+    grid += `<tr class="${r === cfg.headerRow ? 'head' : ''}"><td class="rn" data-hrow="${r}" title="Đặt làm dòng tiêu đề">${r + 1}</td>${Array.from({ length: ncol }, (_, c) => `<td class="${mapped[c] ? 'mcol' : ''}" title="${esc(cellStr(row[c]))}">${esc(cellStr(row[c]))}</td>`).join('')}</tr>`;
+  }
+  const dirty = !!S.draft[key];
+  const isGuess = (f.items || []).some(i => i.src?.sheet === S.sheet && i.src?.guess);
+  return `<div class="card">
+    <h2>Cấu hình bóc tách</h2>${tabs}
+    ${cfg.headerRow < 0 ? `<p class="warn">Không tự tìm thấy dòng tiêu đề${isGuess ? ' — đã đoán các dòng theo mẫu "tên … đơn vị … số lượng"' : ''}. Bấm vào số thứ tự dòng trong bảng xem trước để chọn dòng tiêu đề.</p>` : ''}
+    <div class="row">
+      <label><input type="checkbox" data-cfg="enabled"${cfg.enabled ? ' checked' : ''}> Bóc tách sheet này</label>
+      <label style="margin-left:12px">Dòng tiêu đề <input type="number" min="1" style="width:80px" data-cfg="headerRow" value="${cfg.headerRow >= 0 ? cfg.headerRow + 1 : ''}"></label>
+      <label style="margin-left:12px"><input type="checkbox" data-cfg="requireQty"${cfg.requireQty ? ' checked' : ''}> Chỉ lấy dòng có số lượng &gt; 0</label>
+    </div>
+    <div class="map">${FIELDS.map(fl => `<label>${fl.label}<select data-map="${fl.k}">${colOpts(cfg.map?.[fl.k])}</select></label>`).join('')}</div>
+    <div class="row"><button class="pri" data-act="apply">Áp dụng cho sheet "${esc(S.sheet)}"</button>${dirty ? '<button data-act="cancelDraft">Huỷ thay đổi</button><span class="warn">Chưa áp dụng</span>' : ''}</div>
+    <details style="margin-top:12px"${cfg.headerRow < 0 || dirty ? ' open' : ''}><summary>Xem trước dữ liệu (${rows.length} dòng)</summary>
+      <div class="tbl-wrap"><table class="prev"><thead><tr><th>#</th>${Array.from({ length: ncol }, (_, c) => `<th class="${mapped[c] ? 'mcol' : ''}">${colName(c)}${mapped[c] ? `<small>${mapped[c]}</small>` : ''}</th>`).join('')}</tr></thead><tbody>${grid}</tbody></table></div>
+    </details></div>`;
+}
+
+function itemsPanel(f) {
+  const q = norm(S.itemFilter);
+  const items = (f.items || []).filter(it => !q || norm([it.code, it.name, it.spec, it.note].join(' ')).includes(q));
+  const active = (f.items || []).filter(i => i.on !== false);
+  const total = active.length;
+  return `<div class="card">
+    <div class="hdr" style="margin-bottom:8px"><h2 style="margin:0">Vật tư đã bóc tách — ${total}/${(f.items || []).length} dòng được tính</h2>
+      <div class="row"><input type="search" placeholder="Lọc…" data-act="ifilter" value="${esc(S.itemFilter)}"><button class="sm" data-act="addItem">+ Thêm dòng</button>${(f.items || []).length ? '<button class="sm" data-act="toggleAll">Bật/tắt tất cả</button>' : ''}</div></div>
+    ${items.length ? `<div class="tbl-wrap"><table class="items"><thead><tr><th title="Tính vào tổng hợp">✓</th><th>Mã VT</th><th>Tên vật tư</th><th>Quy cách</th><th>ĐVT</th><th class="num">Số lượng</th><th>Ghi chú</th><th>Nguồn</th><th></th></tr></thead><tbody>
+    ${items.map(it => `<tr class="${it.on === false ? 'off' : ''}" data-id="${it.id}">
+      <td><input type="checkbox" data-f="on"${it.on !== false ? ' checked' : ''} style="width:auto"></td>
+      <td><input data-f="code" value="${esc(it.code)}" style="min-width:90px"></td>
+      <td><input data-f="name" value="${esc(it.name)}" style="min-width:220px"></td>
+      <td><input data-f="spec" value="${esc(it.spec)}" style="min-width:120px"></td>
+      <td><input data-f="unit" value="${esc(it.unit)}" style="width:60px"></td>
+      <td><input class="q" data-f="qty" value="${esc(fmtNum(Number(it.qty) || 0))}"></td>
+      <td><input data-f="note" value="${esc(it.note)}" style="min-width:100px"></td>
+      <td class="src">${it.src ? esc(it.src.sheet) + (it.src.row ? ' · d' + it.src.row : '') + (it.src.guess ? ' (đoán)' : '') : ''}</td>
+      <td><button class="sm danger" data-del="${it.id}" title="Xoá dòng">✕</button></td></tr>`).join('')}
+    </tbody></table></div>` : `<p class="muted">${q ? 'Không có dòng phù hợp.' : 'Chưa có dòng vật tư nào.'}</p>`}
+  </div>`;
+}
+
+function renderSummary(m) {
+  const agg = aggregate(), fs = projFiles();
+  const q = norm(S.sumFilter);
+  const list = agg.filter(g => !q || norm([g.code, g.name, g.spec, g.unit].join(' ')).includes(q));
+  const lines = fs.reduce((a, f) => a + (f.items || []).filter(i => i.on !== false).length, 0);
+  const warn = agg.filter(g => g.unitWarn).length;
+  m.innerHTML = `<div class="wrap">
+    <div class="hdr"><div><button class="sm back" data-act="back">← Danh sách</button><h1>Bảng tổng hợp — ${esc(curProject()?.name)}</h1>
+      <div class="muted">Gộp theo mã vật tư + ĐVT; dòng không có mã gộp theo tên + quy cách + ĐVT.</div></div>
+      <div class="row"><input type="search" placeholder="Tìm vật tư…" data-act="sfilter" value="${esc(S.sumFilter)}"><button class="pri" data-act="export"${agg.length ? '' : ' disabled'}>Xuất Excel</button></div></div>
+    <div class="stats">
+      <div class="stat"><b>${fs.length}</b><span class="muted">tệp (${fs.filter(f => f.status === 'checked').length} đã kiểm tra)</span></div>
+      <div class="stat"><b>${lines}</b><span class="muted">dòng bóc tách</span></div>
+      <div class="stat"><b>${agg.length}</b><span class="muted">loại vật tư sau gộp</span></div>
+      <div class="stat"><b style="color:${warn ? 'var(--warn)' : 'inherit'}">${warn}</b><span class="muted">mã có nhiều ĐVT</span></div>
+    </div>
+    ${list.length ? `<div class="card" style="padding:0"><div class="tbl-wrap" style="max-height:none;border:0"><table><thead><tr><th class="num">STT</th><th>Mã VT</th><th>Tên vật tư</th><th>Quy cách</th><th>ĐVT</th><th class="num">Tổng SL</th><th class="num">Dòng</th><th>Nguồn</th></tr></thead><tbody>
+      ${list.map((g, i) => `<tr><td class="num">${i + 1}</td><td>${esc(g.code)}</td><td>${esc(g.name)}</td><td>${esc(g.spec)}</td><td>${esc(g.unit)}${g.unitWarn ? ' <span class="warn" title="Cùng mã nhưng khác ĐVT">⚠</span>' : ''}</td><td class="num"><b>${fmtNum(g.qty)}</b></td><td class="num">${g.lines}</td><td class="src" style="white-space:normal">${esc([...g.files].join('; '))}</td></tr>`).join('')}
+    </tbody></table></div></div>` : `<div class="empty">${q ? 'Không có vật tư phù hợp.' : 'Chưa có vật tư nào. Hãy thêm tệp để bóc tách.'}</div>`}
+  </div>`;
+}
+
+/* ---------- sự kiện ---------- */
+const main = $('#main');
+main.addEventListener('click', async e => {
+  const t = e.target.closest('[data-act],[data-sheet],[data-hrow],[data-del]'); if (!t) return;
+  const f = curFile();
+  if (t.dataset.sheet != null) { S.sheet = t.dataset.sheet; return render(); }
+  if (t.dataset.hrow != null) {
+    const key = f.id + '|' + S.sheet, r = +t.dataset.hrow;
+    const parsed = S.parsed[f.id];
+    const base = S.draft[key] || f.sheets[S.sheet];
+    const row = gridRows(parsed, S.sheet, r)[r];
+    S.draft[key] = { ...base, headerRow: r, map: mapRow(row).map, enabled: true };
+    return render();
+  }
+  if (t.dataset.del) { f.items = f.items.filter(i => i.id !== t.dataset.del); await saveFile(f); return render(); }
+  switch (t.dataset.act) {
+    case 'back': document.body.classList.remove('detail'); S.view = 'home'; S.fileId = null; return render();
+    case 'rename': { const n = prompt('Tên tệp:', f.name); if (n && n.trim()) { f.name = n.trim(); await saveFile(f); render(); } return; }
+    case 'download': return downloadOriginal(f);
+    case 'delete': return deleteFile(f);
+    case 'reauto':
+      if (!confirm('Tự nhận diện lại toàn bộ tệp? Các dòng được bóc tự động (kể cả đã sửa) sẽ bị thay thế; dòng nhập tay được giữ lại.')) return;
+      Object.keys(S.draft).forEach(k => k.startsWith(f.id + '|') && delete S.draft[k]);
+      await autoExtract(f); await saveFile(f); toast(`Đã bóc tách ${f.items.length} dòng`); return render();
+    case 'apply': {
+      const key = f.id + '|' + S.sheet, cfg = S.draft[key] || f.sheets[S.sheet];
+      const had = f.items.some(i => i.auto && i.src?.sheet === S.sheet);
+      if (had && !confirm(`Thay thế các dòng tự động của "${S.sheet}" bằng kết quả bóc tách mới?`)) return;
+      f.sheets[S.sheet] = cfg; delete S.draft[key];
+      f.items = f.items.filter(i => !(i.auto && i.src?.sheet === S.sheet));
+      if (cfg.enabled) {
+        const rows = gridRows(S.parsed[f.id], S.sheet, cfg.headerRow);
+        const add = extractSheet(S.sheet, rows, cfg);
+        f.items.push(...add);
+        toast(`Bóc được ${add.length} dòng từ "${S.sheet}"`);
+      } else toast(`Đã bỏ qua sheet "${S.sheet}"`);
+      if (f.items.length && f.status === 'new') f.status = 'done';
+      await saveFile(f); return render();
+    }
+    case 'cancelDraft': delete S.draft[f.id + '|' + S.sheet]; return render();
+    case 'addItem': f.items.push({ id: uid(), auto: false, on: true, code: '', name: '', spec: '', unit: '', qty: 0, note: '', src: { sheet: 'Nhập tay' } }); S.itemFilter = ''; await saveFile(f); render(); { const ins = main.querySelectorAll('.items tr:last-child input[data-f="code"]'); ins[0]?.focus(); } return;
+    case 'toggleAll': { const on = !f.items.every(i => i.on !== false); f.items.forEach(i => i.on = on); await saveFile(f); return render(); }
+    case 'export': return exportXlsx();
+  }
+});
+main.addEventListener('change', async e => {
+  const t = e.target, f = curFile();
+  if (t.dataset.act === 'status') { f.status = t.value; await saveFile(f); return renderSide(); }
+  if (t.dataset.act === 'move') { f.projectId = t.value; await saveFile(f); S.projectId = t.value; try { localStorage.setItem('btvt.project', t.value); } catch (er) {} return render(); }
+  if (t.dataset.cfg || t.dataset.map) {
+    const key = f.id + '|' + S.sheet;
+    const d = S.draft[key] = S.draft[key] || JSON.parse(JSON.stringify(f.sheets[S.sheet]));
+    if (t.dataset.map) { if (t.value === '') delete d.map[t.dataset.map]; else d.map[t.dataset.map] = +t.value; }
+    else if (t.dataset.cfg === 'headerRow') { const r = parseInt(t.value, 10) - 1; d.headerRow = r >= 0 ? r : -1; if (r >= 0) d.map = mapRow(gridRows(S.parsed[f.id], S.sheet, r)[r]).map; }
+    else d[t.dataset.cfg] = t.checked;
+    return render();
+  }
+  const tr = t.closest('tr[data-id]');
+  if (tr && t.dataset.f) {
+    const it = f.items.find(i => i.id === tr.dataset.id); if (!it) return;
+    if (t.dataset.f === 'on') { it.on = t.checked; tr.classList.toggle('off', !t.checked); }
+    else if (t.dataset.f === 'qty') { it.qty = parseQty(t.value) ?? 0; t.value = fmtNum(it.qty); }
+    else it[t.dataset.f] = t.value.trim();
+    await saveFile(f); renderSide();
+  }
+});
+main.addEventListener('input', e => {
+  const t = e.target;
+  if (t.dataset.act === 'ifilter' || t.dataset.act === 'sfilter') {
+    if (t.dataset.act === 'ifilter') S.itemFilter = t.value; else S.sumFilter = t.value;
+    clearTimeout(main.ft); main.ft = setTimeout(() => { const pos = t.selectionStart; render(); const n = main.querySelector(`[data-act="${t.dataset.act}"]`); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (er) {} } }, 250);
+  }
+});
+
+$('#files').addEventListener('click', e => { const it = e.target.closest('[data-open]'); if (it) openFile(it.dataset.open); });
+$('#ffilter').addEventListener('input', e => { S.fileFilter = e.target.value; renderSide(); });
+$('#proj').addEventListener('change', e => { S.projectId = e.target.value; S.view = 'home'; S.fileId = null; try { localStorage.setItem('btvt.project', S.projectId); } catch (er) {} render(); });
+$('#projNew').addEventListener('click', async () => { const n = prompt('Tên dự án mới:'); if (n && n.trim()) { await newProject(n.trim()); S.view = 'home'; S.fileId = null; render(); } });
+$('#projMenu').addEventListener('click', projectMenu);
+$('#sumBtn').addEventListener('click', () => { S.view = 'summary'; S.fileId = null; document.body.classList.add('detail'); render(); });
+$('#newList').addEventListener('click', async () => {
+  const n = prompt('Tên danh sách nhập tay:', 'Vật tư bổ sung'); if (!n || !n.trim()) return;
+  const f = { id: uid(), projectId: S.projectId, name: n.trim(), size: 0, kind: 'manual', addedAt: Date.now(), status: 'new', sheets: {}, items: [] };
+  await saveFile(f); S.files.push(f); openFile(f.id);
+});
+const drop = $('#drop'), pick = $('#pick');
+drop.addEventListener('click', () => pick.click());
+pick.addEventListener('change', () => { addFiles([...pick.files]); pick.value = ''; });
+['dragenter', 'dragover'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); if (ev === 'drop' || !e.relatedTarget) drop.classList.remove('over'); }));
+document.addEventListener('drop', e => { if (e.dataTransfer?.files?.length) addFiles([...e.dataTransfer.files]); });
+
+/* ---------- khởi động ---------- */
+(async function init() {
+  if (!window.XLSX) { document.body.innerHTML = '<div class="empty"><h1>Không tải được thư viện đọc Excel</h1><p>Hãy kiểm tra kết nối mạng rồi tải lại trang.</p></div>'; return; }
+  try { await DB.open(); } catch (e) { document.body.innerHTML = '<div class="empty"><h1>Trình duyệt chặn lưu trữ cục bộ</h1><p>Hãy mở trang ở chế độ thường (không ẩn danh).</p></div>'; return; }
+  S.projects = await DB.all('projects'); S.files = await DB.all('files');
+  if (!S.projects.length) await newProject('Dự án 1');
+  let saved = null; try { saved = localStorage.getItem('btvt.project'); } catch (e) {}
+  S.projectId = S.projects.some(p => p.id === saved) ? saved : S.projects[0].id;
+  render();
+})();
+</script>
+</body>
+</html>
