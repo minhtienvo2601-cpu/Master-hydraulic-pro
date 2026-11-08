@@ -22,3 +22,16 @@ File `tools/boc-tach-vat-tu.html` — mở trực tiếp bằng trình duyệt (
 - Nhập cả **thư mục BOM** (mỗi thư mục con dạng `001 80056657-01#A HYDRAULIC EQUIPMENT`): dựng cây BOM theo Pos / Mã / Rev / Mô tả, đọc SL từ PDF `…ASSEMBLED ITEM REPORT` trong thư mục cha, nhân SL theo cụm, báo vị trí bị thiếu, mở bản vẽ ngay trong app
 - Chỉnh lại dòng tiêu đề / cột, sửa, thêm, bỏ dòng
 - Bảng tổng hợp cộng dồn theo mã + ĐVT (hoặc tên + quy cách), xuất Excel 2 sheet "Tổng hợp" và "Chi tiết"
+
+## Phần mềm Bóc Tách Vật Tư cho Windows (.exe)
+Bản cài trên máy tính của `tools/QuanLyBocVatTu.html` (thư mục `desktop/`, dùng Electron).
+- Đọc thư mục hồ sơ bằng Windows: **không giới hạn 260 ký tự**, thấy cả thư mục rỗng, không cần quyền trình duyệt
+- Chạy không cần Internet (thư viện đọc PDF / Excel / ZIP đóng gói sẵn)
+- Tự mở lại hồ sơ lần trước; nhớ kết quả đọc BOM nên mở lại rất nhanh; đọc 4 file BOM song song
+- Mở bản vẽ / BOM bằng phần mềm xem PDF của máy; khung xem bản vẽ song song có thu phóng
+- Xuất Excel + bản vẽ lắp + BOM thẳng ra thư mục, bấm liên kết trong Excel mở PDF
+
+Mỗi lần thay đổi `desktop/` hoặc `tools/QuanLyBocVatTu.html`, mục **Actions** tự build trên Windows và đưa 2 file lên **Releases**:
+`BocTachVatTu-CaiDat-*.exe` (bản cài đặt) và `BocTachVatTu-ChayLuon-*.exe` (chạy luôn, không cần cài).
+
+Chạy thử khi phát triển: `cd desktop && npm install && npm start`. Kiểm tra bộ quét thư mục: `npm test`.

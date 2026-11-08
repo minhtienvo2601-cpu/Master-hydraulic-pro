@@ -161,6 +161,13 @@ main{flex:1;min-height:0;display:flex;background:var(--surface)}
 .dbody{flex:1;min-height:0;display:flex}
 .pdfpane{flex:none;display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--surface-3);min-width:0}
 .pdfpane iframe{flex:1;border:0;width:100%;background:#525659}
+.pv{flex:1;display:flex;flex-direction:column;min-height:0}
+.pv-bar{display:flex;gap:4px;align-items:center;padding:5px 8px;border-bottom:1px solid var(--border);background:var(--surface)}
+.pv-bar .sp{flex:1}.pv-z{min-width:52px;text-align:center;font-size:12px}
+.pv-pages{flex:1;overflow:auto;background:#525659;padding:10px 12px;cursor:grab}
+.pv-pages.drag{cursor:grabbing;user-select:none}
+.pv-pages canvas{display:block;margin:0 auto 10px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.pv-pages .empty{color:#e6edf5}
 .bompane{flex:1;min-width:0;display:flex;flex-direction:column}
 
 /* filter + bulk */
@@ -376,8 +383,25 @@ const idb={p:null,open(){return this.p||(this.p=new Promise((res,rej)=>{const r=
 function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;$('#toast').appendChild(d);setTimeout(()=>d.remove(),2800);}
 const safeName=s=>String(s).replace(/[^\p{L}\d]+/gu,'_').replace(/^_|_$/g,'');
 
+/* ================= bản Windows (.exe) =================
+   Khi chạy trong bản .exe, window.desktop có sẵn: đọc thư mục bằng Windows (không giới hạn 260 ký tự),
+   mở PDF bằng phần mềm mặc định, ghi file xuất ra thư mục. Bản web vẫn chạy như cũ. */
+const D=window.desktop||null;
+class DFile{
+  constructor(abs,rel,size,mtime,err){this.abs=abs;this.webkitRelativePath=rel;this.name=rel.split('/').pop();this.size=size||0;this.lastModified=Math.round(mtime||0);this.type=/\.pdf$/i.test(this.name)?'application/pdf':'';if(err)this._broken=new DOMException(err,'NotReadableError');}
+  async arrayBuffer(){const u=await D.readFile(this.abs);return u.buffer.slice(u.byteOffset,u.byteOffset+u.byteLength);}
+  slice(){const f=this;return {arrayBuffer:async()=>{const r=await D.stat(f.abs);if(!r.ok)throw new DOMException(r.msg||'Không đọc được file','NotFoundError');return new ArrayBuffer(0);}};}
+}
+/* mở file: bản .exe mở bằng phần mềm mặc định (Adobe/Edge…), bản web mở tab mới */
+function openF(f){
+  if(!f){toast('Không có file');return;}
+  if(f._broken){toast('Không đọc được file này (đường dẫn dài?) – kéo thả file vào để nạp');return;}
+  if(D&&f.abs){D.openPath(f.abs).then(r=>{if(r)toast('Không mở được: '+r);});return;}
+  window.open(URL.createObjectURL(f),'_blank');
+}
+if(D) document.documentElement.classList.add('desktop');
 let pdfReady=(async()=>{
-  if(!window.pdfjsLib) throw new Error('Không tải được thư viện đọc PDF (cần mạng Internet).');
+  if(!window.pdfjsLib) throw new Error(D?'Thiếu thư viện đọc PDF trong bộ cài – hãy cài lại phần mềm.':'Không tải được thư viện đọc PDF (cần mạng Internet).');
   const url='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   try{pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(await (await fetch(url)).blob());}
   catch(e){pdfjsLib.GlobalWorkerOptions.workerSrc=url;}
@@ -535,7 +559,7 @@ function buildTree(fileList,opt={}){
   const files=[...fileList].sort((a,b)=>a.webkitRelativePath.localeCompare(b.webkitRelativePath));
   if(!files.length&&!(opt.dirs&&opt.dirs.length)){toast('Thư mục trống');return;}
   flush(); rowIndex.clear(); closeModal();
-  loadMode=opt.mode||'input'; rootHandle=opt.handle||null;
+  loadMode=opt.mode||'input'; rootHandle=opt.handle||null; rootPath=opt.rootPath||'';
   const map=new Map(), rootName=opt.rootName||files[0].webkitRelativePath.split('/')[0];
   const ensure=parts=>ensureNode(parts,map);
   winList=null;
@@ -567,7 +591,9 @@ function buildTree(fileList,opt={}){
   const pk=projKey;
   idb.get('winlist:'+pk).then(w=>{if(w&&w.text&&projKey===pk)mergeListing(w.text,{store:false,quiet:true,at:w.at});}).catch(()=>{});
 }
-let nodeMap=new Map(), winList=null;
+let nodeMap=new Map(), winList=null, rootPath='';
+/* đường dẫn trên máy của một thư mục trong hồ sơ (bản .exe) */
+const absOf=rel=>{if(!rootPath)return '';const sep=rootPath.includes('\\')?'\\':'/';return rootPath+sep+rel.split('/').slice(1).join(sep);};
 function ensureNode(parts,map,extra){
   const path=parts.join('/'); if(map.has(path)) return map.get(path);
   const n=Object.assign({name:parts[parts.length-1],path,children:[],others:[],drawing:null,report:null,bom:null,bomP:null,parent:null,depth:parts.length-1},parseFolderName(parts[parts.length-1]),extra||{});
@@ -585,7 +611,7 @@ function addFileToNode(n,f){
 }
 const nodeHasFile=(n,fn)=>[n.report,n.drawing,...n.others].some(f=>f&&f.name===fn);
 function sortTree(n){n.children.sort((a,b)=>posNum(a.pos)-posNum(b.pos)||a.name.localeCompare(b.name,undefined,{numeric:true}));n.children.forEach(sortTree);}
-const modeName=()=>({fsa:'đọc trực tiếp',drop:'kéo thả',input:'cách chọn cũ'})[loadMode]||'';
+const modeName=()=>({desktop:'bản Windows',fsa:'đọc trực tiếp',drop:'kéo thả',input:'cách chọn cũ'})[loadMode]||'';
 function projTitle(){return (root.item?root.item+' · ':'')+(root.title||root.name)+`  —  ${allNodes.length} thư mục · ${modeName()}${winList?' + DS Windows':''}`;}
 /* dựng lại danh sách nút và liên kết dòng BOM ↔ thư mục sau khi cây thay đổi */
 function rebuildAll(){
@@ -676,7 +702,19 @@ function bindDrop(el,cb){
 const STOP_RE=/Copyright|CONFIDENTIAL|Unauthorized|Weight\s*KG|Drawn\s*By|Checked\s*By|Approved\s*By|Spec\s*No\s*:/i;
 async function parseReport(file){
   await pdfReady;
-  const pdf=await pdfjsLib.getDocument({data:await readFileBuf(file)}).promise;
+  const task=pdfjsLib.getDocument({data:await readFileBuf(file)});
+  try{return await parseReportDoc(await task.promise);}finally{task.destroy();}   // giải phóng bộ nhớ / worker
+}
+/* Bộ nhớ đệm kết quả đọc BOM theo tên + dung lượng + ngày sửa: mở lại hồ sơ gần như tức thì */
+const BOM_CACHE_V='bomc2:';
+async function parseReportCached(file){
+  const k=file&&!file._broken&&file.size&&file.lastModified?BOM_CACHE_V+file.name+'|'+file.size+'|'+file.lastModified:null;
+  if(k){try{const c=await idb.get(k);if(c&&Array.isArray(c.rows))return c.rows.map(r=>Object.assign({},r));}catch(e){}}
+  const rows=await parseReport(file);
+  if(k) idb.set(k,{rows:rows.map(({pos,item,qty,unit,type,spec,notes,weight})=>({pos,item,qty,unit,type,spec,notes,weight})),at:Date.now()}).catch(()=>{});
+  return rows;
+}
+async function parseReportDoc(pdf){
   const rows=[]; let lastCols=null;
   for(let p=1;p<=pdf.numPages;p++){
     const page=await pdf.getPage(p); const tc=await page.getTextContent();
@@ -741,7 +779,7 @@ function childFor(node,row){
 }
 function ensureBom(node){
   if(!node.report) return Promise.resolve(null);
-  if(!node.bomP) node.bomP=parseReport(node.report).then(rows=>{
+  if(!node.bomP) node.bomP=parseReportCached(node.report).then(rows=>{
     rows.forEach(r=>{
       r.node=node; r.key=nodeKey(node)+'|'+r.pos+'|'+r.item;
       /* r.folder: thư mục khớp dòng BOM (kể cả thư mục chi tiết chỉ có bản vẽ / rỗng);
@@ -763,12 +801,15 @@ function getMult(node){
 }
 async function scanAll(){
   const id=++scanId; scanning=true; renderKPI();
-  const list=allNodes.filter(n=>n.report); let i=0;
-  for(const n of list){
-    if(id!==scanId) return;
-    try{await ensureBom(n);}catch(e){}
-    if(++i%4===0){renderKPI();renderTree();}
-  }
+  const list=allNodes.filter(n=>n.report); let k=0, last=0;
+  const worker=async()=>{
+    while(k<list.length&&id===scanId){
+      const n=list[k++];
+      try{await ensureBom(n);}catch(e){}
+      if(Date.now()-last>400){last=Date.now();renderKPI();renderTree();}
+    }
+  };
+  await Promise.all(Array.from({length:Math.min(4,list.length)},worker));   // đọc 4 file BOM song song
   if(id!==scanId) return;
   scanning=false; renderKPI(); renderTree();
   if(curView==='vSum') renderSummary(); if(curView==='vList') renderListView();
@@ -1002,7 +1043,7 @@ function renderKPI(){
    <div class="kpi ${errN?'click':''}" ${errN?'data-kerr="1" title="Bấm để xem file lỗi và cách khắc phục"':''} style="--c:${errN?'var(--bad)':'var(--accent)'}"><div class="k">BOM đã đọc ${scanning?'<span class="spin"></span>':''}</div><div class="v">${parsed}<small> / ${withRep.length}</small></div><div class="s ${errN?'err':''}">${errN?`⚠ ${errN} file không đọc được · bấm xem`:rows.length+' dòng vật tư'}</div>${errN&&!scanning?`<div class="kfix"><button class="btn sm" data-kretry title="Đọc lại tất cả cụm lỗi (sau khi đã chuyển thư mục / tải OneDrive)">${ic('refresh',12)} Đọc lại</button><button class="btn sm" data-kload title="Chọn các file PDF lỗi đã chép ra chỗ khác">${ic('upload',12)} Nạp file</button></div>`:''}</div>
    ${(()=>{const fc=folderCheck(),bad=fc.listErr.length,mis=fc.missing.length,old=loadMode==='input',gh=allNodes.filter(n=>n.ghost).length;
       const col=bad?'var(--bad)':(gh||mis||old)?'var(--warn)':'var(--ok)';
-      const st=bad?`⚠ ${bad} không mở được`:gh?`⚠ ${gh} chỉ thấy qua Windows`:mis?`⚠ ${mis} dòng BOM thiếu thư mục`:old?'⚠ cách chọn cũ, bấm xem':winList?'✓ khớp danh sách Windows':'bấm để đối chiếu Windows';
+      const st=bad?`⚠ ${bad} không mở được`:gh?`⚠ ${gh} chỉ thấy qua Windows`:mis?`⚠ ${mis} dòng BOM thiếu thư mục`:old?'⚠ cách chọn cũ, bấm xem':loadMode==='desktop'?'✓ đọc đủ bằng Windows':winList?'✓ khớp danh sách Windows':'bấm để đối chiếu Windows';
       return `<div class="kpi click" data-kfold="1" style="--c:${col}" title="Bấm để kiểm tra / đối chiếu thư mục"><div class="k">Thư mục</div><div class="v">${allNodes.length}</div><div class="s ${bad?'err':''}">${st}</div></div>`;})()}
    <div class="kpi" style="--c:var(--warn)"><div class="k">Dòng đã xử lý</div><div class="v">${handled}<small> / ${rows.length}</small></div><div class="bar"><i style="width:${pct(handled,rows.length)}%;background:var(--warn)"></i></div><div class="s">đã xem hoặc đã chọn</div></div>
    ${['Ống mềm','Van','Lọc / lõi lọc','Bình tích áp'].map(k=>`<div class="kpi click" data-kcat="${k}" style="--c:${catColor(k)}" title="Bấm để xem tất cả ${k.toLowerCase()}"><div class="k">${k}</div><div class="v">${cc(k)}</div><div class="s">dòng · bấm để lọc</div></div>`).join('')}
@@ -1056,7 +1097,7 @@ function afterChange(){renderKPI();renderTabs();renderTree();refreshSeg();
 
 /* ================= detail ================= */
 let bomArea=null;
-const drawUrl=n=>n.drawUrl||(n.drawUrl=URL.createObjectURL(n.drawing));
+const drawUrl=n=>n.drawUrl||(n.drawUrl=(D&&n.drawing.abs)?D.fileUrl(n.drawing.abs):URL.createObjectURL(n.drawing));
 const segHTML=s=>Object.entries(STATUS).map(([k,[t,c]])=>`<button data-s="${k}" class="${s===k?'on':''}"><i style="background:${c}"></i>${t}</button>`).join('');
 function refreshSeg(){const s=$('#seg');if(s&&selected)s.innerHTML=segHTML(getProg(selected).s);}
 function select(n){
@@ -1064,7 +1105,48 @@ function select(n){
   renderTree(); const el=$('.tn.sel'); if(el) el.scrollIntoView({block:'nearest'});
   renderDetail(n);
 }
+/* ================= khung xem bản vẽ (bản .exe): vẽ bằng pdf.js, thu phóng, kéo để di chuyển ================= */
+let pvState=null;
+function closeViewer(){if(pvState){try{pvState.ro&&pvState.ro.disconnect();pvState.task&&pvState.task.destroy();}catch(e){}pvState=null;}}
+async function mountViewer(el,f){
+  closeViewer();
+  const st=pvState={k:1,gen:0,task:null,doc:null,ro:null};
+  el.innerHTML=`<div class="pv-bar"><button class="btn sm" data-z="out" title="Thu nhỏ (Ctrl + lăn chuột)">−</button><span class="pv-z mono">100%</span><button class="btn sm" data-z="in" title="Phóng to (Ctrl + lăn chuột)">+</button><button class="btn sm" data-z="fit" title="Vừa bề rộng khung">Vừa khung</button><span class="sp"></span><span class="pv-n muted"></span><button class="btn sm" data-z="ext" title="Mở bằng phần mềm xem PDF của máy">${ic('ext',13)} Mở ngoài</button></div><div class="pv-pages"><div class="empty"><span class="spin"></span> Đang mở bản vẽ…</div></div>`;
+  const pages=el.querySelector('.pv-pages');
+  el.querySelector('.pv-bar').onclick=e=>{const b=e.target.closest('[data-z]');if(!b)return;const z=b.dataset.z;
+    if(z==='ext'){openF(f);return;} st.k=z==='fit'?1:Math.min(8,Math.max(.25,st.k*(z==='in'?1.25:.8)));draw();};
+  pages.addEventListener('wheel',e=>{if(!e.ctrlKey)return;e.preventDefault();st.k=Math.min(8,Math.max(.25,st.k*(e.deltaY<0?1.15:1/1.15)));draw();},{passive:false});
+  let drag=null;
+  pages.addEventListener('mousedown',e=>{if(e.button!==0)return;drag={x:e.clientX,y:e.clientY,l:pages.scrollLeft,t:pages.scrollTop};pages.classList.add('drag');});
+  addEventListener('mousemove',e=>{if(!drag)return;pages.scrollLeft=drag.l-(e.clientX-drag.x);pages.scrollTop=drag.t-(e.clientY-drag.y);});
+  addEventListener('mouseup',()=>{drag=null;pages.classList.remove('drag');});
+  try{await pdfReady;st.task=pdfjsLib.getDocument({data:await readFileBuf(f),isEvalSupported:false});st.doc=await st.task.promise;}
+  catch(e){if(pvState===st)pages.innerHTML=`<div class="empty">Không mở được bản vẽ: ${esc(errMsg(e))}</div>`;return;}
+  if(pvState!==st){st.task.destroy();return;}
+  el.querySelector('.pv-n').textContent=st.doc.numPages+' trang ';
+  async function draw(){
+    const g=++st.gen, dpr=window.devicePixelRatio||1;
+    const cx=(pages.scrollLeft+pages.clientWidth/2)/Math.max(1,pages.scrollWidth), cy=(pages.scrollTop+pages.clientHeight/2)/Math.max(1,pages.scrollHeight);
+    const p1=await st.doc.getPage(1); if(g!==st.gen) return;
+    const fit=Math.max(.05,(pages.clientWidth-26)/p1.getViewport({scale:1}).width), scale=fit*st.k;
+    el.querySelector('.pv-z').textContent=Math.round(st.k*100)+'%';
+    const frag=[];
+    for(let i=1;i<=Math.min(st.doc.numPages,60);i++){
+      const pg=i===1?p1:await st.doc.getPage(i); if(g!==st.gen) return;
+      const css=pg.getViewport({scale}); let vp=pg.getViewport({scale:scale*dpr});
+      const lim=4.8e7; if(vp.width*vp.height>lim) vp=pg.getViewport({scale:scale*dpr*Math.sqrt(lim/(vp.width*vp.height))});   // giới hạn kích thước canvas
+      const c=document.createElement('canvas'); c.width=Math.floor(vp.width); c.height=Math.floor(vp.height); c.style.width=Math.floor(css.width)+'px'; c.style.height=Math.floor(css.height)+'px';
+      frag.push([c,pg,vp]);
+    }
+    pages.innerHTML=''; frag.forEach(([c])=>pages.appendChild(c));
+    pages.scrollLeft=cx*pages.scrollWidth-pages.clientWidth/2; pages.scrollTop=cy*pages.scrollHeight-pages.clientHeight/2;
+    for(const [c,pg,vp] of frag){if(g!==st.gen) return; await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise.catch(()=>{});}
+  }
+  await draw();
+  let rt=null; st.ro=new ResizeObserver(()=>{clearTimeout(rt);rt=setTimeout(()=>{if(pvState===st)draw();},250);}); st.ro.observe(pages);
+}
 function renderDetail(n){
+  closeViewer();
   const d=$('#detail'); const chain=[]; let p=n; while(p){chain.unshift(p);p=p.parent;}
   const okDraw=!!(n.drawing&&!n.drawing._broken), pr=getProg(n), split=splitOn&&okDraw;
   d.innerHTML=`<div class="dhead">
@@ -1076,20 +1158,23 @@ function renderDetail(n){
       <button class="btn" id="bDraw" ${okDraw?'':'disabled'} ${n.drawing&&!okDraw?`title="Trình duyệt không đọc được bản vẽ ${esc(n.drawing.name)} (đường dẫn dài?) – kéo thả file bản vẽ vào cửa sổ để nạp"`:''}>${ic('ext')} Mở bản vẽ</button>
       <button class="btn ${splitOn?'on':''}" id="bSplit" ${okDraw?'':'disabled'} title="Xem bản vẽ và BOM cạnh nhau">${ic('split')} Bản vẽ song song</button>
       <button class="btn" id="bRep" ${n.report?'':'disabled'}>${ic('file')} Mở BOM PDF</button>
+      ${D&&rootPath?`<button class="btn" id="bFolder" title="Mở thư mục của cụm này trong File Explorer">${ic('folder')} Mở thư mục</button>`:''}
       ${n.others.length?`<select id="bOther"><option value="">File khác (${n.others.length})…</option>${n.others.map((f,i)=>`<option value="${i}">${esc(f.name)}</option>`).join('')}</select>`:''}
       <div class="seg" id="seg">${segHTML(pr.s)}</div>
     </div>
     <textarea class="note" id="bNote" rows="1" placeholder="Ghi chú bóc tách cho cụm này (tự lưu)…">${esc(pr.note)}</textarea>
   </div>
-  <div class="dbody" id="dbody">${split?`<div class="pdfpane" id="pdfPane" style="width:${ls.get('bocvt:pdfw',48)}%"><iframe title="Bản vẽ" src="${drawUrl(n)}#view=FitH"></iframe></div><div class="divider" id="divPdf"></div>`:''}<div class="bompane" id="bomPane"></div></div>`;
+  <div class="dbody" id="dbody">${split?`<div class="pdfpane" id="pdfPane" style="width:${ls.get('bocvt:pdfw',48)}%">${D?'<div class="pv" id="pv"></div>':`<iframe title="Bản vẽ" src="${drawUrl(n)}#view=FitH"></iframe>`}</div><div class="divider" id="divPdf"></div>`:''}<div class="bompane" id="bomPane"></div></div>`;
   d.querySelectorAll('.crumb a').forEach(a=>a.onclick=()=>select(allNodes.find(x=>x.path===a.dataset.path)));
-  $('#bDraw').onclick=()=>window.open(drawUrl(n),'_blank');
-  $('#bRep').onclick=()=>window.open(URL.createObjectURL(n.report),'_blank');
+  $('#bDraw').onclick=()=>openF(n.drawing);
+  if($('#bFolder')) $('#bFolder').onclick=()=>{const f=n.drawing||n.report||n.others[0];D.showItem(f&&f.abs?f.abs:absOf(n.path));};
+  $('#bRep').onclick=()=>openF(n.report);
   d.querySelectorAll('[data-fold]').forEach(b=>b.onclick=openFolderModal);
   $('#bSplit').onclick=()=>{splitOn=!splitOn;ls.set('bocvt:split',splitOn);renderDetail(n);};
-  if($('#bOther')) $('#bOther').onchange=e=>{if(e.target.value!=='')window.open(URL.createObjectURL(n.others[+e.target.value]),'_blank');e.target.value='';};
+  if($('#bOther')) $('#bOther').onchange=e=>{if(e.target.value!=='')openF(n.others[+e.target.value]);e.target.value='';};
   $('#seg').onclick=e=>{const b=e.target.closest('[data-s]');if(!b)return;setProg(n,{s:b.dataset.s});afterChange();};
   $('#bNote').oninput=e=>setProg(n,{note:e.target.value});
+  if(split&&D&&$('#pv')) mountViewer($('#pv'),n.drawing);
   if(split) dragDivider($('#divPdf'),ev=>{const rc=$('#dbody').getBoundingClientRect();const w=clamp((ev.clientX-rc.left)/rc.width*100,20,80);$('#pdfPane').style.width=w+'%';ls.set('bocvt:pdfw',w);});
   bomArea=null; const bp=$('#bomPane');
   if(n.listErr){bp.innerHTML=`<div class="empty"><div class="big err">${ic('warn',16)} Không mở được thư mục này</div>
@@ -1251,17 +1336,19 @@ function openPackModal(kind){
     </div>
     <p id="pkEst" class="muted"></p>
     <div class="foldwarn" style="font-size:12.5px"><b>Để bấm vào tên bản vẽ / BOM trong Excel là mở được PDF:</b><br>
-      ${window.showDirectoryPicker?`• <b>Lưu vào thư mục</b> (nên dùng): chọn hoặc tạo một thư mục, ví dụ <span class="mono">Desktop\\XuatBOM</span> (Edge không cho chọn thẳng Desktop / Downloads, hãy bấm <i>New folder</i> tạo thư mục con). Ứng dụng ghi Excel + bản vẽ + BOM vào đó, mở Excel là bấm được ngay.<br>`:''}
+      ${D?`• <b>Lưu vào thư mục</b> (nên dùng): chọn một thư mục, ví dụ Desktop. Ứng dụng tạo thư mục con <span class="mono">${esc(ctx.fname)}</span>, ghi Excel + bản vẽ + BOM vào đó và mở sẵn trong File Explorer.<br>`
+        :window.showDirectoryPicker?`• <b>Lưu vào thư mục</b> (nên dùng): chọn hoặc tạo một thư mục, ví dụ <span class="mono">Desktop\\XuatBOM</span> (Edge không cho chọn thẳng Desktop / Downloads, hãy bấm <i>New folder</i> tạo thư mục con). Ứng dụng ghi Excel + bản vẽ + BOM vào đó, mở Excel là bấm được ngay.<br>`:''}
       • <b>Tải file ZIP</b>: phải chuột phải file ZIP → <i>Extract All</i> (giải nén) rồi mới mở Excel; mở Excel ngay trong ZIP thì liên kết không chạy.<br>
       • Excel có thể hỏi <i>"Bạn có chắc muốn mở file này?"</i> → bấm <b>Yes</b>. Nếu Excel hiện thanh vàng <i>Protected View</i>, bấm <b>Enable Editing</b> trước.<br>
       <span class="muted">Ký tự <span class="mono">#</span> trong tên file được đổi thành <span class="mono">_</span> vì Excel không mở được liên kết có dấu # (nên không thể liên kết thẳng tới file gốc trong hồ sơ).</span></div>
-    <div class="mfoot"><button class="btn" data-close>Hủy</button><button class="btn ${window.showDirectoryPicker?'':'primary'}" id="pkGo">${ic('download',14)} Tải file ZIP</button>${window.showDirectoryPicker?`<button class="btn primary" id="pkDir">${ic('folder',14)} Lưu vào thư mục (mở được ngay)</button>`:''}</div>`,box=>{
+    <div class="mfoot"><button class="btn" data-close>Hủy</button><button class="btn ${D||window.showDirectoryPicker?'':'primary'}" id="pkGo">${ic('download',14)} Tải file ZIP</button>${D||window.showDirectoryPicker?`<button class="btn primary" id="pkDir">${ic('folder',14)} Lưu vào thư mục (mở được ngay)</button>`:''}</div>`,box=>{
       const est=()=>{const pl=packPlan(ctx,o);const bad=pl.items.filter(x=>!okFile(x.f)).length;
         $('#pkEst',box).innerHTML=`Sẽ đóng gói <b>${pl.nFiles}</b> file PDF của <b>${pl.nodes.length}</b> cụm, khoảng <b>${fmtMB(pl.size)}</b>${bad?` · <span style="color:var(--warn)">${bad} file trình duyệt không đọc được sẽ bị bỏ qua</span>`:''}.`;};
       box.querySelectorAll('[data-o]').forEach(c=>c.onchange=()=>{o[c.dataset.o]=c.checked;est();});
       est();
       $('#pkGo',box).onclick=()=>buildPack(ctx,Object.assign({},o),null);
       if($('#pkDir',box)) $('#pkDir',box).onclick=async()=>{
+        if(D){const p=await D.pickFolder({title:'Chọn thư mục để lưu Excel + bản vẽ + BOM',export:true});if(p)buildPack(ctx,Object.assign({},o),{desktop:p});return;}
         let dh; try{dh=await showDirectoryPicker({id:'bocvt-out',mode:'readwrite',startIn:'desktop'});}
         catch(e){if(e&&e.name!=='AbortError')toast('Không chọn được thư mục: '+errMsg(e)+' – hãy dùng Tải file ZIP');return;}
         buildPack(ctx,Object.assign({},o),dh);
@@ -1302,6 +1389,18 @@ async function buildPack(ctx,o,dirHandle){
       `Số file PDF: ${names.size}`].join('\r\n')});
     if(fail.length) out.push({path:'KHONG_XUAT_DUOC.txt',data:['Các file sau không đọc được nên không được xuất:','',...fail.map(f=>f.join('\t'))].join('\r\n')});
     const tail=`${names.size} file PDF${o.xlsx?' + Excel':''}${fail.length?` · ${fail.length} file không đọc được, xem KHONG_XUAT_DUOC.txt`:''}`;
+    if(dirHandle&&dirHandle.desktop){
+      say(`Đang lưu ${out.length} file…`);
+      const r=await D.exportTo(dirHandle.desktop,ctx.fname,out.map(e=>e.data instanceof DFile?{path:e.path,src:e.data.abs}:{path:e.path,data:e.data}));
+      if(box) box.innerHTML=`<h3 style="color:var(--ok)">${ic('check',18)} Đã lưu xong</h3>
+        <p>Đã lưu ${esc(tail)} vào thư mục <b class="mono">${esc(r.dir||'')}</b> (đã mở thư mục đó trong File Explorer).</p>
+        ${r.errors&&r.errors.length?`<p class="err">${r.errors.length} file không lưu được: ${esc(r.errors.slice(0,5).map(x=>x.path+' – '+x.msg).join('; '))}</p>`:''}
+        <p>Mở file <b class="mono">${esc(xname)}</b>, bấm vào tên file ở cột <b>Bản vẽ lắp / File BOM</b> để mở PDF.</p>
+        <div class="mfoot"><button class="btn primary" data-close>Đóng</button></div>`;
+      box&&box.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeModal);
+      toast('Đã lưu vào thư mục: '+tail);
+      return;
+    }
     if(dirHandle){
       const dest=await dirHandle.getDirectoryHandle(ctx.fname,{create:true}), dirs=new Map();
       const dirOf=async parts=>{let d=dest,k='';for(const p of parts){k+='/'+p;if(!dirs.has(k))dirs.set(k,await d.getDirectoryHandle(p,{create:true}));d=dirs.get(k);}return d;};
@@ -1321,7 +1420,7 @@ async function buildPack(ctx,o,dirHandle){
       return;
     }
     say('Đang tải thư viện nén…'); await loadJSZip();
-    const zip=new JSZip(); for(const e of out) zip.file(e.path,e.data,{binary:typeof e.data!=='string'});
+    const zip=new JSZip(); for(const e of out) zip.file(e.path,e.data instanceof DFile?e.data.arrayBuffer():e.data,{binary:typeof e.data!=='string'});
     const blob=await zip.generateAsync({type:'blob',compression:'STORE',streamFiles:true},m=>say(`Đang nén… ${Math.round(m.percent)}%`));
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=ctx.fname+'.zip';document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(a.href),120000);
@@ -1582,7 +1681,20 @@ async function openDirEntry(de){
   try{const r=await walkEntry(de);buildTree(r.files,{dirs:r.dirs,errs:r.errs,rootName:r.rootName,mode:'drop'});}
   catch(e){toast('Không quét được thư mục: '+errMsg(e));renderTree();}
 }
+async function openDesktopRoot(abs){
+  scanId++; scanMsg('Đang quét thư mục…');
+  const off=D.onScanProgress(p=>scanMsg(`Đang quét thư mục… ${p.dirs} thư mục, ${p.files} file`));
+  try{
+    const r=await D.scan(abs);
+    if(r.error){toast(r.error);renderTree();updReopen();return;}
+    const files=r.files.map(x=>new DFile(x.abs,x.rel,x.size,x.mtime,x.err));
+    buildTree(files,{dirs:r.dirs,errs:r.errs,rootName:r.rootName,mode:'desktop',rootPath:r.rootPath});
+    if(!getBase()) ls.set(baseKey(),r.rootPath);
+  }catch(e){toast('Không quét được thư mục: '+errMsg(e));renderTree();}
+  finally{off();}
+}
 async function pickRoot(){
+  if(D){const p=await D.pickFolder({title:'Chọn thư mục gốc của bộ hồ sơ'});if(p)openDesktopRoot(p);return;}
   if(window.showDirectoryPicker){
     let h;
     try{h=await showDirectoryPicker({id:'bocvt',mode:'read'});}
@@ -1599,12 +1711,19 @@ async function pickRoot(){
 }
 async function updReopen(){
   const b=$('#btnReopen'); let last=null;
+  if(D){
+    const c=await D.getConfig().catch(()=>({}));
+    if(root&&rootPath){b.hidden=false;$('#reopenTxt').textContent='Quét lại';b.title='Quét lại thư mục hồ sơ đang mở (sau khi thêm / sửa thư mục)';return;}
+    if(c.lastRoot){b.hidden=false;$('#reopenTxt').textContent='Mở lại: '+c.lastRoot.split(/[\\/]/).pop();b.title=c.lastRoot;return;}
+    b.hidden=true;return;
+  }
   try{last=await idb.get('lastRoot');}catch(e){}
   if(rootHandle){b.hidden=false;$('#reopenTxt').textContent='Quét lại';b.title='Quét lại thư mục hồ sơ đang mở (sau khi thêm / sửa thư mục)';return;}
   if(last&&last.handle&&!root){b.hidden=false;$('#reopenTxt').textContent='Mở lại: '+last.name;b.title='Mở lại hồ sơ lần trước, không cần chọn lại thư mục';return;}
   b.hidden=true;
 }
 $('#btnReopen').onclick=async()=>{
+  if(D){const c=await D.getConfig().catch(()=>({}));const p=rootPath||c.lastRoot;if(p)openDesktopRoot(p);return;}
   let h=rootHandle;
   if(!h){try{const l=await idb.get('lastRoot');h=l&&l.handle;}catch(e){}}
   if(!h){updReopen();return;}
@@ -1641,7 +1760,7 @@ function openFolderModal(){
       • thư mục <b>không có file</b> (ví dụ thư mục bulông, long đen chỉ có tên) sẽ <b>không hiện</b>;<br>
       • thư mục có <b>đường dẫn quá dài</b> bị <b>bỏ qua mà không báo lỗi</b>, mất luôn mọi cụm con bên trong.<br>
       ${canFsa?`Bấm nút dưới để đọc lại bằng cách đọc trực tiếp: hiện đủ cả thư mục rỗng và báo rõ thư mục nào không mở được.<br><button class="btn primary" id="fPick" style="margin-top:6px">${ic('folder',14)} Chọn lại thư mục gốc (đọc đầy đủ)</button>`:`Trình duyệt này không hỗ trợ đọc trực tiếp. Hãy dùng <b>Edge</b> hoặc <b>Chrome</b> bản mới, hoặc <b>kéo thả thư mục</b> hồ sơ vào cửa sổ ứng dụng.`}</div>`:''}
-    ${winSectionHTML()}
+    ${loadMode==='desktop'?`<p style="color:var(--ok)"><b>✓ Bản Windows đọc thư mục trực tiếp bằng Windows</b>, không bị giới hạn độ dài đường dẫn, không cần đối chiếu danh sách.</p>`:winSectionHTML()}
     ${fc.listErr.length?`<div class="foldbad"><b>${ic('warn',14)} ${fc.listErr.length} thư mục không mở được</b>: mọi thứ bên trong bị thiếu. Thường do <b>đường dẫn đầy đủ quá dài</b> (Windows giới hạn ~260 ký tự) hoặc thư mục OneDrive chưa tải về.</div>
       <p style="margin-bottom:2px"><b>Kiểm tra độ dài đầy đủ:</b> dán đường dẫn thư mục gốc (copy từ thanh địa chỉ File Explorer):</p>
       <div class="basebox"><input type="text" id="fBase" placeholder="vd. C:\\Users\\tien\\OneDrive\\Ho so\\K8817" value="${esc(getBase())}"><button class="btn sm" id="fBaseOk">Tính</button></div>
@@ -1660,7 +1779,7 @@ function openFolderModal(){
     ${fc.orphans.length?`<p class="muted" style="font-size:12px;margin-top:10px">${fc.orphans.length} thư mục không khớp dòng nào trong BOM của cụm cha (tên thư mục khác Pos/Item No trong BOM): ${fc.orphans.slice(0,12).map(n=>`<span class="mono">${esc(n.path.split('/').slice(-2).join(' › '))}</span>`).join(', ')}${fc.orphans.length>12?'…':''}</p>`:''}
     <div class="mfoot"><button class="btn" id="fDiag" title="Sao chép để gửi cho người hỗ trợ">${ic('file',14)} Sao chép thông tin chẩn đoán</button>${rootHandle?`<button class="btn" id="fRescan">${ic('refresh',14)} Quét lại</button>`:''}<button class="btn primary" data-close>Đóng</button></div>`,box=>{
       if($('#fPick',box)) $('#fPick',box).onclick=()=>{closeModal();pickRoot();};
-      bindWinSection(box);
+      if(loadMode!=='desktop') bindWinSection(box);
       $('#fDiag',box).onclick=()=>navigator.clipboard.writeText(diagText()).then(()=>toast('Đã sao chép thông tin chẩn đoán'),()=>toast('Không sao chép được'));
       if($('#fRescan',box)) $('#fRescan',box).onclick=()=>{closeModal();$('#btnReopen').click();};
       if($('#fBaseOk',box)){const setB=()=>{ls.set(baseKey(),$('#fBase',box).value.trim());openFolderModal();renderTree();};$('#fBaseOk',box).onclick=setB;$('#fBase',box).onkeydown=e=>{if(e.key==='Enter')setB();};}
@@ -1851,8 +1970,8 @@ function runSearch(){
 }
 function palGo(it,a){
   if(!it) return; const n=it.t==='node'?it.n:it.r.node;
-  if(a==='draw'){if(n.drawing&&!n.drawing._broken)window.open(drawUrl(n),'_blank');else toast(n.drawing?'Trình duyệt không đọc được bản vẽ này (đường dẫn dài?)':'Cụm này không có bản vẽ');return;}
-  if(a==='bom'){if(n.report)window.open(URL.createObjectURL(n.report),'_blank');else toast('Cụm này không có file BOM');return;}
+  if(a==='draw'){if(n.drawing)openF(n.drawing);else toast('Cụm này không có bản vẽ');return;}
+  if(a==='bom'){if(n.report)openF(n.report);else toast('Cụm này không có file BOM');return;}
   closePalette(); switchView('vTree');
   if(it.t==='row') focusKey=it.r.key;
   select(n);
@@ -1892,6 +2011,7 @@ $('#btnDir').onclick=pickRoot;
 $('#listInput').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)applyListingFile(f);};
 $('#dirInput').onchange=e=>{const fs=[...e.target.files];e.target.value='';if(fs.length)buildTree(fs,{mode:'input'});};
 updReopen();
+if(D) D.getConfig().then(c=>{if(c.lastRoot&&!root)openDesktopRoot(c.lastRoot);}).catch(()=>{});
 (()=>{let dc=0; const hasF=e=>e.dataTransfer&&[...e.dataTransfer.types].includes('Files');
   window.addEventListener('dragenter',e=>{if(!hasF(e)||!$('#modal').hidden)return;dc++;document.body.classList.add('gdrag');});
   window.addEventListener('dragleave',e=>{if(!hasF(e))return;if(--dc<=0){dc=0;document.body.classList.remove('gdrag');}});
@@ -1899,6 +2019,9 @@ updReopen();
   window.addEventListener('drop',e=>{
     if(!hasF(e))return;e.preventDefault();dc=0;document.body.classList.remove('gdrag');
     if(!$('#modal').hidden) return;
+    if(D){const fs0=[...e.dataTransfer.files];(async()=>{
+      for(const f of fs0){const p=D.pathOf(f);if(p&&await D.isDir(p))return openDesktopRoot(p);}
+      if(root) attachFiles(fs0); else toast('Hãy thả cả thư mục hồ sơ, hoặc bấm Chọn thư mục gốc');})();return;}
     /* phải lấy handle / entry ngay trong sự kiện, trước mọi await */
     const items=[...(e.dataTransfer.items||[])].filter(i=>i.kind==='file');
     const hs=items.map(i=>i.getAsFileSystemHandle?i.getAsFileSystemHandle():null);

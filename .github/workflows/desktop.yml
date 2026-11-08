@@ -1,0 +1,61 @@
+name: Build Windows app
+
+on:
+  push:
+    branches: [ main, master, ccr-8521cb65-0efhvf ]
+    paths:
+      - 'desktop/**'
+      - 'tools/QuanLyBocVatTu.html'
+      - '.github/workflows/desktop.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Cai thu vien
+        run: npm ci
+
+      - name: Kiem tra doc thu muc rong va duong dan dai tren Windows
+        run: npm test
+
+      - name: Dat so phien ban
+        run: npm version 1.0.${{ github.run_number }} --no-git-tag-version
+
+      - name: Dong goi file exe
+        run: npm run dist
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Luu file exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: BocTachVatTu-windows
+          path: desktop/dist/*.exe
+
+      - name: Tao ban phat hanh
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: boctach-v1.0.${{ github.run_number }}
+          name: Boc Tach Vat Tu (Windows) 1.0.${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          body: |
+            Phần mềm Bóc Tách Vật Tư cho Windows (64-bit).
+            - BocTachVatTu-CaiDat-*.exe: bản cài đặt (tạo biểu tượng trên Desktop và Start Menu).
+            - BocTachVatTu-ChayLuon-*.exe: bản chạy luôn, không cần cài (chép vào USB dùng được).
+            Lần đầu chạy, nếu Windows hiện "Windows protected your PC": bấm "More info" → "Run anyway".
+          files: desktop/dist/*.exe
