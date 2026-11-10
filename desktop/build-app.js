@@ -13,6 +13,7 @@ const swap = (from, to) => { if (!h.includes(from)) throw new Error('Không th�
 swap('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/', 'vendor/');
 swap('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/', 'vendor/');
 swap('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/', 'vendor/');
+swap('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/', 'vendor/');
 h = h.replace(/<link rel="preconnect"[^>]*>\s*/g, '');
 h = h.replace(/<link href="https:\/\/fonts\.googleapis\.com[^>]*>/, '<link href="vendor/fonts/fonts.css" rel="stylesheet">');
 h = h.replace('<meta charset="utf-8">', `<meta charset="utf-8">
@@ -24,6 +25,7 @@ fs.writeFileSync(path.join(OUT, 'index.html'), h);
 for (const [src, dst] of [
   ['pdfjs-dist/build/pdf.min.js', 'pdf.min.js'], ['pdfjs-dist/build/pdf.worker.min.js', 'pdf.worker.min.js'],
   ['xlsx/dist/xlsx.full.min.js', 'xlsx.full.min.js'], ['jszip/dist/jszip.min.js', 'jszip.min.js'],
+  ['exceljs/dist/exceljs.min.js', 'exceljs.min.js'],
 ]) fs.copyFileSync(nm(src), path.join(OUT, 'vendor', dst));
 
 /* Phông chữ: chỉ lấy woff2 của các cỡ chữ app dùng */

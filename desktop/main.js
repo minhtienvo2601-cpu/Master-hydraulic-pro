@@ -98,7 +98,10 @@ ipcMain.handle('scan', async (e, abs) => {
   try {
     const t0 = Date.now();
     const r = await scanTree(abs, { onProgress: p => e.sender.send('scan-progress', p) });
-    roots.add(abs); writeCfg({ lastRoot: abs });
+    roots.add(abs);
+    const rec = (readCfg().recent || []).filter(x => x && x.path !== abs);
+    rec.unshift({ path: abs, name: r.rootName, at: Date.now() });
+    writeCfg({ lastRoot: abs, recent: rec.slice(0, 10) });
     r.ms = Date.now() - t0;
     return r;
   } catch (er) { return { error: 'Không mở được thư mục: ' + errText(er) }; }

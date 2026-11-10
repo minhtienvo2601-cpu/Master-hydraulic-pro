@@ -132,6 +132,13 @@ main{flex:1;min-height:0;display:flex;background:var(--surface)}
 .caret svg{transition:transform .12s}.caret.open svg{transform:rotate(90deg)}
 .st{width:8px;height:8px;border-radius:50%;background:var(--todo);flex:none}
 .st.doing{background:var(--warn)}.st.done{background:var(--ok)}
+.st.part{width:7px;height:7px;border-radius:2px;background:transparent;border:1.5px solid var(--todo)}
+.st.part.done{background:var(--ok);border-color:var(--ok)}
+.tn.part .tt{color:var(--muted)}
+.tn.part .pos{color:var(--faint);font-weight:500}
+.partinfo{flex:none;border-bottom:1px solid var(--border)}
+.phead{padding:8px 18px;font-size:12.5px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:var(--surface-2);border-bottom:1px solid var(--border)}
+.ptable{overflow:auto}
 .tn .pos{font-family:var(--mono);font-weight:600;color:var(--accent);font-size:11.5px;flex:none}
 .tn .tt{overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
 .tn .it{font-family:var(--mono);font-size:10.5px;color:var(--faint);flex:none}
@@ -162,11 +169,21 @@ main{flex:1;min-height:0;display:flex;background:var(--surface)}
 .pdfpane{flex:none;display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--surface-3);min-width:0}
 .pdfpane iframe{flex:1;border:0;width:100%;background:#525659}
 .pv{flex:1;display:flex;flex-direction:column;min-height:0}
-.pv-bar{display:flex;gap:4px;align-items:center;padding:5px 8px;border-bottom:1px solid var(--border);background:var(--surface)}
+.pv-bar{display:flex;gap:4px;align-items:center;flex-wrap:wrap;padding:5px 8px;border-bottom:1px solid var(--border);background:var(--surface)}
+.pv-n{white-space:nowrap;font-size:11.5px}
 .pv-bar .sp{flex:1}.pv-z{min-width:52px;text-align:center;font-size:12px}
 .pv-pages{flex:1;overflow:auto;background:#525659;padding:10px 12px;cursor:grab}
 .pv-pages.drag{cursor:grabbing;user-select:none}
-.pv-pages canvas{display:block;margin:0 auto 10px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.pv-page{position:relative;margin:0 auto 10px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.pv-page canvas{display:block;width:100%;height:100%}
+.pv-ov{position:absolute;inset:0;pointer-events:none}
+.pv-h{position:absolute;transform:translate(-50%,-50%);min-width:22px;min-height:22px;border:2px solid #ff3b30;background:rgba(255,214,10,.38);border-radius:6px;pointer-events:auto}
+.pv-h.cur{background:rgba(255,149,0,.45);box-shadow:0 0 0 4px rgba(255,59,48,.35),0 0 0 9px rgba(255,59,48,.14)}
+.pv-s{flex:1;min-width:110px;max-width:230px;height:26px}
+.pv-s input{font-size:12px}
+.pv-hit{font-size:11.5px;min-width:36px;text-align:center;white-space:nowrap}
+.pv-nav{display:inline-flex;align-items:center;white-space:nowrap;flex:none}
+.pv-bar .btn.ghost{padding:0 6px;font-size:15px}
 .pv-pages .empty{color:#e6edf5}
 .bompane{flex:1;min-width:0;display:flex;flex-direction:column}
 
@@ -203,6 +220,16 @@ table.grid{border-collapse:separate;border-spacing:0;width:100%}
 .grid tr.m-g td{background:var(--mark-g)}
 .grid tr.m-r td{background:var(--mark-r)}
 .grid tr.r:hover td{filter:brightness(.98)}
+.grid tr.r.cur td{background-image:linear-gradient(var(--accent-soft),var(--accent-soft))}
+.grid tr.r.cur td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.grid th.sortable{cursor:pointer;user-select:none}
+.grid th.sortable:hover{color:var(--text)}
+.grid th .sarr{display:inline-block;width:10px;margin-left:3px;color:var(--accent)}
+.grid th.asc .sarr::after{content:'▲';font-size:8px}
+.grid th.desc .sarr::after{content:'▼';font-size:8px}
+.morerows{padding:8px 18px;font-size:11.5px;color:var(--muted);text-align:center}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:center;margin:6px 0 4px}
+.keys kbd{justify-self:start}
 [data-theme=dark] .grid tr.r:hover td{filter:brightness(1.12)}
 .grid tr.minor td{color:var(--muted)}
 .grid tr.minor .d1{font-weight:500}
@@ -278,16 +305,49 @@ body.gdrag::after{content:'Thả THƯ MỤC hồ sơ để mở, hoặc thả fi
 .cmdbox code{flex:1;min-width:0;font-family:var(--mono);font-size:11px;line-height:1.5;padding:6px 8px;background:var(--surface-2);border:1px solid var(--border);border-radius:5px;word-break:break-all;max-height:84px;overflow:auto;user-select:all}
 .winsec{border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:0 0 12px;background:var(--surface-2)}
 .winsec ol{margin:4px 0 6px;padding-left:20px;line-height:1.7}
+/* màn hình chào + thanh trạng thái */
+#home{display:none;flex:1;min-width:0;overflow:auto;background:var(--bg)}
+body.noroot #home{display:block}
+body.noroot .tabs,body.noroot main>.view{display:none}
+.home-in{max-width:980px;margin:0 auto;padding:44px 24px 40px}
+.home-hero{text-align:center;margin-bottom:28px}
+.home-logo{width:60px;height:60px;border-radius:16px;margin:0 auto 14px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,var(--accent),#3aa0ff);box-shadow:0 8px 22px color-mix(in srgb,var(--accent) 35%,transparent)}
+.home-hero h1{margin:0 0 6px;font-size:26px;letter-spacing:-.01em}
+.home-hero p{margin:0 auto;max-width:560px;color:var(--muted);font-size:14px;line-height:1.6}
+.home-act{margin-top:20px;display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;color:var(--muted)}
+.btn.big{height:42px;padding:0 20px;font-size:14px;border-radius:8px}
+.home-scan{margin-top:14px;min-height:20px;color:var(--muted)}
+.home-sec{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;margin:26px 0 8px}
+.recent{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+.recent-it{display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;border-top:1px solid var(--border)}
+.recent-it:first-child{border-top:0}
+.recent-it:hover{background:var(--surface-2)}
+.recent-it .ri{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);flex:none}
+.recent-it .rm{flex:1;min-width:0}
+.recent-it .rn{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recent-it .rp{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recent-it .rd{font-size:11.5px;color:var(--faint);white-space:nowrap;flex:none}
+.home-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.hcard{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow)}
+.hcard .hn{width:24px;height:24px;border-radius:50%;display:inline-grid;place-items:center;background:var(--accent);color:#fff;font-weight:700;font-size:12px;margin-right:8px}
+.hcard b{font-size:13.5px}
+.hcard p{margin:8px 0 0;color:var(--muted);line-height:1.6;font-size:12.5px}
+.home-foot{margin-top:22px;text-align:center;color:var(--faint);font-size:12px}
+.sbar{flex:none;display:flex;gap:14px;align-items:center;height:24px;padding:0 12px;font-size:11.5px;color:var(--muted);background:var(--surface-2);border-top:1px solid var(--border);white-space:nowrap;overflow:hidden}
+.sbar .sp{flex:1}
+.sbar #sbL{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.sbar a{cursor:pointer;color:var(--muted)}
+.sbar a:hover{color:var(--accent)}
 .kfix{margin-top:4px;display:flex;gap:4px;flex-wrap:nowrap} .kfix .btn{padding:0 6px;height:22px;font-size:11px;gap:3px}
 .dstat{padding:8px 10px;border-radius:6px;background:var(--surface-2);border:1px solid var(--border);margin:8px 0 10px;font-size:12px;display:flex;align-items:center;gap:8px}
-#toast{position:fixed;right:16px;bottom:16px;z-index:70;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+#toast{position:fixed;right:16px;bottom:36px;z-index:70;display:flex;flex-direction:column;gap:6px;pointer-events:none}
 .toast{background:var(--chrome);color:var(--chrome-text);padding:8px 13px;border-radius:6px;font-size:12px;box-shadow:0 6px 18px rgba(0,0,0,.25);animation:tin .18s}
 @keyframes tin{from{opacity:0;transform:translateY(6px)}}
 @container (max-width:470px){.tn .it{display:none}}
 @media (max-width:1000px){#treePane{width:300px}}
 </style>
 </head>
-<body>
+<body class="noroot">
 <header class="topbar">
   <div class="brand">
     <div class="logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h10M4 17h7"/><path d="m15 17 2 2 4-4"/></svg></div>
@@ -299,6 +359,7 @@ body.gdrag::after{content:'Thả THƯ MỤC hồ sơ để mở, hoặc thả fi
     <button class="btn primary" id="btnDir" title="Chọn thư mục gốc của bộ hồ sơ (đọc trực tiếp cả thư mục rỗng)"><span data-ic="folder"></span>Chọn thư mục gốc</button>
     <input id="dirInput" type="file" webkitdirectory directory multiple hidden>
     <input id="listInput" type="file" accept=".txt,text/plain" hidden>
+    <button class="btn" id="btnRecent" hidden title="Hồ sơ gần đây"><span data-ic="list"></span></button>
     <button class="btn" id="btnReopen" hidden><span data-ic="refresh"></span><span id="reopenTxt">Mở lại</span></button>
     <button class="btn" id="btnDict" title="Nạp file Excel mã vật tư công ty để tự dò"><span data-ic="db"></span>File mã vật tư</button>
     <button class="btn" id="btnBackup" title="Lưu toàn bộ tiến độ, đánh dấu, danh sách ra file"><span data-ic="download"></span>Sao lưu</button>
@@ -313,6 +374,23 @@ body.gdrag::after{content:'Thả THƯ MỤC hồ sơ để mở, hoặc thả fi
   <button class="tab" data-view="vList"><span data-ic="list"></span>Danh sách đã chọn <span class="cnt" id="listCnt">0</span></button>
 </nav>
 <main>
+  <section id="home"><div class="home-in">
+    <div class="home-hero">
+      <div class="home-logo"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h10M4 17h7"/><path d="m15 17 2 2 4-4"/></svg></div>
+      <h1>Bóc tách vật tư</h1>
+      <p>Mở bộ hồ sơ thiết bị, đọc toàn bộ BOM, xem bản vẽ lắp cạnh danh mục, chọn mã cần mua và xuất Excel kèm bản vẽ.</p>
+      <div class="home-act"><button class="btn primary big" id="hPick"><span data-ic="folder" data-s="17"></span>Chọn thư mục gốc</button><span>hoặc kéo thả thư mục hồ sơ vào cửa sổ</span></div>
+      <div class="home-scan" id="hScan"></div>
+    </div>
+    <div id="hRecent"></div>
+    <div class="home-sec">Cách dùng</div>
+    <div class="home-cards">
+      <div class="hcard"><span class="hn">1</span><b>Mở hồ sơ</b><p>Chọn thư mục gốc chứa các thư mục con dạng <span class="mono">001 80056715-01#- PLATFORM</span>. Ứng dụng dựng cây cụm và đọc mọi file ASSEMBLED ITEM REPORT.</p></div>
+      <div class="hcard"><span class="hn">2</span><b>Bóc tách</b><p>Chọn cụm để xem BOM cạnh bản vẽ. Bấm một dòng để tô sáng số Pos trên bản vẽ; tích ô sau mã vật tư để đưa vào danh sách.</p></div>
+      <div class="hcard"><span class="hn">3</span><b>Xuất</b><p>Nhập mã công ty, tên ngắn / dài rồi xuất Excel kèm bản vẽ lắp và BOM; bấm liên kết trong Excel để mở PDF.</p></div>
+    </div>
+    <div class="home-foot">Nhấn <kbd>?</kbd> để xem phím tắt · <kbd>Ctrl K</kbd> tìm nhanh toàn hồ sơ</div>
+  </div></section>
   <section class="view active" id="vTree">
     <aside id="treePane">
       <div class="thead">
@@ -322,6 +400,7 @@ body.gdrag::after{content:'Thả THƯ MỤC hồ sơ để mở, hoặc thả fi
         </select>
         <button class="btn sm ghost" id="btnExpand" title="Mở hết"><span data-ic="expand"></span></button>
         <button class="btn sm ghost" id="btnCollapse" title="Thu gọn"><span data-ic="collapse"></span></button>
+        <button class="btn sm ghost" id="btnParts" title="Ẩn / hiện thư mục chi tiết (thư mục không có BOM: bulông, long đen…)"><span data-ic="eye"></span></button>
       </div>
       <div id="tree"></div>
     </aside>
@@ -331,6 +410,7 @@ body.gdrag::after{content:'Thả THƯ MỤC hồ sơ để mở, hoặc thả fi
   <section class="view" id="vSum"></section>
   <section class="view" id="vList"></section>
 </main>
+<footer class="sbar"><span id="sbL"></span><span class="sp"></span><span id="sbM"></span><a id="sbHelp" title="Xem phím tắt (?)">Phím tắt ?</a><span id="sbVer"></span></footer>
 <div id="pop" class="popover" hidden></div>
 <div id="modal" class="modal" hidden></div>
 <div id="pal" class="pal" hidden></div>
@@ -381,7 +461,8 @@ const idb={p:null,open(){return this.p||(this.p=new Promise((res,rej)=>{const r=
  async set(k,v){const db=await this.open();return new Promise((res,rej)=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=()=>res();t.onerror=()=>rej(t.error);});},
  async del(k){const db=await this.open();return new Promise(res=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').delete(k);t.oncomplete=()=>res();});}};
 function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;$('#toast').appendChild(d);setTimeout(()=>d.remove(),2800);}
-const safeName=s=>String(s).replace(/[^\p{L}\d]+/gu,'_').replace(/^_|_$/g,'');
+/* tên file / thư mục xuất ra: không dấu, chỉ chữ số và gạch dưới (an toàn cho mọi máy, ZIP và liên kết Excel) */
+const safeName=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').replace(/[^A-Za-z\d]+/g,'_').replace(/^_|_$/g,'');
 
 /* ================= bản Windows (.exe) =================
    Khi chạy trong bản .exe, window.desktop có sẵn: đọc thư mục bằng Windows (không giới hạn 260 ký tự),
@@ -579,6 +660,7 @@ function buildTree(fileList,opt={}){
   P.lists.forEach(l=>{l.items=l.items||{};l.meta=l.meta||{};});
   const old=ls.get('bocvt:'+(root.item||rootName),null); if(old&&!Object.keys(P.progress).length) P.progress=old;
   root.open=true; selected=null;
+  document.body.classList.remove('noroot'); document.title=(root.title||root.name)+' – Bóc tách vật tư';
   $('#projName').textContent=projTitle();
   renderTree(); renderKPI(); renderTabs(); select(root); updReopen();
   if(rootHandle) idb.set('lastRoot',{handle:rootHandle,name:rootName}).catch(()=>{});
@@ -612,7 +694,7 @@ function addFileToNode(n,f){
 const nodeHasFile=(n,fn)=>[n.report,n.drawing,...n.others].some(f=>f&&f.name===fn);
 function sortTree(n){n.children.sort((a,b)=>posNum(a.pos)-posNum(b.pos)||a.name.localeCompare(b.name,undefined,{numeric:true}));n.children.forEach(sortTree);}
 const modeName=()=>({desktop:'bản Windows',fsa:'đọc trực tiếp',drop:'kéo thả',input:'cách chọn cũ'})[loadMode]||'';
-function projTitle(){return (root.item?root.item+' · ':'')+(root.title||root.name)+`  —  ${allNodes.length} thư mục · ${modeName()}${winList?' + DS Windows':''}`;}
+function projTitle(){return (root.item?root.item+' · ':'')+(root.title||root.name)+`  —  ${allNodes.filter(n=>n.report).length} cụm · ${allNodes.length} thư mục · ${modeName()}${winList?' + DS Windows':''}`;}
 /* dựng lại danh sách nút và liên kết dòng BOM ↔ thư mục sau khi cây thay đổi */
 function rebuildAll(){
   sortTree(root); allNodes=[];(function dfs(n){allNodes.push(n);n.children.forEach(dfs);})(root);
@@ -793,6 +875,12 @@ function ensureBom(node){
   }).catch(e=>{node.bom=[];node.bomErr={msg:(e&&e.message)||String(e),nf:isNotFound(e)};throw e;});
   return node.bomP;
 }
+/* thư mục chi tiết = thư mục lá không có BOM (chỉ có bản vẽ hoặc rỗng); cụm = thư mục có BOM */
+const isPart=n=>!!n.parent&&!n.report&&!n.children.length&&!n.listErr;
+const rowOf=n=>n.parent&&n.parent.bom?n.parent.bom.find(r=>r.folder===n)||null:null;
+const partState=n=>{const r=rowOf(n);return r&&isHandled(r)?'done':'todo';};
+const nodeState=n=>isPart(n)?partState(n):getProg(n).s;
+let hideParts=ls.get('bocvt:hideparts',false);
 const isAsmNode=n=>!!(n.report||n.children.length||n.listErr);  // thư mục không mở được: coi như cụm (chưa biết bên trong)
 function getMult(node){
   if(!node.parent) return 1;
@@ -826,12 +914,14 @@ const inAnyList=k=>P.lists.some(l=>l.items[k]);
 const isHandled=r=>!!((P.rows[r.key]||{}).rev||inAnyList(r.key));
 function setRowState(k,patch){const s=Object.assign({},P.rows[k],patch);Object.keys(s).forEach(x=>{if(!s[x])delete s[x];});if(Object.keys(s).length)P.rows[k]=s;else delete P.rows[k];save();}
 function snapshot(r){return {item:r.item,pos:r.pos,type:r.type,spec:r.spec,unit:r.unit,qty:r.qty,cat:r.cat.n,brand:r.brand,mult:getMult(r.node),where:where(r.node),asmTitle:r.node.title,path:r.node.path};}
-function setPick(r,on){
-  if(r.group){r.rows.forEach(x=>setPick(x,on));return;}
+/* noAuto: bỏ qua việc tính lại trạng thái cụm (khi xử lý hàng loạt, tính một lần ở cuối) */
+function setPick(r,on,noAuto){
+  if(r.group){r.rows.forEach(x=>setPick(x,on,noAuto));return;}
   const L=activeList(); if(on) L.items[r.key]=snapshot(r); else delete L.items[r.key];
-  autoStatus(r.node); save();
+  if(!noAuto) autoStatus(r.node); save();
 }
-function setRev(r,v){if(r.group)return;setRowState(r.key,{rev:v});autoStatus(r.node);}
+const nodesOfRows=rows=>new Set(rows.flatMap(r=>r.group?r.rows.map(x=>x.node):[r.node]));
+function setRev(r,v,noAuto){if(r.group)return;setRowState(r.key,{rev:v});if(!noAuto)autoStatus(r.node);}
 function setMark(r,m){if(r.group){r.rows.forEach(x=>setRowState(x.key,{mark:m}));return;}setRowState(r.key,{mark:m});}
 function autoStatus(node){
   if(!node||!node.bom) return; const rows=node.bom.filter(r=>!r.child); if(!rows.length) return;
@@ -923,10 +1013,20 @@ function itemCell(r,picked,q,indet){
   const code=r.item?hl(r.item,q):'<span class="muted">—</span>';
   return `<div class="itemc"><span class="mono">${r.folder?`<a class="lnk" data-child="1" title="${r.child?'Mở cụm con':'Mở thư mục của chi tiết này (bản vẽ)'}">${code}</a>`:code}</span><input type="checkbox" class="pick" ${picked?'checked':''} ${indet?'data-indet="1"':''} title="Tích để đưa vào danh sách (giữ Shift để chọn một dải)"></div>${codeChip(r)}`;
 }
+/* tiêu đề cột: [nhãn, khóa sắp xếp] */
 function tableHead(mode){
-  if(mode==='group') return ['Item No ☐','Mô tả','Loại / Hãng','SL tổng','ĐVT','Vị trí (cụm › pos × SL)'];
-  if(mode==='sum') return ['','Cụm','Pos','Item No ☐','SL/BOM','× cụm','SL tổng','ĐVT','Mô tả','Loại / Hãng','KL kg','Tô'];
-  return ['','Pos','Item No ☐','SL','ĐVT','Mô tả','Loại / Hãng','KL kg','Tô','Ghi chú'];
+  if(mode==='group') return [['Item No ☐','item'],['Mô tả','type'],['Loại / Hãng','cat'],['SL tổng','total'],['ĐVT'],['Vị trí (cụm › pos × SL)']];
+  if(mode==='sum') return [[''],['Cụm','where'],['Pos','pos'],['Item No ☐','item'],['SL/BOM','qty'],['× cụm','mult'],['SL tổng','total'],['ĐVT'],['Mô tả','type'],['Loại / Hãng','cat'],['KL kg','weight'],['Tô']];
+  return [[''],['Pos','pos'],['Item No ☐','item'],['SL','qty'],['ĐVT'],['Mô tả','type'],['Loại / Hãng','cat'],['KL kg','weight'],['Tô'],['Ghi chú']];
+}
+const SORTV={pos:r=>posNum(r.pos),item:r=>(r.item||'￿').toLowerCase(),qty:r=>r.qty??-1,mult:r=>r.node?getMult(r.node):0,
+  total:r=>r.group?r.total:(r.qty||0)*getMult(r.node),type:r=>((r.type||'')+' '+(r.spec||'')).toLowerCase(),
+  cat:r=>String(CAT_ORDER.indexOf(r.cat.n)).padStart(3,'0')+(r.brand||''),weight:r=>r.weight??-1,where:r=>r.node?r.node._ord||0:0};
+function sortRows(rows,sort){
+  if(!sort||!sort.k||!SORTV[sort.k]) return rows;
+  if(sort.k==='where') allNodes.forEach((n,i)=>n._ord=i);
+  const v=SORTV[sort.k];
+  return rows.map((r,i)=>[v(r),i,r]).sort((a,b)=>(a[0]<b[0]?-1:a[0]>b[0]?1:0)*sort.d||a[1]-b[1]).map(x=>x[2]);
 }
 function rowHTML(r,i,o){
   const q=o.q, L=activeList();
@@ -955,19 +1055,23 @@ function rowHTML(r,i,o){
 }
 function tableHTML(rows,o){
   if(!rows.length) return `<div class="empty">Không có dòng nào khớp bộ lọc.</div>`;
-  return `<table class="grid"><thead><tr>${tableHead(o.mode).map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map((r,i)=>rowHTML(r,i,o)).join('')}</tbody></table>`;
+  const so=o.sort||{}, n=Math.min(rows.length,o.limit||rows.length); let body='';
+  for(let i=0;i<n;i++) body+=rowHTML(rows[i],i,o);
+  return `<table class="grid"><thead><tr>${tableHead(o.mode).map(([h,k])=>k?`<th class="sortable ${so.k===k?(so.d===1?'asc':'desc'):''}" data-sort="${k}" title="Bấm để sắp xếp">${h}<span class="sarr"></span></th>`:`<th>${h}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table><div class="morerows"></div>`;
 }
 function setIndet(el){el.querySelectorAll('input[data-indet]').forEach(x=>x.indeterminate=true);}
-function bindTable(wrap,rows,o){
+function bindTable(wrap,rows,o,hooks={}){
   setIndet(wrap); let last=null;
-  const refresh=i=>{const tr=wrap.querySelector(`tr.r[data-i="${i}"]`);if(!tr)return;const tmp=document.createElement('tbody');tmp.innerHTML=rowHTML(rows[i],i,o);const nt=tmp.firstElementChild;tr.replaceWith(nt);setIndet(nt);};
+  const refresh=i=>{const tr=wrap.querySelector(`tr.r[data-i="${i}"]`);if(!tr)return;const tmp=document.createElement('tbody');tmp.innerHTML=rowHTML(rows[i],i,o);const nt=tmp.firstElementChild;if(tr.classList.contains('cur'))nt.classList.add('cur');tr.replaceWith(nt);setIndet(nt);};
+  const isPicked=i=>{const r=rows[i],L=activeList();return r.group?r.rows.every(x=>L.items[x.key]):!!L.items[r.key];};
+  const pick=(idx,on)=>{idx.forEach(k=>setPick(rows[k],on));idx.forEach(refresh);afterChange();if(idx.length>1)toast(`${on?'Đã chọn':'Đã bỏ chọn'} ${idx.length} dòng`);};
   wrap.onclick=e=>{
     const tr=e.target.closest('tr.r'); if(!tr) return; const i=+tr.dataset.i, r=rows[i], t=e.target;
+    if(hooks.setCur) hooks.setCur(i);
     if(t.classList.contains('pick')){
       const on=t.checked; let idx=[i];
       if(e.shiftKey&&last!=null){idx=[];for(let k=Math.min(last,i);k<=Math.max(last,i);k++)idx.push(k);}
-      last=i; idx.forEach(k=>setPick(rows[k],on)); idx.forEach(refresh); afterChange();
-      if(idx.length>1) toast(`${on?'Đã chọn':'Đã bỏ chọn'} ${idx.length} dòng`);
+      last=i; pick(idx,on);
       return;
     }
     if(t.closest('.revbtn')){setRev(r,!(P.rows[r.key]||{}).rev);refresh(i);afterChange();return;}
@@ -975,6 +1079,7 @@ function bindTable(wrap,rows,o){
     if(t.closest('[data-child]')){select(r.folder||r.child);return;}
     const ln=t.closest('[data-node]'); if(ln){switchView('vTree');select(allNodes.find(n=>n.path===ln.dataset.node));}
   };
+  return {refresh,isPicked,pick};
 }
 function bulkInner(shown,total,mode){
   return `<span class="muted">Hiển thị <b>${shown}</b> / ${total} dòng</span>
@@ -987,23 +1092,60 @@ function bulkInner(shown,total,mode){
 }
 function tableArea(el,cfg,api={}){
   el.innerHTML=filterBarHTML(cfg.f,cfg.rows(),{summary:cfg.summary,extra:cfg.extra})+`<div class="bulk"></div><div class="tablewrap"></div>`;
-  const bulk=el.querySelector('.bulk'), wrap=el.querySelector('.tablewrap'); let disp=[], mode='bom';
+  const bulk=el.querySelector('.bulk'), wrap=el.querySelector('.tablewrap'); let disp=[], mode='bom', shown=0, cur=-1, T=null;
+  const CHUNK=250;   // bảng lớn: vẽ từng đợt, cuộn tới đâu vẽ thêm tới đó
+  const opts=()=>({mode,q:cfg.f.q.trim(),sort:cfg.f.sort});
+  const foot=()=>{const f=wrap.querySelector('.morerows');if(f)f.textContent=shown<disp.length?`Đang hiện ${shown} / ${disp.length} dòng · cuộn xuống để xem tiếp`:'';};
+  const more=n=>{
+    const tb=wrap.querySelector('tbody'); if(!tb||shown>=disp.length) return;
+    const to=Math.min(disp.length,Math.max(n,shown+CHUNK)), o=opts(); let h='';
+    for(let i=shown;i<to;i++) h+=rowHTML(disp[i],i,o);
+    tb.insertAdjacentHTML('beforeend',h); setIndet(tb); shown=to; foot();
+  };
+  const setCur=(i,scroll)=>{
+    if(!disp.length){cur=-1;return;}
+    i=clamp(i,0,disp.length-1); if(i>=shown) more(i+1);
+    wrap.querySelectorAll('tr.r.cur').forEach(t=>t.classList.remove('cur'));
+    const changed=i!==cur; cur=i;
+    const tr=wrap.querySelector(`tr.r[data-i="${i}"]`); if(tr){tr.classList.add('cur');if(scroll)tr.scrollIntoView({block:'nearest'});}
+    const r=disp[i]; if(changed&&r&&!r.group&&cfg.onFocus) cfg.onFocus(r);
+  };
   const draw=()=>{
     const all=cfg.rows(); const vis=applyFilter(all,cfg.f);
-    mode=cfg.summary?(cfg.f.group?'group':'sum'):'bom'; disp=mode==='group'?groupRows(vis):vis;
+    mode=cfg.summary?(cfg.f.group?'group':'sum'):'bom'; disp=sortRows(mode==='group'?groupRows(vis):vis,cfg.f.sort);
     bulk.innerHTML=bulkInner(disp.length,all.length,mode);
-    const st=wrap.scrollTop; wrap.innerHTML=tableHTML(disp,{mode,q:cfg.f.q.trim()}); wrap.scrollTop=st;
-    bindTable(wrap,disp,{mode,q:cfg.f.q.trim()});
+    const st=wrap.scrollTop; shown=Math.min(disp.length,Math.max(CHUNK,shown));
+    wrap.innerHTML=tableHTML(disp,Object.assign(opts(),{limit:shown})); wrap.scrollTop=st; foot();
+    T=bindTable(wrap,disp,opts(),{setCur:i=>setCur(i,false)});
+    if(cur>=disp.length) cur=-1;
+    if(cur>=0){const tr=wrap.querySelector(`tr.r[data-i="${cur}"]`);if(tr)tr.classList.add('cur');}
     api.disp=disp; api.mode=mode;
   };
+  wrap.addEventListener('scroll',()=>{if(shown<disp.length&&wrap.scrollTop+wrap.clientHeight>wrap.scrollHeight-700)more(shown+CHUNK);});
+  wrap.addEventListener('click',e=>{const th=e.target.closest('th[data-sort]');if(!th)return;const k=th.dataset.sort,so=cfg.f.sort||{};cfg.f.sort=so.k!==k?{k,d:1}:so.d===1?{k,d:-1}:null;cur=-1;draw();});
   bindFilterBar(el.querySelector('.fbar'),cfg.f,draw,()=>tableArea(el,cfg,api));
   bulk.addEventListener('click',e=>{
     const b=e.target.closest('button[data-bulk]'); if(!b) return; const k=b.dataset.bulk;
-    if(k==='pick'||k==='unpick'){disp.forEach(r=>setPick(r,k==='pick'));toast(`${k==='pick'?'Đã chọn':'Đã bỏ chọn'} ${disp.length} dòng`);}
-    if(k==='rev'){disp.forEach(r=>setRev(r,true));toast(`Đã đánh dấu đã xem ${disp.length} dòng`);}
+    if(k==='pick'||k==='unpick'){disp.forEach(r=>setPick(r,k==='pick',true));toast(`${k==='pick'?'Đã chọn':'Đã bỏ chọn'} ${disp.length} dòng`);}
+    if(k==='rev'){disp.forEach(r=>setRev(r,true,true));toast(`Đã đánh dấu đã xem ${disp.length} dòng`);}
+    nodesOfRows(disp).forEach(autoStatus);
     draw(); afterChange();
   });
   bulk.addEventListener('change',e=>{if(e.target.dataset.bulk==='list'){P.active=e.target.value;save();draw();renderTabs();renderKPI();}});
+  /* phím tắt trên bảng: trả về true nếu đã xử lý */
+  api.key=e=>{
+    const k=e.key;
+    if(k==='ArrowDown'||k==='j'){setCur(cur<0?0:cur+1,true);return true;}
+    if(k==='ArrowUp'||k==='k'){setCur(cur<0?0:cur-1,true);return true;}
+    if(cur<0||!disp[cur]||!T) return false;
+    const r=disp[cur];
+    if(k===' '){T.pick([cur],!T.isPicked(cur));return true;}
+    if(k==='Enter'){if(!r.group){setRev(r,!(P.rows[r.key]||{}).rev);T.refresh(cur);afterChange();}setCur(cur+1,true);return true;}
+    if(k.length===1&&'0123'.includes(k)){setMark(r,['','y','g','r'][+k]);T.refresh(cur);afterChange();return true;}
+    if(k==='ArrowRight'){const n=r.group?null:(r.folder||r.child);if(n){select(n);return true;}}
+    return false;
+  };
+  api.focus=key=>{const i=disp.findIndex(r=>r.key===key);if(i>=0)setCur(i,true);};
   api.draw=draw; draw();
   return api;
 }
@@ -1033,13 +1175,14 @@ function confirmBox(text,cb){openModal(`<h3>Xác nhận</h3><p>${text}</p><div c
 
 /* ================= KPI, tabs, tree ================= */
 function renderKPI(){
+  updStatus();
   const el=$('#kpis'); if(!root){el.hidden=true;return;} el.hidden=false;
-  const c={todo:0,doing:0,done:0}; allNodes.forEach(n=>c[getProg(n).s]++);
+  const asm=allNodes.filter(n=>n.report), c={todo:0,doing:0,done:0}; asm.forEach(n=>c[getProg(n).s]++);
   const withRep=allNodes.filter(n=>n.report), parsed=withRep.filter(n=>n.bom&&!n.bomErr).length, errN=withRep.filter(n=>n.bomErr).length;
   const rows=allRows().filter(r=>!r.child), handled=rows.filter(isHandled).length;
   const cc=k=>rows.filter(r=>r.cat.n===k).length, pct=(a,b)=>b?Math.round(100*a/b):0, L=activeList();
   el.innerHTML=`
-   <div class="kpi" style="--c:var(--ok)"><div class="k">Cụm đã bóc</div><div class="v">${c.done}<small> / ${allNodes.length}</small></div><div class="bar"><i style="width:${pct(c.done,allNodes.length)}%"></i></div><div class="s">${pct(c.done,allNodes.length)}% · đang ${c.doing} · chưa ${c.todo}</div></div>
+   <div class="kpi" style="--c:var(--ok)" title="Chỉ tính các cụm có file BOM (không tính thư mục chi tiết)"><div class="k">Cụm đã bóc</div><div class="v">${c.done}<small> / ${asm.length}</small></div><div class="bar"><i style="width:${pct(c.done,asm.length)}%"></i></div><div class="s">${pct(c.done,asm.length)}% · đang ${c.doing} · chưa ${c.todo}</div></div>
    <div class="kpi ${errN?'click':''}" ${errN?'data-kerr="1" title="Bấm để xem file lỗi và cách khắc phục"':''} style="--c:${errN?'var(--bad)':'var(--accent)'}"><div class="k">BOM đã đọc ${scanning?'<span class="spin"></span>':''}</div><div class="v">${parsed}<small> / ${withRep.length}</small></div><div class="s ${errN?'err':''}">${errN?`⚠ ${errN} file không đọc được · bấm xem`:rows.length+' dòng vật tư'}</div>${errN&&!scanning?`<div class="kfix"><button class="btn sm" data-kretry title="Đọc lại tất cả cụm lỗi (sau khi đã chuyển thư mục / tải OneDrive)">${ic('refresh',12)} Đọc lại</button><button class="btn sm" data-kload title="Chọn các file PDF lỗi đã chép ra chỗ khác">${ic('upload',12)} Nạp file</button></div>`:''}</div>
    ${(()=>{const fc=folderCheck(),bad=fc.listErr.length,mis=fc.missing.length,old=loadMode==='input',gh=allNodes.filter(n=>n.ghost).length;
       const col=bad?'var(--bad)':(gh||mis||old)?'var(--warn)':'var(--ok)';
@@ -1058,25 +1201,26 @@ $('#kpis').addEventListener('click',e=>{
   if(e.target.closest('[data-kfold]')) openFolderModal();
 });
 function renderTabs(){$('#listCnt').textContent=root?listCount(activeList()):0;}
-function subtreeStat(n){let tot=0,done=0;for(const c of n.children){tot++;if(getProg(c).s==='done')done++;const s=subtreeStat(c);tot+=s.tot;done+=s.done;}return {tot,done};}
+function subtreeStat(n){let tot=0,done=0;for(const c of n.children){if(c.report){tot++;if(getProg(c).s==='done')done++;}const s=subtreeStat(c);tot+=s.tot;done+=s.done;}return {tot,done};}
 function renderTree(){
-  const T=$('#tree');
+  const T=$('#tree'); const hs=$('#hScan'); if(hs) hs.innerHTML='';
   if(!root){T.innerHTML=`<div class="empty"><div class="big">Chưa có hồ sơ</div>Bấm <b>Chọn thư mục gốc</b> và chọn thư mục chứa bộ hồ sơ<br>(các thư mục con dạng <span class="mono">001 80056715-01#- PLATFORM</span>).</div>`;return;}
   const q=$('#treeSearch').value.trim().toLowerCase(), st=$('#treeStatus').value, filtering=!!(q||st);
-  const vis=n=>{n._v=(!q||(n.pos+' '+n.item+' '+n.title+' '+n.name).toLowerCase().includes(q))&&(!st||getProg(n).s===st);n._s=false;n.children.forEach(c=>{if(vis(c))n._s=true;});return n._v||n._s;};
+  const vis=n=>{n._v=(!q||(n.pos+' '+n.item+' '+n.title+' '+n.name).toLowerCase().includes(q))&&(!st||nodeState(n)===st)&&!(hideParts&&isPart(n));n._s=false;n.children.forEach(c=>{if(vis(c))n._s=true;});return n._v||n._s;};
   vis(root);
   const li=n=>{
     if(filtering&&!n._v&&!n._s) return '';
-    const open=filtering?n._s:n.open, kids=n.children.length, p=getProg(n).s;
+    const part=isPart(n); if(hideParts&&part) return '';
+    const open=filtering?n._s:n.open, kids=hideParts?n.children.filter(c=>!isPart(c)).length:n.children.length, p=nodeState(n);
     const sb=kids?subtreeStat(n):null;
     const hc=n.bom?n.bom.filter(r=>r.cat.n==='Ống mềm').length:0, vc=n.bom?n.bom.filter(r=>r.cat.n==='Van').length:0, mc=missOf(n).length;
-    return `<li><div class="tn ${selected===n?'sel':''}" data-path="${esc(n.path)}">
+    return `<li><div class="tn ${selected===n?'sel':''} ${part?'part':''}" data-path="${esc(n.path)}">
       <span class="caret ${open?'open':''}" data-toggle="1">${kids?ic('chev',12):''}</span>
-      <span class="st ${p}" title="${STATUS[p][0]}"></span>
+      <span class="st ${part?'part ':''}${p}" title="${part?(p==='done'?'Chi tiết đã xử lý (đã xem / đã chọn)':'Thư mục chi tiết – không có BOM'):STATUS[p][0]}"></span>
       ${n.pos?`<span class="pos">${esc(n.pos)}</span>`:''}
       <span class="tt ${n.ghost?'ghost':''}" title="${esc(n.name)}${n.ghost?' – chỉ thấy qua danh sách Windows, trình duyệt không đọc được':''}">${esc(n.title||n.name)}</span>
       <span class="mini">${mc?`<span style="--c:var(--warn)" title="${mc} dòng trong BOM của cụm này không thấy thư mục tương ứng">thiếu ${mc}</span>`:''}${hc?`<span style="--c:#d4433b" title="${hc} dòng ống mềm">${hc} ÔM</span>`:''}${vc?`<span style="--c:#2f6fdf" title="${vc} dòng van">${vc} V</span>`:''}</span>
-      ${sb?`<span class="pbar" title="${sb.done}/${sb.tot} cụm con đã bóc"><i style="width:${sb.tot?100*sb.done/sb.tot:0}%"></i></span>`:''}
+      ${sb&&sb.tot?`<span class="pbar" title="${sb.done}/${sb.tot} cụm con đã bóc"><i style="width:${sb.tot?100*sb.done/sb.tot:0}%"></i></span>`:''}
       <span class="it">${n.item?esc(n.item):n.osp?`<i>${esc(n.osp)}</i>`:''}${n.rev?'#'+esc(n.rev):''}</span>
       <span class="files"><span class="${n.drawing?'has':''}" title="${n.drawing?'Có bản vẽ':'Không có bản vẽ'}">${ic('draw',12)}</span><span class="${n.report?'has':''}" title="${n.report?'Có BOM':'Không có BOM'}">${ic('file',12)}</span>${n.bomErr?`<span style="color:var(--bad)" title="Không đọc được file BOM${fullLen(n.report)!=null?' · đường dẫn đầy đủ ~'+fullLen(n.report)+' ký tự':''}">${ic('warn',12)}</span>`:''}${n.listErr?`<span style="color:var(--bad)" title="Không mở được thư mục này (${esc(n.listErr.msg)}) – nội dung bên trong bị thiếu">${ic('warn',12)}</span>`:''}${n.repLocal?`<span style="color:var(--ok)" title="Đang dùng file BOM nạp tay">${ic('upload',12)}</span>`:''}</span>
     </div>${kids&&open?'<ul>'+n.children.map(li).join('')+'</ul>':''}</li>`;
@@ -1092,6 +1236,9 @@ $('#treeSearch').addEventListener('input',renderTree);
 $('#treeStatus').addEventListener('change',renderTree);
 $('#btnExpand').onclick=()=>{allNodes.forEach(n=>n.open=true);renderTree();};
 $('#btnCollapse').onclick=()=>{allNodes.forEach(n=>n.open=n===root);renderTree();};
+const updParts=()=>{const b=$('#btnParts');b.classList.toggle('on',!hideParts);b.title=(hideParts?'Đang ẩn':'Đang hiện')+' thư mục chi tiết (không có BOM: bulông, long đen…) – bấm để '+(hideParts?'hiện':'ẩn');};
+$('#btnParts').onclick=()=>{hideParts=!hideParts;ls.set('bocvt:hideparts',hideParts);updParts();renderTree();};
+updParts();
 function afterChange(){renderKPI();renderTabs();renderTree();refreshSeg();
   document.querySelectorAll('select[data-bulk=list]').forEach(sel=>[...sel.options].forEach(o=>{const l=P.lists.find(x=>x.id===o.value);if(l)o.textContent=`${l.name} (${listCount(l)})`;}));}
 
@@ -1107,48 +1254,124 @@ function select(n){
 }
 /* ================= khung xem bản vẽ (bản .exe): vẽ bằng pdf.js, thu phóng, kéo để di chuyển ================= */
 let pvState=null;
-function closeViewer(){if(pvState){try{pvState.ro&&pvState.ro.disconnect();pvState.task&&pvState.task.destroy();}catch(e){}pvState=null;}}
-async function mountViewer(el,f){
+function closeViewer(){if(pvState){try{pvState.off&&pvState.off();pvState.ro&&pvState.ro.disconnect();pvState.task&&pvState.task.destroy();}catch(e){}pvState=null;}}
+/* tô sáng số Pos của dòng BOM đang chọn trên bản vẽ (nếu khung bản vẽ đang mở) */
+function viewerFindPos(pos){if(pvState&&pvState.find&&pvState.auto)pvState.find(pos,'pos');}
+async function mountViewer(el,f,opt={}){
   closeViewer();
-  const st=pvState={k:1,gen:0,task:null,doc:null,ro:null};
-  el.innerHTML=`<div class="pv-bar"><button class="btn sm" data-z="out" title="Thu nhỏ (Ctrl + lăn chuột)">−</button><span class="pv-z mono">100%</span><button class="btn sm" data-z="in" title="Phóng to (Ctrl + lăn chuột)">+</button><button class="btn sm" data-z="fit" title="Vừa bề rộng khung">Vừa khung</button><span class="sp"></span><span class="pv-n muted"></span><button class="btn sm" data-z="ext" title="Mở bằng phần mềm xem PDF của máy">${ic('ext',13)} Mở ngoài</button></div><div class="pv-pages"><div class="empty"><span class="spin"></span> Đang mở bản vẽ…</div></div>`;
-  const pages=el.querySelector('.pv-pages');
+  const st=pvState={k:1,gen:0,task:null,doc:null,ro:null,pages:[],hits:[],hi:-1,query:null,find:null,auto:!!opt.auto,noText:false};
+  el.innerHTML=`<div class="pv-bar">
+    <button class="btn sm" data-z="out" title="Thu nhỏ (Ctrl + lăn chuột)">−</button><span class="pv-z mono">100%</span><button class="btn sm" data-z="in" title="Phóng to (Ctrl + lăn chuột)">+</button>
+    <button class="btn sm" data-z="fit" title="Vừa bề rộng khung">Vừa khung</button>
+    <div class="search pv-s">${ic('search',13)}<input type="text" placeholder="Tìm chữ / số Pos trên bản vẽ…"></div>
+    <span class="pv-nav"><button class="btn sm ghost" data-z="prev" title="Kết quả trước (Shift + Enter)">‹</button><span class="pv-hit mono muted"></span><button class="btn sm ghost" data-z="next" title="Kết quả sau (Enter)">›</button></span>
+    <span class="sp"></span><span class="pv-n muted"></span>
+    <button class="btn sm" data-z="ext" title="Mở bằng phần mềm xem PDF của máy">${ic('ext',13)} Mở ngoài</button></div>
+    <div class="pv-pages"><div class="empty"><span class="spin"></span> Đang mở bản vẽ…</div></div>`;
+  const pages=el.querySelector('.pv-pages'), inp=el.querySelector('.pv-s input'), hitEl=el.querySelector('.pv-hit');
+  const zoom=k=>{st.k=Math.min(10,Math.max(.25,k));draw();};
   el.querySelector('.pv-bar').onclick=e=>{const b=e.target.closest('[data-z]');if(!b)return;const z=b.dataset.z;
-    if(z==='ext'){openF(f);return;} st.k=z==='fit'?1:Math.min(8,Math.max(.25,st.k*(z==='in'?1.25:.8)));draw();};
-  pages.addEventListener('wheel',e=>{if(!e.ctrlKey)return;e.preventDefault();st.k=Math.min(8,Math.max(.25,st.k*(e.deltaY<0?1.15:1/1.15)));draw();},{passive:false});
+    if(z==='ext'){openF(f);return;}
+    if(z==='prev'||z==='next'){if(st.hits.length)go(st.hi+(z==='next'?1:-1));return;}
+    zoom(z==='fit'?1:st.k*(z==='in'?1.25:.8));};
+  pages.addEventListener('wheel',e=>{if(!e.ctrlKey)return;e.preventDefault();zoom(st.k*(e.deltaY<0?1.15:1/1.15));},{passive:false});
   let drag=null;
   pages.addEventListener('mousedown',e=>{if(e.button!==0)return;drag={x:e.clientX,y:e.clientY,l:pages.scrollLeft,t:pages.scrollTop};pages.classList.add('drag');});
-  addEventListener('mousemove',e=>{if(!drag)return;pages.scrollLeft=drag.l-(e.clientX-drag.x);pages.scrollTop=drag.t-(e.clientY-drag.y);});
-  addEventListener('mouseup',()=>{drag=null;pages.classList.remove('drag');});
-  try{await pdfReady;st.task=pdfjsLib.getDocument({data:await readFileBuf(f),isEvalSupported:false});st.doc=await st.task.promise;}
-  catch(e){if(pvState===st)pages.innerHTML=`<div class="empty">Không mở được bản vẽ: ${esc(errMsg(e))}</div>`;return;}
+  const mv=e=>{if(!drag)return;pages.scrollLeft=drag.l-(e.clientX-drag.x);pages.scrollTop=drag.t-(e.clientY-drag.y);}, up=()=>{drag=null;pages.classList.remove('drag');};
+  addEventListener('mousemove',mv); addEventListener('mouseup',up);
+  st.off=()=>{removeEventListener('mousemove',mv);removeEventListener('mouseup',up);};
+  let it=null; inp.oninput=()=>{clearTimeout(it);it=setTimeout(()=>{const v=inp.value.trim().replace(/^pos\s*/i,'');st.find(v,/^\d+$/.test(v)?'pos':'text');},250);};
+  inp.onkeydown=e=>{if(e.key==='Enter'&&st.hits.length){e.preventDefault();go(st.hi+(e.shiftKey?-1:1));}if(e.key==='Escape'){inp.value='';st.find('');inp.blur();}};
+  try{
+    await pdfReady; st.task=pdfjsLib.getDocument({data:await readFileBuf(f),isEvalSupported:false}); st.doc=await st.task.promise;
+    for(let i=1;i<=Math.min(st.doc.numPages,60);i++){const pg=await st.doc.getPage(i),v=pg.getViewport({scale:1});st.pages.push({pg,v,w1:v.width,h1:v.height,text:null,ov:null});}
+  }catch(e){if(pvState===st)pages.innerHTML=`<div class="empty">Không mở được bản vẽ: ${esc(errMsg(e))}</div>`;return;}
   if(pvState!==st){st.task.destroy();return;}
   el.querySelector('.pv-n').textContent=st.doc.numPages+' trang ';
+  /* vị trí từng chữ trên trang (theo đơn vị của trang ở tỉ lệ 1) */
+  async function loadText(P){
+    if(P.text) return P.text;
+    const tc=await P.pg.getTextContent(), T=P.v.transform;
+    P.text=tc.items.filter(x=>x.str&&x.str.trim()).map(x=>{
+      const m=pdfjsLib.Util.transform(T,x.transform), n=Math.hypot(m[0],m[1])||1, bx=m[0]/n*x.width, by=m[1]/n*x.width;
+      const xs=[m[4],m[4]+bx,m[4]+m[2],m[4]+bx+m[2]], ys=[m[5],m[5]+by,m[5]+m[3],m[5]+by+m[3]];
+      const x0=Math.min(...xs), y0=Math.min(...ys);
+      return {s:x.str.trim(),x:x0,y:y0,w:Math.max(...xs)-x0,h:Math.max(...ys)-y0};
+    });
+    return P.text;
+  }
+  function updHit(){hitEl.textContent=st.hits.length?`${st.hi+1}/${st.hits.length}`:st.query?(st.noText?'bản vẽ không có lớp chữ':'0 kết quả'):'';hitEl.style.color=st.query&&!st.hits.length?'var(--warn)':'';}
+  function paintHits(){
+    st.pages.forEach(P=>{if(P.ov)P.ov.innerHTML='';});
+    st.hits.forEach((h,i)=>{const P=st.pages[h.p];if(!P.ov)return;const e=document.createElement('i');e.className='pv-h'+(i===st.hi?' cur':'');
+      e.style.left=(h.t.x+h.t.w/2)/P.w1*100+'%';e.style.top=(h.t.y+h.t.h/2)/P.h1*100+'%';e.style.width=(h.t.w+6)/P.w1*100+'%';e.style.height=(h.t.h+6)/P.h1*100+'%';
+      e.title=h.t.s;P.ov.appendChild(e);h.el=e;});
+    updHit();
+  }
+  function go(i){
+    const n=st.hits.length; if(!n) return; st.hi=((i%n)+n)%n;
+    st.hits.forEach((h,j)=>h.el&&h.el.classList.toggle('cur',j===st.hi));
+    const e=st.hits[st.hi].el; if(e){const r=e.getBoundingClientRect(),pr=pages.getBoundingClientRect();
+      pages.scrollTop+=r.top-pr.top-pages.clientHeight/2+r.height/2; pages.scrollLeft+=r.left-pr.left-pages.clientWidth/2+r.width/2;}
+    updHit();
+  }
+  st.find=async(q,mode)=>{
+    q=String(q==null?'':q).trim(); mode=mode||'text'; st.query=q?{q,mode}:null; st.hits=[]; st.hi=-1;
+    if(document.activeElement!==inp) inp.value=q?(mode==='pos'?'Pos '+q:q):'';
+    if(q){
+      const num=/^\d+$/.test(q)?String(+q):null, ql=q.toLowerCase(); let any=false;
+      for(let i=0;i<st.pages.length;i++){
+        const T=await loadText(st.pages[i]); if(pvState!==st||!st.query||st.query.q!==q) return;
+        if(T.length) any=true;
+        for(const t of T) if(mode==='pos'?(num!=null&&/^\d+$/.test(t.s)&&String(+t.s)===num):t.s.toLowerCase().includes(ql)) st.hits.push({p:i,t});
+      }
+      st.noText=!any;
+    }
+    paintHits(); if(st.hits.length) go(0);
+  };
   async function draw(){
     const g=++st.gen, dpr=window.devicePixelRatio||1;
     const cx=(pages.scrollLeft+pages.clientWidth/2)/Math.max(1,pages.scrollWidth), cy=(pages.scrollTop+pages.clientHeight/2)/Math.max(1,pages.scrollHeight);
-    const p1=await st.doc.getPage(1); if(g!==st.gen) return;
-    const fit=Math.max(.05,(pages.clientWidth-26)/p1.getViewport({scale:1}).width), scale=fit*st.k;
+    const fit=Math.max(.05,(pages.clientWidth-26)/st.pages[0].w1), scale=fit*st.k;
     el.querySelector('.pv-z').textContent=Math.round(st.k*100)+'%';
-    const frag=[];
-    for(let i=1;i<=Math.min(st.doc.numPages,60);i++){
-      const pg=i===1?p1:await st.doc.getPage(i); if(g!==st.gen) return;
-      const css=pg.getViewport({scale}); let vp=pg.getViewport({scale:scale*dpr});
-      const lim=4.8e7; if(vp.width*vp.height>lim) vp=pg.getViewport({scale:scale*dpr*Math.sqrt(lim/(vp.width*vp.height))});   // giới hạn kích thước canvas
-      const c=document.createElement('canvas'); c.width=Math.floor(vp.width); c.height=Math.floor(vp.height); c.style.width=Math.floor(css.width)+'px'; c.style.height=Math.floor(css.height)+'px';
-      frag.push([c,pg,vp]);
+    const jobs=[], boxes=[];
+    for(const P of st.pages){
+      let vp=P.pg.getViewport({scale:scale*dpr});
+      const lim=4.8e7; if(vp.width*vp.height>lim) vp=P.pg.getViewport({scale:scale*dpr*Math.sqrt(lim/(vp.width*vp.height))});   // giới hạn kích thước canvas
+      const box=document.createElement('div'); box.className='pv-page'; box.style.width=Math.floor(P.w1*scale)+'px'; box.style.height=Math.floor(P.h1*scale)+'px';
+      const c=document.createElement('canvas'); c.width=Math.floor(vp.width); c.height=Math.floor(vp.height);
+      P.ov=document.createElement('div'); P.ov.className='pv-ov'; box.append(c,P.ov); boxes.push(box); jobs.push([c,P.pg,vp]);
     }
-    pages.innerHTML=''; frag.forEach(([c])=>pages.appendChild(c));
+    pages.innerHTML=''; pages.append(...boxes);
     pages.scrollLeft=cx*pages.scrollWidth-pages.clientWidth/2; pages.scrollTop=cy*pages.scrollHeight-pages.clientHeight/2;
-    for(const [c,pg,vp] of frag){if(g!==st.gen) return; await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise.catch(()=>{});}
+    paintHits();
+    for(const [c,pg,vp] of jobs){if(g!==st.gen) return; await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise.catch(()=>{});}
   }
   await draw();
-  let rt=null; st.ro=new ResizeObserver(()=>{clearTimeout(rt);rt=setTimeout(()=>{if(pvState===st)draw();},250);}); st.ro.observe(pages);
+  let rt=null, lw=pages.clientWidth; st.ro=new ResizeObserver(()=>{if(pages.clientWidth===lw)return;lw=pages.clientWidth;clearTimeout(rt);rt=setTimeout(()=>{if(pvState===st)draw();},250);}); st.ro.observe(pages);
+  if(opt.pos) st.find(opt.pos,'pos');
+}
+/* trang của một thư mục chi tiết: dòng BOM của nó trong cụm cha + bản vẽ chi tiết */
+function renderPartPane(n,bp){
+  const okDraw=!!(n.drawing&&!n.drawing._broken), par=n.parent;
+  const paint=()=>{
+    if(selected!==n) return;
+    const r=rowOf(n);
+    bp.innerHTML=`<div class="partinfo">
+        <div class="phead">${ic('file',14)} <b>Thư mục chi tiết</b><span class="muted">thuộc cụm</span><a class="lnk" data-up>${esc(lbl(par))}</a>${r?'':`<span class="muted">· ${par.report?(par.bom?'không khớp dòng nào trong BOM của cụm cha':'đang đọc BOM của cụm cha…'):'cụm cha không có BOM'}</span>`}</div>
+        <div class="ptable"></div></div>
+      ${okDraw?'<div class="pv" id="pvPart"></div>':`<div class="empty" style="flex:1"><div class="big">${n.drawing?'Không đọc được bản vẽ':'Không có bản vẽ'}</div>${n.drawing?esc(n.drawing.name):'Thư mục này không có file bản vẽ.'}</div>`}`;
+    bp.querySelector('[data-up]').onclick=()=>{if(r)focusKey=r.key;select(par);};
+    if(r){const w=bp.querySelector('.ptable');w.innerHTML=tableHTML([r],{mode:'bom',q:''});bindTable(w,[r],{mode:'bom',q:''});}
+    if(okDraw) mountViewer($('#pvPart'),n.drawing);
+  };
+  paint();
+  if(par&&par.report&&!par.bom) ensureBom(par).then(paint,paint);
 }
 function renderDetail(n){
   closeViewer();
   const d=$('#detail'); const chain=[]; let p=n; while(p){chain.unshift(p);p=p.parent;}
-  const okDraw=!!(n.drawing&&!n.drawing._broken), pr=getProg(n), split=splitOn&&okDraw;
+  const part=isPart(n), okDraw=!!(n.drawing&&!n.drawing._broken), pr=getProg(n), split=splitOn&&okDraw&&!part;
   d.innerHTML=`<div class="dhead">
     <div class="crumb">${chain.map((c,i)=>i===chain.length-1?`<span>${esc(lbl(c))}</span>`:`<a data-path="${esc(c.path)}">${esc(lbl(c))}</a>${ic('chev',11)}`).join('')}</div>
     <div class="dtitle">${n.pos?`<span class="pos">${esc(n.pos)}</span>`:''}<h2>${esc(n.title||n.name)}</h2>
@@ -1156,15 +1379,15 @@ function renderDetail(n){
       ${n.parent?`<span class="tag" title="Số lượng cụm này trong toàn bộ thiết bị">× ${fmt(getMult(n))}</span>`:''}</div>
     <div class="actions">
       <button class="btn" id="bDraw" ${okDraw?'':'disabled'} ${n.drawing&&!okDraw?`title="Trình duyệt không đọc được bản vẽ ${esc(n.drawing.name)} (đường dẫn dài?) – kéo thả file bản vẽ vào cửa sổ để nạp"`:''}>${ic('ext')} Mở bản vẽ</button>
-      <button class="btn ${splitOn?'on':''}" id="bSplit" ${okDraw?'':'disabled'} title="Xem bản vẽ và BOM cạnh nhau">${ic('split')} Bản vẽ song song</button>
+      <button class="btn ${splitOn?'on':''}" id="bSplit" ${okDraw&&!part?'':'disabled'} title="Xem bản vẽ và BOM cạnh nhau">${ic('split')} Bản vẽ song song</button>
       <button class="btn" id="bRep" ${n.report?'':'disabled'}>${ic('file')} Mở BOM PDF</button>
       ${D&&rootPath?`<button class="btn" id="bFolder" title="Mở thư mục của cụm này trong File Explorer">${ic('folder')} Mở thư mục</button>`:''}
       ${n.others.length?`<select id="bOther"><option value="">File khác (${n.others.length})…</option>${n.others.map((f,i)=>`<option value="${i}">${esc(f.name)}</option>`).join('')}</select>`:''}
-      <div class="seg" id="seg">${segHTML(pr.s)}</div>
+      ${part?'':`<div class="seg" id="seg">${segHTML(pr.s)}</div>`}
     </div>
     <textarea class="note" id="bNote" rows="1" placeholder="Ghi chú bóc tách cho cụm này (tự lưu)…">${esc(pr.note)}</textarea>
   </div>
-  <div class="dbody" id="dbody">${split?`<div class="pdfpane" id="pdfPane" style="width:${ls.get('bocvt:pdfw',48)}%">${D?'<div class="pv" id="pv"></div>':`<iframe title="Bản vẽ" src="${drawUrl(n)}#view=FitH"></iframe>`}</div><div class="divider" id="divPdf"></div>`:''}<div class="bompane" id="bomPane"></div></div>`;
+  <div class="dbody" id="dbody">${split?`<div class="pdfpane" id="pdfPane" style="width:${ls.get('bocvt:pdfw',48)}%"><div class="pv" id="pv"></div></div><div class="divider" id="divPdf"></div>`:''}<div class="bompane" id="bomPane"></div></div>`;
   d.querySelectorAll('.crumb a').forEach(a=>a.onclick=()=>select(allNodes.find(x=>x.path===a.dataset.path)));
   $('#bDraw').onclick=()=>openF(n.drawing);
   if($('#bFolder')) $('#bFolder').onclick=()=>{const f=n.drawing||n.report||n.others[0];D.showItem(f&&f.abs?f.abs:absOf(n.path));};
@@ -1172,9 +1395,9 @@ function renderDetail(n){
   d.querySelectorAll('[data-fold]').forEach(b=>b.onclick=openFolderModal);
   $('#bSplit').onclick=()=>{splitOn=!splitOn;ls.set('bocvt:split',splitOn);renderDetail(n);};
   if($('#bOther')) $('#bOther').onchange=e=>{if(e.target.value!=='')openF(n.others[+e.target.value]);e.target.value='';};
-  $('#seg').onclick=e=>{const b=e.target.closest('[data-s]');if(!b)return;setProg(n,{s:b.dataset.s});afterChange();};
+  if($('#seg')) $('#seg').onclick=e=>{const b=e.target.closest('[data-s]');if(!b)return;setProg(n,{s:b.dataset.s});afterChange();};
   $('#bNote').oninput=e=>setProg(n,{note:e.target.value});
-  if(split&&D&&$('#pv')) mountViewer($('#pv'),n.drawing);
+  if(split&&$('#pv')) mountViewer($('#pv'),n.drawing,{auto:true});
   if(split) dragDivider($('#divPdf'),ev=>{const rc=$('#dbody').getBoundingClientRect();const w=clamp((ev.clientX-rc.left)/rc.width*100,20,80);$('#pdfPane').style.width=w+'%';ls.set('bocvt:pdfw',w);});
   bomArea=null; const bp=$('#bomPane');
   if(n.listErr){bp.innerHTML=`<div class="empty"><div class="big err">${ic('warn',16)} Không mở được thư mục này</div>
@@ -1183,14 +1406,15 @@ function renderDetail(n){
       <p style="max-width:640px;margin:10px auto">Mọi file và thư mục con bên trong đều không đọc được, nên cây bị thiếu từ đây trở xuống. Thường do <b>đường dẫn quá dài</b> (Windows ~260 ký tự) hoặc OneDrive chưa tải về.</p>
       <button class="btn primary" data-fold>${ic('warn',14)} Xem cách khắc phục</button></div>`;
     bp.querySelector('[data-fold]').onclick=openFolderModal; return;}
+  if(part){renderPartPane(n,bp);return;}
   if(!n.report){bp.innerHTML=`<div class="empty"><div class="big">Không có BOM</div>Thư mục này không có file ASSEMBLED ITEM REPORT.${n.children.length?'<br>Chọn cụm con bên trái để xem tiếp.':''}${n.ghost?'<br><span style="color:var(--warn)">Thư mục này chỉ thấy qua danh sách Windows (trình duyệt không đọc được nội dung).</span>':''}</div>`;return;}
   bp.innerHTML='<div class="empty"><span class="spin"></span> Đang đọc BOM…</div>';
   ensureBom(n).then(()=>{
     if(selected!==n) return;
     if(focusKey&&n.bom.some(r=>r.key===focusKey)&&!applyFilter(n.bom,fB).some(r=>r.key===focusKey)) fB=newFilter();
-    bomArea=tableArea(bp,{rows:()=>n.bom,f:fB});
+    bomArea=tableArea(bp,{rows:()=>n.bom,f:fB,onFocus:r=>viewerFindPos(r.pos)});
     const rc=$('#dRowCnt'); rc.textContent=n.bom.length+' dòng BOM'; rc.hidden=false; renderTree(); renderKPI();
-    if(focusKey){const k=focusKey;focusKey=null;flashRow(k);}
+    if(focusKey){const k=focusKey;focusKey=null;bomArea.focus(k);flashRow(k);}
   }).catch(e=>{
     if(selected!==n) return; renderTree(); renderKPI();
     const er=n.bomErr||{msg:e.message};
@@ -1227,9 +1451,9 @@ function renderSummary(){
   sw.querySelector('[data-x=xlsx]').onclick=exportSummary;
   sw.querySelector('[data-x=zip]').onclick=()=>openPackModal('sum');
 }
-function exportSummary(){
+async function exportSummary(){
   if(!window.XLSX){toast('Không tải được thư viện Excel (cần mạng Internet).');return;}
-  writeXlsx(plainCols(sumSheets(plainLk)),sumFname());
+  await writeXlsx(plainCols(sumSheets(plainLk)),sumFname());
   toast('Đã xuất Excel kèm danh mục BOM · muốn bấm mở bản vẽ/BOM: dùng nút Xuất Excel + bản vẽ + BOM');
 }
 const sumFname=()=>`TongHop_${safeName(root.item||'hoso')}${fS.cats.size?'_'+safeName([...fS.cats].join('_')):''}.xlsx`;
@@ -1240,14 +1464,57 @@ function sumSheets(lk,o={}){
     return grp?{'STT':i+1,'Item No':r.item,'Mã vật tư công ty':code,'Loại vật tư':r.type,'Thông số':(r.spec||'').replace(/\n/g,' | '),'Phân loại':r.cat.n,'Hãng':r.brand,'SL tổng':r.total,'ĐVT':r.unit,'Gợi ý tên ngắn':r.hose?r.hose.short:'','Vị trí':r.rows.map(x=>where(x.node)+' › '+x.pos).join('; ')}
     :{'STT':i+1,'Cụm':where(r.node),'Tên cụm':r.node.title,'Mã cụm':r.node.item,'Pos':r.pos,'Item No':r.item,'Mã vật tư công ty':code,'Loại vật tư':r.type,'Thông số':(r.spec||'').replace(/\n/g,' | '),'Phân loại':r.cat.n,'Hãng':r.brand,'SL/BOM':r.qty,'× cụm':getMult(r.node),'SL tổng':r.qty!=null?r.qty*getMult(r.node):null,'ĐVT':r.unit,'KL (kg)':r.weight,'Gợi ý tên ngắn':r.hose?r.hose.short:'','Trạng thái cụm':STATUS[getProg(r.node).s][0],[LK_D]:lk(r.node,'draw'),[LK_B]:lk(r.node,'bom')};});
   const sel=sumRows().filter(r=>inAnyList(r.key));
-  return [['Tong hop',data],...bomSheets(relNodes(sel),{picked:r=>inAnyList(r.key),lk,full:o.full})];
+  return [['Tổng hợp',data],...bomSheets(relNodes(sel),{picked:r=>inAnyList(r.key),lk,full:o.full})];
 }
 /* ô có liên kết mở file: {__l: đường dẫn tương đối, t: chữ hiển thị} */
 const XL=(t,l)=>({__l:l,t});
 const LK_D='Bản vẽ lắp (bấm để mở)', LK_B='File BOM (bấm để mở)';
 /* Excel không kèm PDF: cột chỉ ghi tên file, bỏ chữ "bấm để mở" */
 const plainCols=sheets=>sheets.map(([n,rows])=>[n,rows.map(r=>{const o={};for(const k in r)o[k===LK_D?'Bản vẽ lắp':k===LK_B?'File BOM':k]=r[k];return o;})]);
-function writeXlsx(sheets,fname,o={}){
+/* Excel có định dạng (ExcelJS): tiêu đề đậm nền xanh, cố định dòng đầu, bộ lọc, viền, liên kết xanh gạch chân.
+   Không tải được ExcelJS thì dùng SheetJS (không định dạng). */
+const EXCELJS_URLS=['https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js','https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'];
+let excelP=null;
+function loadExcelJS(){
+  if(window.ExcelJS) return Promise.resolve(true);
+  const one=u=>new Promise(res=>{const sc=document.createElement('script');sc.src=u;sc.onload=()=>res(!!window.ExcelJS);sc.onerror=()=>res(false);document.head.appendChild(sc);});
+  return excelP||(excelP=(async()=>{for(const u of EXCELJS_URLS)if(await one(u))return true;excelP=null;return false;})());
+}
+const XL_WRAP=/Thông số|Vị trí|Tên dài|Tên ngắn|Loại vật tư|Mô tả|Tên cụm|Ghi chú|Đường dẫn|^Cụm$/;
+const xlWidth=k=>/Thông số|Vị trí|Tên dài|Đường dẫn/.test(k)?60:/Tên ngắn|Loại vật tư|Tên cụm|Mô tả|Bản vẽ|File BOM|^Cụm$/.test(k)?36:/Mã vật tư|Mã cụm|Item No|Ghi chú|Phân loại|Hãng/.test(k)?18:11;
+async function xlsxStyled(sheets){
+  const wb=new ExcelJS.Workbook(); wb.creator='Bóc Tách Vật Tư'; wb.created=new Date();
+  const ln={style:'thin',color:{argb:'FFD0D7DE'}}, border={top:ln,left:ln,bottom:ln,right:ln};
+  for(const [name,rows0] of sheets){
+    const rows=rows0.length?rows0:[{'(trống)':''}], keys=Object.keys(rows[0]);
+    const ws=wb.addWorksheet(name,{views:[{state:'frozen',ySplit:1}]});
+    ws.columns=keys.map(k=>({header:k,key:k,width:xlWidth(k)}));
+    const head=ws.getRow(1); head.height=32;
+    head.eachCell(c=>{c.font={bold:true,color:{argb:'FFFFFFFF'}};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1F4E78'}};c.alignment={vertical:'middle',horizontal:'center',wrapText:true};c.border=border;});
+    for(const r of rows0){
+      const row=ws.addRow(keys.map(k=>{const v=r[k];if(v&&typeof v==='object'&&'__l' in v)return v.__l?{text:String(v.t),hyperlink:v.__l,tooltip:'Bấm để mở file PDF'}:v.t;return v==null?'':v;}));
+      const sel=r['Đã chọn']==='x';
+      row.eachCell({includeEmpty:true},(c,ci)=>{
+        const k=keys[ci-1], num=typeof c.value==='number';
+        c.border=border; c.alignment={vertical:'top',wrapText:XL_WRAP.test(k),horizontal:num?'right':/^(Đã chọn|Là cụm con|Pos|Rev|ĐVT)$/.test(k)?'center':'left'};
+        if(c.value&&c.value.hyperlink) c.font={color:{argb:'FF0563C1'},underline:true};
+        if(num) c.numFmt=Number.isInteger(c.value)?'#,##0':'#,##0.###';
+        if(sel) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE8F5E9'}};
+      });
+    }
+    if(rows0.length) ws.autoFilter={from:{row:1,column:1},to:{row:1,column:keys.length}};
+  }
+  return wb.xlsx.writeBuffer();
+}
+function saveBlob(blob,fname){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),120000);}
+async function writeXlsx(sheets,fname,o={}){
+  let buf=null;
+  if(await loadExcelJS()){try{buf=await xlsxStyled(sheets);}catch(e){console.error('ExcelJS',e);}}
+  if(!buf) buf=xlsxPlain(sheets);
+  if(o.array) return buf;
+  saveBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),fname);
+}
+function xlsxPlain(sheets){
   const wb=XLSX.utils.book_new();
   for(const [name,data0] of sheets){
     const links=[];
@@ -1259,8 +1526,7 @@ function writeXlsx(sheets,fname,o={}){
     if(data.length) ws['!autofilter']={ref:ws['!ref']};
     XLSX.utils.book_append_sheet(wb,ws,name);
   }
-  if(o.array) return XLSX.write(wb,{bookType:'xlsx',type:'array'});
-  XLSX.writeFile(wb,fname);
+  return XLSX.write(wb,{bookType:'xlsx',type:'array'});
 }
 /* ================= danh mục BOM + gói ZIP (Excel + BOM PDF + bản vẽ) ================= */
 const plainLk=(n,k)=>{const f=k==='draw'?n.drawing:n.report;return f?f.name:'';};
@@ -1291,7 +1557,7 @@ function bomSheets(nodes,o){
         'Phân loại':r.cat.n,'Hãng':r.brand||'','Mã vật tư công ty':c&&(c.kind==='manual'||c.kind==='exact')?c.code:'',
         'Đã chọn':o.picked(r)?'x':'','Là cụm con':r.child?'x':'',[LK_D]:o.lk(n,'draw'),[LK_B]:o.lk(n,'bom')});});
   });
-  return [['Danh muc cum',cum],['Danh muc BOM',bom]];
+  return [['Danh mục cụm',cum],['Danh mục BOM',bom]];
 }
 function packCtx(kind){
   if(kind==='list'){
@@ -1327,8 +1593,8 @@ function openPackModal(kind){
     <p>Chỉ xuất BOM và bản vẽ lắp liên quan tới <b>${esc(ctx.label)}</b>: <b>${ctx.nodes.length}</b> cụm.</p>
     <div style="max-height:120px;overflow:auto;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;margin-bottom:8px">${ctx.nodes.map(n=>`<div><span class="mono">${esc(n.item||'—')}</span> · ${esc(lbl(n))} <span class="muted">(${esc(where(n))})</span>${n.drawing?'':' <span style="color:var(--warn)">không có bản vẽ</span>'}${n.report?'':' <span style="color:var(--warn)">không có BOM</span>'}</div>`).join('')}</div>
     <div style="display:flex;flex-direction:column;gap:6px;margin:4px 0 10px">
-      <label><input type="checkbox" data-o="xlsx" checked> File Excel (có sheet <b>Danh muc cum</b>, <b>Danh muc BOM</b>; bấm tên bản vẽ / BOM để mở PDF)</label>
-      <label style="margin-left:22px"><input type="checkbox" data-o="full"> Sheet Danh muc BOM ghi <b>toàn bộ</b> dòng của các BOM (mặc định: chỉ các mã đã chọn)</label>
+      <label><input type="checkbox" data-o="xlsx" checked> File Excel (có sheet <b>Danh mục cụm</b>, <b>Danh mục BOM</b>; bấm tên bản vẽ / BOM để mở PDF)</label>
+      <label style="margin-left:22px"><input type="checkbox" data-o="full"> Sheet Danh mục BOM ghi <b>toàn bộ</b> dòng của các BOM (mặc định: chỉ các mã đã chọn)</label>
       <label><input type="checkbox" data-o="draw" checked> Bản vẽ lắp của các cụm → thư mục <span class="mono">BanVe_Lap</span></label>
       <label><input type="checkbox" data-o="bom" checked> File BOM PDF (ASSEMBLED ITEM REPORT) → thư mục <span class="mono">BOM</span></label>
       <label><input type="checkbox" data-o="anc"> Kèm cả các cụm cha (đến cụm gốc)</label>
@@ -1379,7 +1645,7 @@ async function buildPack(ctx,o,dirHandle){
     }
     const lk=(n,k)=>{const f=k==='draw'?n.drawing:n.report;if(!f)return '';const p=at.get(f);return p?XL(p.split('/').pop(),encodeURI(p)):f.name+(o[k==='draw'?'draw':'bom']?' (không xuất được)':'');};
     const xname=ctx.fname+'.xlsx';
-    if(o.xlsx){say('Đang tạo file Excel…');out.push({path:xname,data:new Uint8Array(writeXlsx(ctx.sheets(lk,o),xname,{array:true}))});}
+    if(o.xlsx){say('Đang tạo file Excel…');out.push({path:xname,data:new Uint8Array(await writeXlsx(ctx.sheets(lk,o),xname,{array:true}))});}
     out.push({path:'HUONG_DAN.txt',data:['Xuất từ ứng dụng Bóc tách vật tư — '+new Date().toLocaleString('vi-VN'),'Hồ sơ: '+root.name,'',
       dirHandle?'1. Mở file Excel trong thư mục này.':'1. Giải nén cả file ZIP (chuột phải → Extract All) rồi mới mở file Excel.',
       '2. Bấm vào tên file ở cột "Bản vẽ lắp (bấm để mở)" / "File BOM (bấm để mở)" để mở PDF.',
@@ -1497,10 +1763,10 @@ function renderListView(){
     const ln=e.target.closest('[data-node]'); if(ln){switchView('vTree');select(allNodes.find(n=>n.path===ln.dataset.node));}
   });
 }
-function exportList(){
+async function exportList(){
   if(!window.XLSX){toast('Không tải được thư viện Excel (cần mạng Internet).');return;}
   const L=activeList();
-  writeXlsx(plainCols(listSheets(L,plainLk)),`DS_${safeName(L.name)}_${safeName(root.item||'hoso')}.xlsx`);
+  await writeXlsx(plainCols(listSheets(L,plainLk)),`DS_${safeName(L.name)}_${safeName(root.item||'hoso')}.xlsx`);
   toast('Đã xuất Excel '+listGroups(L).length+' mã, kèm danh mục BOM · muốn bấm mở bản vẽ/BOM: dùng nút Xuất Excel + bản vẽ + BOM');
 }
 function listSheets(L,lk,o={}){
@@ -1509,7 +1775,7 @@ function listSheets(L,lk,o={}){
   const d1=gs.map((g,i)=>{const v=matVals(g),mt=L.meta[g.mk]||{};const q=mt.qty!=null&&mt.qty!==''?num(mt.qty):g.total;
     return {'STT':i+1,'Mã vật tư':v.code,'Item No':g.item,'Loại vật tư':g.type,'Thông số':(g.spec||'').replace(/\n/g,' | '),'Phân loại':g.cat.n,'Hãng':g.brand||'','SL theo BOM':g.total,'SL đặt':q,'ĐVT':g.unit,'Tên ngắn':v.short,'Tên dài':v.long,'Vị trí':g.srcs.map(s=>s.where+' › '+s.pos).join('; '),'Ghi chú':mt.note||'',[LK_D]:g.srcs.length?drawOf(g.srcs[0]):'',[LK_B]:g.srcs.length?bomOf(g.srcs[0]):''};});
   const d2=[]; gs.forEach(g=>g.srcs.forEach(s=>d2.push({'Item No':g.item,'Cụm':s.where,'Tên cụm':s.asmTitle,'Pos':s.pos,'SL/BOM':s.qty,'× cụm':s.mult,'SL tổng':(s.qty||0)*(s.mult||1),'ĐVT':s.unit,'Mô tả':s.type,[LK_D]:drawOf(s),[LK_B]:bomOf(s)})));
-  return [['Danh sach',d1],['Chi tiet vi tri',d2],...bomSheets(listNodes(L),{picked:r=>!!L.items[r.key],lk,full:o.full})];
+  return [['Danh sách',d1],['Chi tiết vị trí',d2],...bomSheets(listNodes(L),{picked:r=>!!L.items[r.key],lk,full:o.full})];
 }
 
 /* ================= dictionary modal ================= */
@@ -1636,7 +1902,7 @@ function brokenFile(name,err){
   f._broken=err; return f;
 }
 function setRel(f,rel){try{Object.defineProperty(f,'webkitRelativePath',{value:rel,configurable:true});}catch(e){}return f;}
-function scanMsg(t){$('#tree').innerHTML=`<div class="empty"><span class="spin"></span> ${t}</div>`;}
+function scanMsg(t){$('#tree').innerHTML=`<div class="empty"><span class="spin"></span> ${t}</div>`;const h=$('#hScan');if(h)h.innerHTML=`<span class="spin"></span> ${t}`;}
 /* File System Access API (Edge/Chrome): liệt kê cả thư mục rỗng, báo lỗi rõ thư mục nào không mở được */
 async function walkDirHandle(h){
   const files=[],dirs=[],errs=[]; let last=0;
@@ -1689,6 +1955,7 @@ async function openDesktopRoot(abs){
     if(r.error){toast(r.error);renderTree();updReopen();return;}
     const files=r.files.map(x=>new DFile(x.abs,x.rel,x.size,x.mtime,x.err));
     buildTree(files,{dirs:r.dirs,errs:r.errs,rootName:r.rootName,mode:'desktop',rootPath:r.rootPath});
+    renderHome();
     if(!getBase()) ls.set(baseKey(),r.rootPath);
   }catch(e){toast('Không quét được thư mục: '+errMsg(e));renderTree();}
   finally{off();}
@@ -1978,6 +2245,80 @@ function palGo(it,a){
 }
 $('#btnSearch').onclick=openPalette;
 
+/* ================= màn hình chào, hồ sơ gần đây, thanh trạng thái ================= */
+const APP_VER='2.0';
+let appInfo=null;
+function updStatus(){
+  const L=$('#sbL'), M=$('#sbM'); if(!L) return;
+  $('#sbVer').textContent='Bóc Tách Vật Tư '+APP_VER+(appInfo?' · bản Windows '+appInfo.version:D?' · bản Windows':' · bản web');
+  if(!root){L.textContent=D?'Chưa mở hồ sơ':'Chưa mở hồ sơ · dữ liệu chỉ được đọc trên máy, không gửi đi đâu';M.textContent='';return;}
+  L.textContent=(rootPath||root.name)+' · '+modeName(); L.title=rootPath||root.path;
+  const rep=allNodes.filter(n=>n.report), ok=rep.filter(n=>n.bom&&!n.bomErr).length, bad=rep.filter(n=>n.bomErr).length;
+  M.textContent=scanning?`Đang đọc BOM ${ok+bad}/${rep.length}…`:`${ok}/${rep.length} BOM · ${allRows().length} dòng`+(bad?` · ${bad} lỗi`:'');
+}
+const fmtAgo=t=>{const d=Math.floor((Date.now()-t)/86400000);return d<=0?'hôm nay':d===1?'hôm qua':d<30?d+' ngày trước':new Date(t).toLocaleDateString('vi-VN');};
+async function recentList(){
+  if(D){const c=await D.getConfig().catch(()=>({}));return (c.recent||[]).map(r=>({name:r.name,path:r.path,at:r.at,open:()=>openDesktopRoot(r.path)}));}
+  try{const l=await idb.get('lastRoot');if(l&&l.handle)return [{name:l.name,path:'Bấm để mở lại (trình duyệt sẽ hỏi quyền đọc thư mục)',at:0,open:()=>$('#btnReopen').click()}];}catch(e){}
+  return [];
+}
+async function renderHome(){
+  const el=$('#hRecent'); if(!el) return;
+  const list=await recentList();
+  el.innerHTML=list.length?`<div class="home-sec">Hồ sơ gần đây</div><div class="recent">${list.map((r,i)=>`<div class="recent-it" data-i="${i}"><span class="ri">${ic('folder',16)}</span><div class="rm"><div class="rn">${esc(r.name)}</div><div class="rp">${esc(r.path)}</div></div>${r.at?`<span class="rd">${fmtAgo(r.at)}</span>`:''}${D?`<button class="xbtn" data-rm="${i}" title="Bỏ khỏi danh sách">${ic('x',14)}</button>`:''}</div>`).join('')}</div>`:'';
+  el.onclick=async e=>{
+    const rm=e.target.closest('[data-rm]');
+    if(rm&&D){const c=await D.getConfig();const p=list[+rm.dataset.rm].path;await D.setConfig({recent:(c.recent||[]).filter(x=>x.path!==p),lastRoot:c.lastRoot===p?'':c.lastRoot});renderHome();updReopen();return;}
+    const it=e.target.closest('.recent-it'); if(it) list[+it.dataset.i].open();
+  };
+  if(D){$('#btnRecent').hidden=!list.length;}
+}
+$('#hPick').onclick=()=>pickRoot();
+$('#sbHelp').onclick=()=>openHelp();
+$('#btnRecent').onclick=async e=>{
+  const b=e.currentTarget.getBoundingClientRect();   // lấy trước khi await (currentTarget mất sau đó)
+  const list=await recentList(), p=$('#pop');
+  p.innerHTML=list.map((r,i)=>`<button data-i="${i}" title="${esc(r.path)}">${ic('folder',14)}<span style="max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.name)}</span></button>`).join('')||'<div class="muted" style="padding:8px 10px">Chưa có hồ sơ nào</div>';
+  p.hidden=false; p.style.top=b.bottom+6+'px'; p.style.left=Math.max(8,b.right-p.offsetWidth)+'px';
+  p.onclick=ev=>{const x=ev.target.closest('[data-i]');if(!x)return;p.hidden=true;list[+x.dataset.i].open();};
+};
+if(D&&D.appInfo) D.appInfo().then(i=>{appInfo=i;updStatus();}).catch(()=>{});
+
+/* ================= phím tắt ================= */
+function openHelp(){
+  const K=(k,t)=>`<span>${k.split(' ').map(x=>`<kbd>${x}</kbd>`).join(' ')}</span><span>${t}</span>`;
+  openModal(`<h3>${ic('list',18)} Phím tắt</h3>
+    <div class="keys">
+      ${K('↑ ↓','Chuyển dòng trong bảng BOM / Tổng hợp (bản vẽ song song tự tô sáng số Pos của dòng)')}
+      ${K('Space','Chọn / bỏ chọn dòng vào danh sách')}
+      ${K('Enter','Đánh dấu "đã xem" và xuống dòng kế')}
+      ${K('1 2 3 0','Tô vàng (cần kiểm tra) · xanh (đã có mã) · đỏ (cần tạo mã) · bỏ tô')}
+      ${K('→','Mở cụm con / thư mục chi tiết của dòng')}
+      ${K('←','Quay về cụm cha')}
+      ${K('B','Bật / tắt bản vẽ song song')}
+      ${K('/','Nhảy vào ô tìm của bảng')}
+      ${K('Ctrl K','Tìm nhanh toàn hồ sơ')}
+      ${K('?','Mở bảng phím tắt này')}
+    </div>
+    <p class="muted" style="font-size:12px">Bấm tiêu đề cột để sắp xếp (bấm lần nữa để đảo chiều, lần thứ ba để bỏ). Giữ Shift khi tích ô chọn để chọn cả một dải dòng.</p>
+    <div class="mfoot"><button class="btn primary" data-close>Đóng</button></div>`);
+}
+document.addEventListener('keydown',e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey) return;
+  const t=e.target, tag=t&&t.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||(t&&t.isContentEditable)){if(e.key==='Escape')t.blur();return;}
+  if(!$('#modal').hidden||!$('#pal').hidden||!$('#pop').hidden) return;
+  if(e.key==='?'){openHelp();e.preventDefault();return;}
+  if(!root) return;
+  if(e.key==='/'){const i=document.querySelector(`#${curView} .fbar [data-f=q]`);if(i){i.focus();i.select();e.preventDefault();}return;}
+  if(curView==='vTree'&&selected){
+    if(e.key==='ArrowLeft'&&selected.parent){const r=rowOf(selected);if(r)focusKey=r.key;select(selected.parent);e.preventDefault();return;}
+    if(e.key.toLowerCase()==='b'&&$('#bSplit')&&!$('#bSplit').disabled){$('#bSplit').click();e.preventDefault();return;}
+  }
+  const area=curView==='vTree'?bomArea:curView==='vSum'?sumArea:null;
+  if(area&&area.key&&area.key(e)) e.preventDefault();
+});
+
 /* ================= backup / restore / theme / views ================= */
 $('#btnBackup').onclick=()=>{
   if(!root){toast('Chưa chọn hồ sơ');return;} flush();
@@ -2046,6 +2387,7 @@ $('#detail').innerHTML=`<div class="empty"><div class="big">Bóc tách vật tư
   2. Chọn cụm bên trái để xem BOM. Tích ô <input type="checkbox" checked disabled style="vertical-align:-3px"> sau mã vật tư để đưa vào danh sách.<br>
   3. Sang tab <b>Danh sách đã chọn</b> để nhập mã công ty, tên ngắn/dài và <b>Xuất Excel</b>.</div>`;
 renderSummary(); renderListView();
+renderHome(); updStatus();
 </script>
 </body>
 </html>

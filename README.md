@@ -31,6 +31,14 @@ Bản cài trên máy tính của `tools/QuanLyBocVatTu.html` (thư mục `deskt
 - Mở bản vẽ / BOM bằng phần mềm xem PDF của máy; khung xem bản vẽ song song có thu phóng
 - Xuất Excel + bản vẽ lắp + BOM thẳng ra thư mục, bấm liên kết trong Excel mở PDF
 
+Phiên bản 2.0 (cả bản web và bản Windows):
+- **Tìm Pos trên bản vẽ**: bấm một dòng BOM (hoặc dùng phím ↑ ↓) thì số vị trí đó được khoanh trên bản vẽ song song; có ô tìm chữ trên bản vẽ
+- Tiến độ chỉ tính cụm có BOM; thư mục chi tiết (bulông, long đen…) hiển thị mờ, có nút ẩn/hiện và có trang riêng (dòng BOM + bản vẽ chi tiết)
+- Bấm tiêu đề cột để sắp xếp; phím tắt (Space chọn, Enter đã xem, 1/2/3 tô màu, → ← vào/ra cụm, `?` xem danh sách)
+- Bảng lớn vẽ từng đợt nên vẫn mượt với hàng nghìn dòng
+- Excel xuất ra có định dạng: tiêu đề đậm, cố định dòng đầu, bộ lọc, liên kết xanh, dòng đã chọn tô nền
+- Màn hình chào, hồ sơ gần đây, thanh trạng thái
+
 Mỗi lần thay đổi `desktop/` hoặc `tools/QuanLyBocVatTu.html`, mục **Actions** tự build trên Windows và đưa 2 file lên **Releases**:
 `BocTachVatTu-CaiDat-*.exe` (bản cài đặt) và `BocTachVatTu-ChayLuon-*.exe` (chạy luôn, không cần cài).
 
