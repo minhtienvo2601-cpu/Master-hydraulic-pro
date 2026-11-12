@@ -43,3 +43,10 @@ Mỗi lần thay đổi `desktop/` hoặc `tools/QuanLyBocVatTu.html`, mục **A
 `BocTachVatTu-CaiDat-*.exe` (bản cài đặt) và `BocTachVatTu-ChayLuon-*.exe` (chạy luôn, không cần cài).
 
 Chạy thử khi phát triển: `cd desktop && npm install && npm start`. Kiểm tra bộ quét thư mục: `npm test`.
+
+## Gộp PDF
+File `tools/GopPDF.html` — mở bằng Edge/Chrome (cần mạng lần đầu để tải thư viện). File không được gửi đi đâu.
+- Thêm nhiều file PDF, JPG, PNG (kéo thả hoặc chọn); kéo thả để đổi thứ tự file và thứ tự trang
+- Ảnh thu nhỏ từng trang; xoay, bỏ / lấy lại từng trang; xem lớn
+- Lấy khoảng trang theo từng file (vd. `1-3, 7, 10-`); xoay / đảo thứ tự cả file
+- Tùy chọn đánh số trang `1 / N`, đặt ảnh vừa khổ A4
