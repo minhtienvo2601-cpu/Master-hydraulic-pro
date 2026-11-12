@@ -54,3 +54,6 @@ File `tools/GopPDF.html` — mở bằng Edge/Chrome (cần mạng lần đầu 
 
 ## Luyện tập C++
 File `tools/LuyenTapCpp.html` — 87 bài tập theo 13 chương: 8 chương nền tảng (nhập xuất → quy hoạch động & đồ thị) và 5 chương mức khó kiểu thi đấu (Fenwick / segment tree lazy / DSU / trie, KMP / hash / tổ hợp modulo / lũy thừa ma trận, DP bitmask / cây / chữ số / CHT, cầu / SCC / 2-SAT / luồng / ghép cặp, bài tổng hợp có subtask). Mỗi bài có đề với ràng buộc, ví dụ vào/ra, gợi ý và lời giải mẫu ghi độ phức tạp. Mọi lời giải đã biên dịch bằng g++ -std=c++17; 29 bài khó được so với lời giải vét cạn trên 150 test ngẫu nhiên mỗi bài và chạy thử ở giới hạn tối đa (< 0,5 s). Tiến độ lưu trong trình duyệt, có sao lưu / khôi phục.
+
+## Bí Kíp Tán Gái
+File `tools/BiKipTanGai.html` — ứng dụng cho điện thoại, chạy offline: 69 câu thả thính theo 5 phong cách, 27 câu mở lời theo 8 tình huống (kèm lý do vì sao hiệu quả), 35 chủ đề trò chuyện, 18 chuyện vui, 12 nguyên tắc cốt lõi, cách đọc tín hiệu, lỗi cần tránh, ý tưởng hẹn hò và 12 tình huống luyện phản xạ. Lưu câu yêu thích, sao chép nhanh, tìm kiếm, giao diện sáng / tối.

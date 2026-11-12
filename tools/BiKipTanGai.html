@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e8456b">
+<title>Bí Kíp Tán Gái</title>
+<script>try{var t=localStorage.getItem('bk:theme');t=t?JSON.parse(t):(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='light';}</script>
+<style>
+:root{--font:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+ --bg:#fff5f6;--surface:#fff;--surface-2:#fff0f2;--border:#f3d3da;--text:#2a1820;--muted:#8a6b75;
+ --accent:#e8456b;--accent-2:#ff8a5c;--accent-soft:#ffe3ea;--ok:#1f9d63;--bad:#d4433b;--warn:#c77700;
+ --shadow:0 2px 10px rgba(232,69,107,.10)}
+[data-theme=dark]{--bg:#17101a;--surface:#221826;--surface-2:#2b1f30;--border:#3d2c44;--text:#f3e8ee;--muted:#b39aa6;
+ --accent:#ff6b8e;--accent-2:#ff9a70;--accent-soft:rgba(255,107,142,.16);--ok:#3ecf8e;--bad:#ff6b6b;--warn:#f0a73a;--shadow:none}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;font:15px/1.55 var(--font);color:var(--text);background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
+button,input{font:inherit;color:inherit}
+.app{flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:620px;margin:0 auto;background:var(--bg)}
+header{flex:none;display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;color:#fff;background:linear-gradient(120deg,var(--accent),var(--accent-2))}
+header h1{margin:0;font-size:18px;flex:1;letter-spacing:.01em}
+header small{display:block;font-weight:400;font-size:11.5px;opacity:.9}
+.hbtn{width:36px;height:36px;border-radius:50%;border:0;background:rgba(255,255,255,.22);color:#fff;font-size:17px;cursor:pointer;display:grid;place-items:center}
+main{flex:1;min-height:0;overflow:auto;padding:14px 14px 24px;-webkit-overflow-scrolling:touch}
+nav{flex:none;display:flex;background:var(--surface);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;background:none;padding:8px 2px 7px;cursor:pointer;color:var(--muted);font-size:11px;display:flex;flex-direction:column;align-items:center;gap:1px}
+nav button i{font-style:normal;font-size:20px;line-height:1.2}
+nav button.on{color:var(--accent);font-weight:600}
+h2{font-size:17px;margin:18px 0 8px}
+h2:first-child{margin-top:2px}
+.sub{color:var(--muted);font-size:13px;margin:-4px 0 10px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:10px;box-shadow:var(--shadow)}
+.line{font-size:15.5px}
+.why{margin-top:6px;font-size:12.5px;color:var(--muted);border-left:3px solid var(--accent-soft);padding-left:8px}
+.acts{display:flex;gap:6px;margin-top:9px;align-items:center}
+.acts .tag{font-size:11px;color:var(--muted);background:var(--surface-2);padding:2px 8px;border-radius:10px;margin-right:auto}
+.ib{border:1px solid var(--border);background:var(--surface);border-radius:9px;height:32px;min-width:38px;padding:0 9px;cursor:pointer;font-size:13px}
+.ib:active{transform:scale(.95)}
+.ib.fav{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+.chips{display:flex;gap:7px;overflow:auto;padding:2px 0 10px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--border);background:var(--surface);border-radius:18px;padding:6px 13px;font-size:13px;cursor:pointer;white-space:nowrap}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.hero{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-radius:18px;padding:18px 16px;margin-bottom:14px;box-shadow:0 8px 22px rgba(232,69,107,.28)}
+.hero .k{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;opacity:.9}
+.hero .q{font-size:18px;line-height:1.5;margin:8px 0 12px;font-weight:600}
+.hero .row{display:flex;gap:8px;flex-wrap:wrap}
+.hero button{border:0;border-radius:10px;height:36px;padding:0 13px;cursor:pointer;background:rgba(255,255,255,.24);color:#fff;font-weight:600;font-size:13px}
+.hero button.w{background:#fff;color:var(--accent)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+.tile{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:13px;cursor:pointer;box-shadow:var(--shadow)}
+.tile i{font-style:normal;font-size:24px}
+.tile b{display:block;margin-top:4px}
+.tile span{font-size:12px;color:var(--muted)}
+.gold{background:var(--surface-2);border:1px dashed var(--accent);border-radius:14px;padding:12px 14px;margin:12px 0;font-size:13.5px}
+.name{display:flex;gap:8px;align-items:center;margin:4px 0 14px}
+.name input,.search{flex:1;height:38px;border:1px solid var(--border);border-radius:10px;padding:0 12px;background:var(--surface);min-width:0;width:100%}
+.search{margin-bottom:10px}
+.tip h3{margin:0 0 4px;font-size:15.5px}
+.tip p{margin:0;font-size:14px}
+.tip .ex{margin-top:7px;font-size:13px;background:var(--surface-2);border-radius:9px;padding:7px 10px}
+.tip .ex b{color:var(--ok)}.tip .ex s{color:var(--bad);text-decoration:none}
+ul.list{margin:0;padding-left:20px}ul.list li{margin:5px 0}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cols .card h3{margin:0 0 6px;font-size:14px}
+.good h3{color:var(--ok)}.badc h3{color:var(--bad)}
+.qz .sit{font-size:16px;font-weight:600;margin-bottom:10px}
+.opt{display:block;width:100%;text-align:left;border:1px solid var(--border);background:var(--surface);border-radius:12px;padding:11px 12px;margin-bottom:8px;cursor:pointer;font-size:14.5px}
+.opt.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--surface))}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.expl{font-size:13.5px;background:var(--surface-2);border-radius:10px;padding:9px 11px;margin:4px 0 10px}
+.pbar{height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden;margin-bottom:12px}.pbar i{display:block;height:100%;background:var(--accent);transition:.3s}
+.big{display:block;width:100%;height:44px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer;font-size:15px}
+.score{text-align:center;padding:26px 10px}.score .n{font-size:46px;font-weight:800;color:var(--accent)}
+.empty{text-align:center;color:var(--muted);padding:34px 10px}
+#toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#2a1820;color:#fff;padding:8px 16px;border-radius:20px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;z-index:9;white-space:nowrap}
+#toast.on{opacity:1}
+@media(max-width:380px){.cols{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+<header><div style="font-size:24px">💘</div><h1>Bí Kíp Tán Gái<small>Nói chuyện có duyên · tự tin · tôn trọng</small></h1>
+  <button class="hbtn" id="bFav" title="Đã lưu">♥</button><button class="hbtn" id="bTheme" title="Sáng / tối">◐</button></header>
+<main id="main"></main>
+<nav id="nav">
+  <button data-v="home"><i>🏠</i>Trang chủ</button><button data-v="thinh"><i>💌</i>Thả thính</button><button data-v="talk"><i>💬</i>Trò chuyện</button><button data-v="tips"><i>📖</i>Bí kíp</button><button data-v="quiz"><i>🎯</i>Luyện tập</button>
+</nav>
+</div>
+<div id="toast"></div>
+<script>
+"use strict";
+/* ================= NỘI DUNG ================= */
+/* {ten} được thay bằng tên người dùng nhập ở trang chủ */
+const THINH={
+"Ngọt ngào":[
+"Anh không giỏi nhớ đường, nhưng đường nào dẫn tới em thì anh thuộc lòng.",
+"Trước khi gặp em, anh tưởng mình thích ở một mình. Hóa ra anh chỉ chưa gặp đúng người để ở cùng.",
+"Em có biết điểm chung giữa em và cà phê sáng không? Thiếu là anh không tỉnh táo nổi.",
+"Hôm nay trời đẹp thật, nhưng anh nghĩ là do em vừa cười.",
+"Anh không cần em phải hoàn hảo. Em cứ là em thôi là đủ khiến anh muốn tìm hiểu rồi.",
+"Nói chuyện với em mười phút mà anh vui cả ngày. Em tính lãi kiểu gì vậy?",
+"Anh hay quên lắm. Nhưng lạ là chuyện gì em kể anh cũng nhớ.",
+"Nếu được chọn lại, anh vẫn sẽ bấm kết bạn với em. Chỉ là bấm sớm hơn.",
+"Em không cần làm gì cả. Em xuất hiện là ngày của anh tự khá lên.",
+"Anh đang tập sống chậm lại. Bắt đầu từ việc đọc tin nhắn của em hai lần.",
+"Có người hỏi anh thích kiểu con gái nào. Anh định tả, xong nhận ra mình đang tả em.",
+"Anh không hứa trăng sao. Anh chỉ hứa trả lời tin nhắn em nhanh hơn người khác.",
+"Giữa một ngày bận rộn, nghĩ đến em là khoảng giải lao anh thích nhất.",
+"Em cười lên đi. Nãy giờ điện thoại anh sáng mà lòng anh chưa sáng.",
+"Gặp em rồi anh mới hiểu vì sao người ta hay nói: đúng người, đúng thời điểm.",
+"Anh không biết tương lai thế nào, nhưng anh biết cuối tuần này anh muốn gặp em."],
+"Hài hước":[
+"Em có tin vào tình yêu từ cái nhìn đầu tiên không, hay để anh đi qua lần nữa?",
+"Anh đang làm khảo sát: em thích trà sữa hay cà phê? Kết quả sẽ quyết định anh mời em đi đâu.",
+"Mẹ anh dặn không nói chuyện với người lạ. Nên mình làm quen đi cho hết lạ.",
+"Anh nấu ăn không ngon lắm, nhưng anh rửa bát rất có tâm.",
+"Điện thoại anh hỏng rồi em ạ. Trong danh bạ thiếu mỗi số của em.",
+"Anh định giả vờ lạnh lùng, nhưng em cười một cái là kế hoạch phá sản.",
+"Bác sĩ bảo anh thiếu vitamin. Anh nghĩ là thiếu vitamin “em”.",
+"Em là wifi à? Vì anh thấy có kết nối. Mà khoan, mật khẩu là gì thế?",
+"Anh hơi nhát, nên nhờ tin nhắn này nói hộ: em dễ thương thật đấy.",
+"Em đi đứng kiểu gì mà va vào suy nghĩ của anh cả ngày?",
+"Anh có hai tin. Tin tốt: cuối tuần anh rảnh. Tin tốt hơn: anh muốn rủ em.",
+"Em ăn cơm chưa? Chưa thì đi ăn với anh. Rồi thì đi ăn tráng miệng với anh.",
+"Anh không biết xem bói, nhưng nhìn em anh đoán tương lai gần có một ly trà sữa do anh mời.",
+"Em ơi, em có bản đồ không? Anh lạc… mà thôi, câu này cũ quá. Cho anh làm lại: chào em, anh là {ten}.",
+"Anh mới tải app đếm bước chân. Hôm nay nó báo anh đi lòng vòng quanh ý nghĩ về em 5.000 bước.",
+"Trời hôm nay 35 độ, mà anh vẫn thấy thiếu một chút ấm áp. Em rảnh không?"],
+"Dân kỹ thuật":[
+"Anh làm thủy lực, áp suất nào anh cũng chịu được. Trừ áp lực lúc em nhìn anh.",
+"Tim anh như cái bơm: bình thường chạy đều, gặp em là tăng lưu lượng.",
+"Em là bản vẽ lắp à? Vì thiếu em, mọi chi tiết trong anh không khớp vào đâu cả.",
+"Anh kiểm tra rò rỉ cả ngày, vậy mà để lọt mất trái tim lúc nào không hay.",
+"Em như con ốc đúng cỡ: tìm mãi mới thấy, mà thấy rồi là vừa khít.",
+"Hệ thống của anh có van an toàn. Nhưng với em thì nó không đóng kịp.",
+"Anh bóc tách vật tư cả ngày, tối về chỉ muốn bóc tách xem em đang nghĩ gì.",
+"Dung sai của anh rất nhỏ. Nhưng với em, anh nới rộng vô hạn.",
+"Anh là dân IT. Em là dòng code duy nhất anh không muốn sửa, vì chạy ổn quá.",
+"Tình cảm của anh không cần cập nhật phiên bản. Bản đầu tiên đã ổn định rồi.",
+"Trong toán có những bài vô nghiệm. Còn anh thì có đáp án rồi: em.",
+"Anh với em như hai lực cùng phương cùng chiều: cộng lại là đi được xa.",
+"Bảo trì định kỳ sáu tháng một lần. Còn nhắn tin cho em thì anh bảo trì mỗi ngày.",
+"Kế toán bảo anh phải cân đối thu chi. Anh bảo: thu thì chưa chắc, nhưng chi cho em thì sẵn sàng.",
+"Anh là thợ điện: gặp em là anh biết thế nào là dòng điện xoay chiều trong lòng."],
+"Sáng & tối":[
+"Chào buổi sáng. Hôm nay em không cần cố quá đâu, em vốn đã ổn rồi.",
+"Sáng nay trời hơi lạnh, em nhớ mặc ấm. Anh không ở gần để nhường áo đâu.",
+"Dậy chưa cô gái? Cà phê thì anh chưa mời được, nhưng lời chúc ngày mới thì có ngay.",
+"Chúc em một ngày ít deadline, nhiều đồ ăn ngon.",
+"Hôm nay nếu có ai làm em bực, nhớ là vẫn có người mong em vui.",
+"Sáng ra chưa kịp làm gì, đã kịp nghĩ tới em một cái.",
+"Ngủ ngon nhé. Mai kể anh nghe hôm nay của em thế nào.",
+"Muộn rồi, cất điện thoại đi ngủ thôi. Trừ khi em đang đợi tin nhắn này.",
+"Chúc em ngủ ngon. Hôm nay em vất vả rồi.",
+"Anh không biết em sẽ mơ gì, chỉ mong là giấc mơ đẹp.",
+"Ngủ sớm đi: da đẹp, tâm trạng tốt, mai trả lời tin anh nhanh hơn.",
+"Hôm nay nói chuyện vui lắm. Ngủ ngon nha, mai mình nói tiếp."],
+"Tự trào":[
+"Anh không cao, không đẹp trai xuất sắc, nhưng anh đúng giờ và biết lắng nghe.",
+"Anh nhắn tin không hay lắm, nói chuyện trực tiếp anh duyên hơn. Cho anh cơ hội chứng minh nhé?",
+"Ưu điểm của anh: thật thà. Nhược điểm: thật thà quá nên giờ mới dám nhắn em.",
+"Anh chụp ảnh xấu lắm, nhưng anh sẵn sàng chụp 50 tấm cho tới khi em ưng.",
+"Anh hay quên, nhưng sinh nhật em anh đặt ba cái báo thức rồi.",
+"Anh không biết nhảy. Nhưng tim anh thì biết, nhất là lúc em nhắn tin.",
+"Hồ sơ của anh: biết sửa ống nước, biết xách đồ, biết im lặng khi em đang bực.",
+"Nói thật là anh đang hồi hộp. Nên nếu anh nói gì ngố thì em cười giúp anh nhé.",
+"Anh không giỏi nói lời hay, nhưng anh giỏi có mặt đúng lúc.",
+"Anh hát dở lắm. Ưu điểm là em sẽ không bao giờ phải nghe anh hát."]
+};
+const OPENERS=[
+{s:"Quán cà phê, nhà sách",i:"☕",l:[
+ ["Em ơi, cuốn em đang đọc có hay không? Anh đang tìm sách mà chưa biết chọn gì.","Bắt đầu từ thứ cô ấy đang quan tâm, dễ trả lời, không gây áp lực."],
+ ["Em hay ngồi quán này à? Anh mới tới lần đầu, em thấy món nào đáng thử?","Xin lời khuyên khiến người ta thấy được tin tưởng và dễ mở lời."],
+ ["Xin lỗi làm phiền em một chút. Anh thấy em cười suốt nãy giờ nên tò mò: phim hay hay bạn nhắn vui thế?","Nhận xét nhẹ nhàng về điều tích cực, kèm lời xin phép."],
+ ["Anh không giỏi bắt chuyện lắm, nhưng nếu không chào em một câu thì về anh sẽ tiếc. Anh là {ten}.","Thành thật về sự ngại ngùng thường được đón nhận tốt hơn câu thính bóng bẩy."]]},
+{s:"Chỗ làm, lớp học, phòng tập",i:"🏢",l:[
+ ["Chị/em làm bên phòng nào thế? Em thấy quen quen mà chưa có dịp chào.","Môi trường chung là cái cớ tự nhiên nhất; cứ chào hỏi bình thường trước."],
+ ["Bài hôm nay em hiểu không? Anh nghe tới đoạn giữa là lạc luôn.","Tự trào nhẹ và nhờ giúp đỡ tạo cảm giác gần gũi."],
+ ["Em tập ở đây lâu chưa? Anh mới đăng ký, đang chưa biết bắt đầu từ đâu.","Hỏi kinh nghiệm, không bình luận về cơ thể người ta."],
+ ["Trưa nay cả nhóm đi ăn, em đi cùng cho vui nhé?","Mời theo nhóm trước giúp cô ấy thoải mái, không thấy bị đặt vào thế khó."]]},
+{s:"Mạng xã hội, app hẹn hò",i:"📱",l:[
+ ["Anh thấy ảnh em chụp ở Đà Lạt. Em đi mùa nào mà trời đẹp thế? Anh đang định đi.","Dẫn từ chi tiết cụ thể trên trang cá nhân, cho thấy bạn có để ý chứ không gửi hàng loạt."],
+ ["Hồ sơ em ghi thích mèo. Câu hỏi quan trọng: mèo nhà em tên gì, và nó có cho người lạ sờ không?","Câu hỏi vui, dễ trả lời, mở ra chủ đề cô ấy thích."],
+ ["Chào em. Anh là {ten}, làm kỹ thuật. Anh thấy mình có chung sở thích leo núi nên muốn làm quen.","Ngắn, rõ, tử tế. Tốt hơn nhiều so với “hi” hay “em ơi”."],
+ ["Story em đăng quán này nhìn ngon thế. Ở đâu vậy em, có đáng để anh đi 5 cây số không?","Trả lời story là cách bắt chuyện tự nhiên nhất trên mạng."]]},
+{s:"Qua bạn bè giới thiệu, đám cưới, tiệc",i:"🎉",l:[
+ ["Em là bạn của Lan đúng không? Anh là {ten}, bạn cùng phòng cũ của chồng Lan. Em quen hai người lâu chưa?","Người quen chung là cầu nối an toàn, hỏi về mối liên hệ rất tự nhiên."],
+ ["Bàn này toàn người anh không quen, may có em ngồi cạnh. Em bên nhà trai hay nhà gái?","Hoàn cảnh chung + chút hài hước."],
+ ["Em chọn bài này à? Gu nhạc ổn đấy. Em hay nghe thể loại gì?","Khen lựa chọn, không khen ngoại hình ngay câu đầu."]]},
+{s:"Xin liên lạc",i:"🔗",l:[
+ ["Nói chuyện với em vui thật. Anh phải đi rồi, cho anh xin Zalo để hôm nào nói tiếp nhé?","Xin sau khi đã có vài phút trò chuyện vui, và nói rõ lý do."],
+ ["Anh đưa em số của anh nhé, nếu em thấy ổn thì nhắn anh một tin.","Trao quyền chủ động cho cô ấy, không gây áp lực."],
+ ["Hôm nào anh mời em ly cà phê để nghe nốt chuyện chuyến đi của em. Anh liên lạc với em qua đâu được?","Gắn với một lý do cụ thể từ cuộc nói chuyện."]]},
+{s:"Tin nhắn đầu tiên sau khi quen",i:"✉️",l:[
+ ["Anh {ten} đây, người hỏi em về cuốn sách ở quán hôm nay. Anh đặt mua rồi, đọc không hay là anh bắt đền đấy.","Nhắc lại hoàn cảnh quen để cô ấy nhớ ra, thêm một chút đùa."],
+ ["Em về tới nhà chưa? Hôm nay nói chuyện với em vui lắm.","Ngắn gọn, quan tâm thật, không dồn dập."],
+ ["Quán em chỉ anh ghé thử rồi. Em nói đúng, món đó ngon thật. Còn bí kíp nào nữa không?","Cho thấy bạn nghe và làm theo lời cô ấy nói."]]},
+{s:"Mời đi chơi",i:"📅",l:[
+ ["Thứ bảy này khoảng 3 giờ chiều anh định ra quán cà phê sách ở Hồ Tây. Em đi cùng anh nhé?","Cụ thể ngày, giờ, địa điểm. “Hôm nào rảnh đi cà phê” gần như không bao giờ thành."],
+ ["Em bảo thích ăn bún chả đúng không? Anh biết một quán ổn lắm. Tối thứ sáu anh mời, em thấy sao?","Dựa trên điều cô ấy từng nói, cho thấy bạn nhớ."],
+ ["Cuối tuần có triển lãm ảnh ở trung tâm. Anh có hai vé, em đi không? Nếu bận thì mình dời hôm khác.","Có sẵn lối ra để cô ấy từ chối mà không khó xử."]]},
+{s:"Khi cuộc trò chuyện chững lại",i:"🧊",l:[
+ ["Đổi chủ đề nhé: nếu được nghỉ một tháng vẫn có lương, em sẽ đi đâu đầu tiên?","Câu hỏi mở, vui, không có đáp án sai."],
+ ["Anh hỏi câu nghiêm túc: phở phải ăn với quẩy hay không quẩy?","Tranh luận vui về chuyện vô hại luôn làm không khí nhẹ đi."],
+ ["Hôm nay em có vẻ bận. Em cứ làm việc đi, lúc nào rảnh mình nói chuyện tiếp nhé.","Biết dừng đúng lúc cũng là một cách ghi điểm."]]}
+];
+const TOPICS={
+"Câu hỏi mở":[
+"Nếu được nghỉ một tháng vẫn có lương, em sẽ làm gì đầu tiên?","Món nào em có thể ăn cả tuần không chán?","Hồi nhỏ em mơ lớn lên làm nghề gì?","Chuyến đi nào em nhớ nhất từ trước tới giờ?","Cuối tuần lý tưởng của em trông như thế nào?","Bộ phim nào em xem đi xem lại vẫn thích?","Em là người của buổi sáng hay cú đêm?","Có kỹ năng nào em muốn học mà chưa có thời gian không?","Điều gì nhỏ nhỏ thôi mà làm em vui cả ngày?","Nếu mở một quán nhỏ, em sẽ bán gì?","Bài hát nào dạo này em nghe nhiều nhất?","Em thích biển hay núi hơn? Vì sao?","Lời khuyên hay nhất em từng nhận được là gì?","Có điều gì ở em mà người mới quen thường đoán sai không?","Em nấu món nào tự tin nhất?","Nếu trúng một vé máy bay đi bất cứ đâu, em chọn nơi nào?","Việc gì em làm rất giỏi mà ít người biết?","Thú cưng: chó, mèo, hay cả hai đều không?","Kỷ niệm đi học nào em hay kể lại nhất?","Điều gì làm em thấy một ngày là trọn vẹn?"],
+"Chọn một trong hai":[
+"Trà sữa hay cà phê?","Ở nhà xem phim hay ra ngoài đi dạo?","Đi du lịch tự túc hay theo tour?","Ăn cay được không, hay thua từ vòng gửi xe?","Nhắn tin hay gọi điện?","Mùa hè hay mùa đông?","Dậy sớm ngắm bình minh hay thức khuya ngắm sao?","Phở hay bún chả?","Sách giấy hay sách điện tử?","Lên kế hoạch kỹ hay tùy hứng?"],
+"Trò chơi nhỏ":[
+"Hai sự thật, một lời nói dối: mỗi người nói ba điều về mình, người kia đoán điều nào là bịa.","Mười câu hỏi nhanh: mỗi người hỏi 5 câu, phải trả lời trong 3 giây.","Kể một chuyện xấu hổ hồi nhỏ, ai kể buồn cười hơn thì người kia mời nước.","Đoán nghề: nhìn mọi người xung quanh và đoán họ làm nghề gì.","Danh sách ba điều: ba món muốn ăn, ba nơi muốn đi, ba việc muốn thử trong năm nay."]
+};
+const JOKES=[
+["Ăn gì cũng được","Hai đứa đi ăn. Cô gái: “Em ăn gì cũng được.” – “Vậy ăn phở nhé?” – “Thôi, ngán lắm.” – “Bún chả?” – “Hôm qua ăn rồi.” – “Thế em muốn ăn gì?” – “Em ăn gì cũng được mà.”"],
+["Cái cốc","Người lạc quan thấy cốc đầy một nửa. Người bi quan thấy cốc vơi một nửa. Kỹ sư thấy cái cốc to gấp đôi mức cần thiết."],
+["Lập trình viên đi chợ","Vợ dặn: “Anh mua một lít sữa, nếu có trứng thì mua sáu.” Anh chồng lập trình viên về với sáu lít sữa: “Tại họ có trứng.”"],
+["Câu hỏi khó","Bạn gái hỏi: “Em mặc váy này có béo không?” Chàng trai có kinh nghiệm đáp: “Anh thấy cái váy này may mắn thật.”"],
+["Dậy sớm","Tôi quyết tâm dậy sớm tập thể dục. Hôm đầu tiên tôi dậy lúc 5 giờ, nhìn đồng hồ, tự hào về bản thân, rồi ngủ tiếp."],
+["Biển báo","Thầy hỏi: “Sao em đi học muộn?” – “Dạ tại biển báo ạ.” – “Biển báo gì?” – “Dạ: Trường học, đi chậm lại.”"],
+["Thợ sửa ống nước","Thợ sửa ống nước đến nhà bác sĩ, sửa mười phút, tính năm trăm nghìn. Bác sĩ kêu: “Tôi làm bác sĩ còn không kiếm được thế!” Anh thợ gật đầu: “Vâng, hồi tôi làm bác sĩ tôi cũng thế.”"],
+["Có nghe không","– Anh có nghe em nói không đấy? – Có chứ. – Thế em vừa nói gì? – Em hỏi anh có nghe em nói không."],
+["Ăn kiêng","Tôi bảo bạn là tôi đang ăn kiêng. Nó hỏi kiêng gì. Tôi bảo: kiêng nhìn giá trên thực đơn."],
+["Wifi hàng xóm","Wifi nhà hàng xóm tên là “Trả tiền đi”. Mật khẩu là “Tháng sau”."],
+["Thời gian dùng màn hình","Điện thoại báo: “Hôm nay bạn đã dùng màn hình 9 tiếng.” Tôi dùng thêm 5 phút nữa để tắt thông báo đó."],
+["Tiết kiệm năng lượng","Tôi không lười. Tôi chỉ đang ở chế độ tiết kiệm năng lượng."],
+["Hết giận","Hỏi: Làm sao để con gái hết giận? Đáp: Chưa ai biết chắc. Nhưng đồ ăn có tỉ lệ thành công cao nhất."],
+["Đặt câu","Cô giáo: “Em đặt câu có từ ‘đường’.” – “Dạ: Em uống trà.” – “Đường đâu?” – “Dạ ở trong trà rồi ạ.”"],
+["Tiền và hạnh phúc","Người ta bảo tiền không mua được hạnh phúc. Nhưng tôi chưa thấy ai buồn khi đang ăn lẩu."],
+["Cà phê không đường","– Em ơi cho anh ly cà phê không đường. – Dạ quán em hết loại không đường rồi, anh dùng loại không sữa được không ạ?"],
+["Kiên nhẫn","Anh hỏi: “Em thích anh ở điểm nào?” Em nghĩ rất lâu rồi nói: “Em thích nhất là anh kiên nhẫn chờ em nghĩ.”"],
+["Bản đồ","Vợ: “Anh đi lạc rồi, hỏi đường đi.” Chồng: “Anh không lạc. Anh chỉ đang khám phá tuyến đường thay thế.”"]
+];
+const TIPS=[
+["Tự tin là chấp nhận hồi hộp","Không ai hết run khi bắt chuyện với người mình thích. Tự tin là vẫn chào dù tim đập nhanh. Mục tiêu của lần đầu chỉ là một cuộc trò chuyện dễ chịu, không phải “cưa đổ”.",null],
+["Nghe nhiều hơn nói","Người nói chuyện có duyên là người khiến người kia thấy mình thú vị. Hỏi câu mở, nghe hết câu, rồi hỏi tiếp từ chính điều cô ấy vừa kể.",["“Em kể là mới chuyển việc, chỗ mới có gì khác?”","Chờ cô ấy nói xong chỉ để kể chuyện của mình."]],
+["Khen cụ thể, khen lựa chọn","Lời khen về gu, cách kể chuyện, sự chăm chỉ đáng nhớ hơn lời khen ngoại hình chung chung.",["“Anh thích cách em kể chuyện, nghe rất cuốn.”","“Em xinh thế.” (ai cũng nói)"]],
+["Hài hước là cùng cười","Đùa về tình huống, về chính mình. Đừng lấy cô ấy, ngoại hình hay gia đình cô ấy ra làm trò cười, và đừng “chê để gây chú ý”.",["“Anh gọi món mà đọc sai tên, phục vụ nhìn anh thương lắm.”","“Em ăn nhiều thế không sợ béo à?”"]],
+["Mời rõ ràng, cụ thể","Nói rõ ngày, giờ, địa điểm. Lời mời mơ hồ để lại cho cô ấy phần việc khó nhất là tự sắp xếp.",["“Thứ bảy 3 giờ chiều, cà phê sách ở Hồ Tây, em đi nhé?”","“Hôm nào rảnh đi chơi nhé.”"]],
+["“Không” nghĩa là không","Cô ấy từ chối, im lặng kéo dài, hoặc nói đã có người yêu: cảm ơn, chúc cô ấy vui, và dừng lại. Tử tế lúc bị từ chối là thứ khiến người ta nhớ tốt về mình. Bám theo, nhắn dồn hay xuất hiện ở chỗ cô ấy là làm phiền.",null],
+["Nhắn tin để hẹn gặp","Tin nhắn dùng để giữ kết nối và hẹn gặp. Đừng kể hết đời mình qua màn hình, đừng gửi năm tin liền khi chưa được trả lời. Trả lời chậm một chút không sao, cô ấy cũng có cuộc sống riêng.",["Một tin có nội dung, chờ trả lời.","“Em ơi” “Em đâu rồi” “???” “Sao seen không rep”"]],
+["Gọn gàng là đủ","Không cần đẹp trai. Tóc gọn, quần áo vừa người và sạch, móng tay cắt ngắn, hơi thở thơm, đúng giờ. Đó là tôn trọng người mình gặp.",null],
+["Có cuộc sống của riêng mình","Công việc, sở thích, bạn bè, việc bạn đang cố gắng. Người có cuộc sống thú vị thì tự nhiên có chuyện để kể và không bám víu.",null],
+["Thật thà về bản thân","Đừng nói quá về thu nhập, công việc hay tình trạng hôn nhân. Lời nói dối nào rồi cũng lộ, và khi lộ thì mất hết.",null],
+["Để cô ấy thấy an toàn","Hẹn lần đầu ở nơi công cộng, ban ngày hoặc đầu buổi tối. Đừng ép uống, đừng ép về muộn, đừng đụng chạm khi chưa chắc cô ấy thoải mái. Hỏi một câu “anh nắm tay em được không?” không hề mất điểm.",null],
+["Bị từ chối là chuyện thường","Không hợp không có nghĩa là bạn kém. Mỗi lần bắt chuyện là một lần luyện. Rút kinh nghiệm một điều, rồi đi tiếp.",null]
+];
+const SIGNS={good:["Trả lời dài, có hỏi lại bạn","Chủ động nhắn hoặc kể chuyện trong ngày","Cười nhiều, nhìn vào mắt khi nói chuyện","Nhớ chi tiết bạn từng kể","Bận thì đề xuất ngày khác","Giới thiệu bạn với bạn bè của cô ấy"],
+ bad:["Trả lời cụt: “ừ”, “haha”, “ok”","Nhiều ngày mới trả lời, không giải thích","Hay nhìn điện thoại, nhìn quanh","Từ chối hẹn mà không đề xuất ngày khác","Nhắc tới người yêu hoặc “anh trai tốt”","Giữ khoảng cách, khoanh tay, quay người đi"]};
+const AVOID=["Nhắn dồn dập, kiểm soát: “đang ở đâu, với ai, sao không trả lời”","Khoe tiền, khoe quan hệ, nói xấu người yêu cũ","Chê bai để gây chú ý, đùa về cân nặng hay ngoại hình","Tỏ tình quá sớm khi chưa hiểu nhau","Uống say trong buổi hẹn đầu","Dùng mãi câu thính chép sẵn thay cho nói chuyện thật","Hứa cho vui rồi không làm","Giận dỗi, trách móc khi cô ấy bận hoặc từ chối"];
+const DATES=["Cà phê sách hoặc quán yên tĩnh, dễ nói chuyện","Đi dạo phố đi bộ, hồ, công viên rồi ăn vặt","Triển lãm, bảo tàng, chợ phiên cuối tuần","Lớp trải nghiệm một buổi: làm gốm, pha chế, nấu ăn","Ăn món cô ấy từng nhắc là thích","Xem phim rồi cà phê để bàn về phim","Đạp xe, leo núi nhẹ, chèo SUP nếu cả hai thích vận động","Hội chợ sách, hội chợ ẩm thực"];
+const QUIZ=[
+{q:"Cô ấy trả lời tin nhắn toàn “ừ”, “haha”. Bạn làm gì?",o:["Đổi sang một câu hỏi mở nhẹ nhàng. Nếu vẫn vậy thì chào và để hôm khác.","Nhắn liền năm tin hỏi sao em lạnh nhạt thế.","Trách: “Em nhắn tin chán thật.”"],e:"Trả lời cụt thường là bận, mệt hoặc chưa hứng thú. Thử một lần rồi biết dừng là cách giữ thiện cảm. Hỏi dồn hay trách móc chỉ đẩy cô ấy ra xa."},
+{q:"Bạn thấy một cô gái đọc sách ở quán cà phê và muốn làm quen.",o:["Hỏi về cuốn sách cô ấy đang đọc, rồi giới thiệu tên mình.","Đi thẳng tới nói: “Em xinh thế, cho anh xin số.”","Ngồi nhìn chằm chằm, chờ cô ấy nhìn lại."],e:"Bắt đầu từ điều cô ấy đang quan tâm thì dễ trả lời và không áp lực. Xin số ngay câu đầu là quá vội, còn nhìn chằm chằm khiến người ta sợ."},
+{q:"Cô ấy nói: “Em có bạn trai rồi.”",o:["“Ừ, chúc em vui nhé. Rất vui được nói chuyện với em.” Rồi dừng lại.","“Có thủ môn thì vẫn có bàn thắng mà em.”","Hỏi tiếp bạn trai làm gì, quen lâu chưa."],e:"Đây là lời từ chối rõ ràng. Tôn trọng và rút lui lịch sự là lựa chọn duy nhất đúng."},
+{q:"Hai người nói chuyện vui được mười phút, bạn sắp phải đi.",o:["“Nói chuyện với em vui thật. Cho anh xin Zalo để hôm nào nói tiếp nhé?”","Không nói gì, hy vọng lần sau gặp lại.","Lén hỏi số của cô ấy qua người khác."],e:"Xin liên lạc ngay lúc cuộc trò chuyện đang vui, nói rõ lý do, là tự nhiên nhất. Hỏi lén qua người khác khiến cô ấy thấy bị xâm phạm."},
+{q:"Bạn muốn mời cô ấy đi chơi. Câu nào tốt nhất?",o:["“Thứ bảy này 3 giờ chiều anh định đi cà phê sách ở Hồ Tây, em đi cùng nhé?”","“Hôm nào rảnh mình đi cà phê nhé.”","“Em muốn đi đâu cũng được, tùy em hết.”"],e:"Lời mời cụ thể cho thấy bạn nghiêm túc và giúp cô ấy dễ trả lời. Lời mời mơ hồ thường trôi mất."},
+{q:"Cô ấy trả lời: “Tuần này em bận rồi.”",o:["“Không sao. Tuần sau em rảnh hôm nào thì báo anh nhé.” Rồi để cô ấy chủ động.","Hỏi dồn: bận gì, với ai, mấy giờ xong.","Giận, không nhắn nữa và đăng status bóng gió."],e:"Nếu cô ấy quan tâm, cô ấy sẽ đề xuất ngày khác. Nếu không, bạn đã có câu trả lời mà không ai phải khó xử."},
+{q:"Buổi hẹn đầu tiên, nên nói chuyện thế nào?",o:["Hỏi về cô ấy, lắng nghe, rồi chia sẻ chuyện của mình qua lại.","Kể hết thành tích, lương, kế hoạch mua nhà để gây ấn tượng.","Tâm sự chuyện người yêu cũ để cô ấy hiểu mình."],e:"Buổi hẹn đầu là để hai người thấy dễ chịu khi ở cạnh nhau. Khoe khoang hay than về người cũ đều làm không khí nặng nề."},
+{q:"Bạn muốn khen cô ấy.",o:["“Anh thích cách em kể chuyện, nghe rất cuốn.”","“Em xinh hơn mấy đứa bạn em nhiều.”","“Em mà gầy đi chút nữa là hoàn hảo.”"],e:"Lời khen cụ thể về con người cô ấy đáng nhớ nhất. So sánh với người khác hay khen kèm chê đều phản tác dụng."},
+{q:"Bạn nhắn tin từ hôm qua, cô ấy chưa trả lời.",o:["Chờ. Vài ngày sau nhắn một tin nhẹ có nội dung mới. Nếu vẫn im lặng thì dừng.","Gửi “???” rồi “Em bận gì mà không trả lời?”","Gọi điện liên tục cho tới khi cô ấy nghe máy."],e:"Ai cũng có lúc bận. Dồn dập khiến bạn trông thiếu kiên nhẫn, còn im lặng kéo dài sau tin thứ hai thì chính là câu trả lời."},
+{q:"Cô ấy kể hôm nay bị sếp mắng, rất buồn.",o:["Lắng nghe, rồi hỏi: “Em muốn anh nghe thôi hay muốn anh góp ý?”","Đưa ngay năm giải pháp để xử lý sếp.","“Thế đã là gì, anh còn bị nặng hơn nhiều.”"],e:"Nhiều khi người ta chỉ cần được nghe. Hỏi cô ấy cần gì là cách quan tâm tinh tế nhất."},
+{q:"Buổi hẹn đầu sắp kết thúc, bạn rất muốn nắm tay cô ấy.",o:["Để ý xem cô ấy có thoải mái không, và hỏi nhẹ: “Anh nắm tay em được không?”","Cứ nắm, con gái thích sự quyết đoán.","Rủ cô ấy uống thêm vài ly cho dễ nói chuyện."],e:"Hỏi trước không làm mất đi sự lãng mạn, mà cho thấy bạn tôn trọng cô ấy. Ép uống là hành vi không thể chấp nhận."},
+{q:"Sau buổi hẹn đầu vui vẻ, nên nhắn gì?",o:["Tối đó nhắn: “Hôm nay anh vui lắm. Em về tới nhà chưa?”","Chờ đúng ba ngày mới nhắn cho có giá.","Nhắn ngay: “Anh nghĩ anh yêu em rồi.”"],e:"Nhắn sớm, chân thành, ngắn gọn. Luật “ba ngày” chỉ làm cô ấy nghĩ bạn không hứng thú, còn tỏ tình ngay thì quá vội."}
+];
+
+/* ================= ỨNG DỤNG ================= */
+const $=(s,el=document)=>el.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ls={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+let view=ls.get('bk:view','home'), favs=ls.get('bk:favs',[]), name=ls.get('bk:name','');
+let cat=Object.keys(THINH)[0], talkTab='open', topicCat=Object.keys(TOPICS)[0], q='', heroLine='';
+let quiz=null;
+const fill=s=>s.replace(/\{ten\}/g,name||'[tên bạn]');
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),1600);}
+const ALL_LINES=()=>[...Object.entries(THINH).flatMap(([c,a])=>a.map(t=>({t,tag:c}))),...OPENERS.flatMap(o=>o.l.map(([t,w])=>({t,w,tag:o.s}))),...Object.entries(TOPICS).flatMap(([c,a])=>a.map(t=>({t,tag:c}))),...JOKES.map(([h,t])=>({t,tag:'Chuyện vui: '+h}))];
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+function lineCard(t,o={}){
+  const f=favs.includes(t);
+  return `<div class="card"><div class="line">${esc(fill(t))}</div>${o.w?`<div class="why">${esc(o.w)}</div>`:''}
+    <div class="acts">${o.tag?`<span class="tag">${esc(o.tag)}</span>`:'<span style="margin-right:auto"></span>'}
+    <button class="ib" data-copy="${esc(t)}" title="Sao chép">⧉ Chép</button><button class="ib ${f?'fav':''}" data-fav="${esc(t)}" title="Lưu">${f?'♥':'♡'}</button></div></div>`;
+}
+const chips=(arr,cur,attr)=>`<div class="chips">${arr.map(c=>`<button class="chip ${c===cur?'on':''}" data-${attr}="${esc(c)}">${esc(c)}</button>`).join('')}</div>`;
+
+function vHome(){
+  if(!heroLine) heroLine=pick(Object.values(THINH).flat());
+  const n=Object.values(THINH).flat().length;
+  return `<div class="hero"><div class="k">Câu thính hôm nay</div><div class="q">${esc(fill(heroLine))}</div>
+      <div class="row"><button class="w" data-hero="next">🎲 Câu khác</button><button data-copy="${esc(heroLine)}">⧉ Sao chép</button><button data-fav="${esc(heroLine)}">${favs.includes(heroLine)?'♥ Đã lưu':'♡ Lưu'}</button></div></div>
+    <div class="name"><input id="nm" placeholder="Tên của bạn (để điền vào câu giới thiệu)" value="${esc(name)}" maxlength="20"></div>
+    <div class="grid">
+      <div class="tile" data-go="thinh"><i>💌</i><b>Thả thính</b><span>${n} câu, 5 phong cách</span></div>
+      <div class="tile" data-go="talk"><i>💬</i><b>Mở lời & trò chuyện</b><span>Theo từng tình huống</span></div>
+      <div class="tile" data-go="tips"><i>📖</i><b>Bí kíp cốt lõi</b><span>${TIPS.length} nguyên tắc, tín hiệu, lỗi cần tránh</span></div>
+      <div class="tile" data-go="quiz"><i>🎯</i><b>Luyện phản xạ</b><span>${QUIZ.length} tình huống thực tế</span></div>
+    </div>
+    <div class="gold"><b>Nguyên tắc vàng:</b> câu thính chỉ để mở đầu cho vui. Thứ giữ được một cô gái ở lại là sự chân thành, biết lắng nghe và tôn trọng. Cô ấy nói “không” thì dừng lại.</div>
+    <h2>Chuyện vui ngẫu nhiên</h2>${(()=>{const j=pick(JOKES);return lineCard(j[1],{tag:j[0]});})()}`;
+}
+function vThinh(){
+  const qq=q.trim().toLowerCase();
+  const list=qq?Object.entries(THINH).flatMap(([c,a])=>a.filter(t=>fill(t).toLowerCase().includes(qq)).map(t=>[t,c])):THINH[cat].map(t=>[t,'']);
+  return `<input class="search" id="q" type="search" placeholder="Tìm câu thính…" value="${esc(q)}">
+    ${qq?'':chips(Object.keys(THINH),cat,'cat')}
+    <div class="sub">${qq?`${list.length} kết quả`:`${list.length} câu · bấm ♡ để lưu, ⧉ để chép vào tin nhắn`}</div>
+    ${list.length?list.map(([t,c])=>lineCard(t,{tag:c})).join(''):'<div class="empty">Không tìm thấy câu nào.</div>'}`;
+}
+function vTalk(){
+  const tabs=[['open','Mở lời'],['topic','Chủ đề'],['joke','Chuyện vui']];
+  let body='';
+  if(talkTab==='open') body=OPENERS.map(o=>`<h2>${o.i} ${esc(o.s)}</h2>${o.l.map(([t,w])=>lineCard(t,{w})).join('')}`).join('');
+  if(talkTab==='topic') body=chips(Object.keys(TOPICS),topicCat,'tcat')+`<div class="sub">Hỏi để nghe câu trả lời, rồi hỏi tiếp từ điều cô ấy kể. Đừng hỏi liên tục như phỏng vấn.</div>`+TOPICS[topicCat].map(t=>lineCard(t)).join('');
+  if(talkTab==='joke') body=`<div class="sub">Kể ngắn, kể tự nhiên, đừng cười trước. Một chuyện là đủ, đừng kể liền ba chuyện.</div>`+JOKES.map(([h,t])=>lineCard(t,{tag:h})).join('');
+  return `<div class="chips">${tabs.map(([k,t])=>`<button class="chip ${talkTab===k?'on':''}" data-tab="${k}">${t}</button>`).join('')}</div>${body}`;
+}
+function vTips(){
+  return `<h2>12 nguyên tắc cốt lõi</h2>${TIPS.map(([h,p,ex],i)=>`<div class="card tip"><h3>${i+1}. ${esc(h)}</h3><p>${esc(p)}</p>${ex?`<div class="ex"><b>✓ Nên:</b> ${esc(ex[0])}<br><s>✗ Tránh:</s> ${esc(ex[1])}</div>`:''}</div>`).join('')}
+    <h2>Đọc tín hiệu</h2><div class="cols"><div class="card good"><h3>✓ Cô ấy có hứng thú</h3><ul class="list">${SIGNS.good.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div><div class="card badc"><h3>✗ Nên dừng lại</h3><ul class="list">${SIGNS.bad.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></div>
+    <h2>Lỗi cần tránh</h2><div class="card"><ul class="list">${AVOID.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+    <h2>Ý tưởng buổi hẹn đầu</h2><div class="card"><ul class="list">${DATES.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`;
+}
+function newQuiz(){
+  const order=QUIZ.map((_,i)=>i).sort(()=>Math.random()-.5);
+  quiz={order,i:0,score:0,picked:null,opts:null};
+}
+function vQuiz(){
+  if(!quiz) return `<div class="score"><div style="font-size:44px">🎯</div><h2>Luyện phản xạ</h2><p class="sub" style="margin:6px 0 18px">${QUIZ.length} tình huống thường gặp. Chọn cách xử lý bạn cho là tốt nhất, rồi xem giải thích.</p><button class="big" data-quiz="start">Bắt đầu</button>${ls.get('bk:best',null)!=null?`<p class="sub" style="margin-top:14px">Điểm cao nhất: ${ls.get('bk:best')}/${QUIZ.length}</p>`:''}</div>`;
+  if(quiz.i>=quiz.order.length){
+    const s=quiz.score,n=QUIZ.length; if(s>(ls.get('bk:best',-1))) ls.set('bk:best',s);
+    const msg=s===n?'Xuất sắc. Bạn hiểu rằng tinh tế và tôn trọng mới là bí kíp thật.':s>=n*.7?'Khá tốt. Xem lại vài tình huống sai để tinh tế hơn.':'Đọc lại phần Bí kíp rồi thử lần nữa nhé.';
+    return `<div class="score"><div class="n">${s}/${n}</div><p>${msg}</p><button class="big" data-quiz="start" style="margin-top:14px">Làm lại</button></div>`;
+  }
+  const it=QUIZ[quiz.order[quiz.i]];
+  if(!quiz.opts) quiz.opts=it.o.map((t,k)=>({t,ok:k===0})).sort(()=>Math.random()-.5);
+  const done=quiz.picked!=null;
+  return `<div class="pbar"><i style="width:${100*quiz.i/quiz.order.length}%"></i></div><div class="sub">Tình huống ${quiz.i+1}/${quiz.order.length} · đúng ${quiz.score}</div>
+    <div class="qz"><div class="sit">${esc(it.q)}</div>${quiz.opts.map((o,k)=>`<button class="opt ${done?(o.ok?'right':k===quiz.picked?'wrong':''):''}" data-opt="${k}" ${done?'disabled':''}>${esc(o.t)}</button>`).join('')}
+    ${done?`<div class="expl">${quiz.opts[quiz.picked].ok?'✓ Chính xác. ':'✗ Chưa hợp lý. '}${esc(it.e)}</div><button class="big" data-quiz="next">${quiz.i+1<quiz.order.length?'Tình huống tiếp':'Xem kết quả'}</button>`:''}</div>`;
+}
+function vFav(){
+  const map=new Map(ALL_LINES().map(x=>[x.t,x]));
+  return `<h2>♥ Đã lưu (${favs.length})</h2>${favs.length?favs.map(t=>lineCard(t,map.get(t)||{})).join(''):'<div class="empty">Chưa lưu câu nào.<br>Bấm ♡ ở câu bạn thích để lưu vào đây.</div>'}`;
+}
+function render(keep){
+  const m=$('#main'), st=m.scrollTop;
+  m.innerHTML=({home:vHome,thinh:vThinh,talk:vTalk,tips:vTips,quiz:vQuiz,fav:vFav}[view]||vHome)();
+  m.scrollTop=keep?st:0;
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===view));
+  const qi=$('#q'); if(qi) qi.oninput=e=>{q=e.target.value;const p=e.target.selectionStart;render(true);const n=$('#q');n.focus();n.setSelectionRange(p,p);};
+  const nm=$('#nm'); if(nm) nm.onchange=e=>{name=e.target.value.trim();ls.set('bk:name',name);render(true);toast(name?'Đã lưu tên':'Đã xóa tên');};
+}
+function go(v){view=v;ls.set('bk:view',v==='fav'?'home':v);q='';render();}
+$('#nav').onclick=e=>{const b=e.target.closest('[data-v]');if(b)go(b.dataset.v);};
+$('#bFav').onclick=()=>go('fav');
+$('#bTheme').onclick=()=>{const t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;ls.set('bk:theme',t);};
+async function copy(t){
+  t=fill(t);
+  try{await navigator.clipboard.writeText(t);}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');}catch(x){}a.remove();}
+  toast('Đã sao chép');
+}
+$('#main').addEventListener('click',e=>{
+  const t=e.target;
+  let b;
+  if((b=t.closest('[data-copy]'))){copy(b.dataset.copy);return;}
+  if((b=t.closest('[data-fav]'))){const x=b.dataset.fav;favs=favs.includes(x)?favs.filter(y=>y!==x):[x,...favs];ls.set('bk:favs',favs);toast(favs.includes(x)?'Đã lưu ♥':'Đã bỏ lưu');render(true);return;}
+  if((b=t.closest('[data-hero]'))){let n;do{n=pick(Object.values(THINH).flat());}while(n===heroLine);heroLine=n;render(true);return;}
+  if((b=t.closest('[data-go]'))){go(b.dataset.go);return;}
+  if((b=t.closest('[data-cat]'))){cat=b.dataset.cat;render();return;}
+  if((b=t.closest('[data-tab]'))){talkTab=b.dataset.tab;render();return;}
+  if((b=t.closest('[data-tcat]'))){topicCat=b.dataset.tcat;render(true);return;}
+  if((b=t.closest('[data-quiz]'))){if(b.dataset.quiz==='start')newQuiz();else{quiz.i++;quiz.picked=null;quiz.opts=null;}render();return;}
+  if((b=t.closest('[data-opt]'))&&quiz&&quiz.picked==null){quiz.picked=+b.dataset.opt;if(quiz.opts[quiz.picked].ok)quiz.score++;render(true);return;}
+});
+render();
+</script>
+</body>
+</html>
