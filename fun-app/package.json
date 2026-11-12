@@ -1,0 +1,16 @@
+{
+  "name": "fun-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Ứng dụng Fun (Android) đóng gói từ tools/BiKipTanGai.html",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/core": "8.5.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.2"
+  }
+}

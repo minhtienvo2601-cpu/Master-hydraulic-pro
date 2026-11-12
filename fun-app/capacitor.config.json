@@ -1,0 +1,9 @@
+{
+  "appId": "vn.tien.fun",
+  "appName": "Fun",
+  "webDir": "www",
+  "backgroundColor": "#e8456b",
+  "plugins": {
+    "SystemBars": { "style": "DARK", "insetsHandling": "css" }
+  }
+}

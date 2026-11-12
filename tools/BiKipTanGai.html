@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e8456b">
-<title>Bí Kíp Tán Gái</title>
+<title>Fun</title>
 <script>try{var t=localStorage.getItem('bk:theme');t=t?JSON.parse(t):(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='light';}</script>
 <style>
 :root{--font:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
@@ -13,18 +13,19 @@
  --shadow:0 2px 10px rgba(232,69,107,.10)}
 [data-theme=dark]{--bg:#17101a;--surface:#221826;--surface-2:#2b1f30;--border:#3d2c44;--text:#f3e8ee;--muted:#b39aa6;
  --accent:#ff6b8e;--accent-2:#ff9a70;--accent-soft:rgba(255,107,142,.16);--ok:#3ecf8e;--bad:#ff6b6b;--warn:#f0a73a;--shadow:none}
+:root{--sat:var(--safe-area-inset-top,env(safe-area-inset-top,0px));--sab:var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
 html,body{height:100%}
 body{margin:0;font:15px/1.55 var(--font);color:var(--text);background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
 button,input{font:inherit;color:inherit}
 .app{flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:620px;margin:0 auto;background:var(--bg)}
-header{flex:none;display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;color:#fff;background:linear-gradient(120deg,var(--accent),var(--accent-2))}
+header{flex:none;display:flex;align-items:center;gap:10px;padding:calc(10px + var(--sat)) 16px 10px;color:#fff;background:linear-gradient(120deg,var(--accent),var(--accent-2))}
 header h1{margin:0;font-size:18px;flex:1;letter-spacing:.01em}
 header small{display:block;font-weight:400;font-size:11.5px;opacity:.9}
 .hbtn{width:36px;height:36px;border-radius:50%;border:0;background:rgba(255,255,255,.22);color:#fff;font-size:17px;cursor:pointer;display:grid;place-items:center}
 main{flex:1;min-height:0;overflow:auto;padding:14px 14px 24px;-webkit-overflow-scrolling:touch}
-nav{flex:none;display:flex;background:var(--surface);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom)}
+nav{flex:none;display:flex;background:var(--surface);border-top:1px solid var(--border);padding-bottom:var(--sab)}
 nav button{flex:1;border:0;background:none;padding:8px 2px 7px;cursor:pointer;color:var(--muted);font-size:11px;display:flex;flex-direction:column;align-items:center;gap:1px}
 nav button i{font-style:normal;font-size:20px;line-height:1.2}
 nav button.on{color:var(--accent);font-weight:600}
@@ -82,7 +83,7 @@ ul.list{margin:0;padding-left:20px}ul.list li{margin:5px 0}
 </head>
 <body>
 <div class="app">
-<header><div style="font-size:24px">💘</div><h1>Bí Kíp Tán Gái<small>Nói chuyện có duyên · tự tin · tôn trọng</small></h1>
+<header><div style="font-size:24px">💘</div><h1>Fun<small>Bí kíp nói chuyện có duyên · tự tin · tôn trọng</small></h1>
   <button class="hbtn" id="bFav" title="Đã lưu">♥</button><button class="hbtn" id="bTheme" title="Sáng / tối">◐</button></header>
 <main id="main"></main>
 <nav id="nav">
@@ -272,7 +273,7 @@ const QUIZ=[
 const $=(s,el=document)=>el.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
-let view=ls.get('bk:view','home'), favs=ls.get('bk:favs',[]), name=ls.get('bk:name','');
+let view='home', favs=ls.get('bk:favs',[]), name=ls.get('bk:name','');
 let cat=Object.keys(THINH)[0], talkTab='open', topicCat=Object.keys(TOPICS)[0], q='', heroLine='';
 let quiz=null;
 const fill=s=>s.replace(/\{ten\}/g,name||'[tên bạn]');
@@ -354,7 +355,12 @@ function render(keep){
   const qi=$('#q'); if(qi) qi.oninput=e=>{q=e.target.value;const p=e.target.selectionStart;render(true);const n=$('#q');n.focus();n.setSelectionRange(p,p);};
   const nm=$('#nm'); if(nm) nm.onchange=e=>{name=e.target.value.trim();ls.set('bk:name',name);render(true);toast(name?'Đã lưu tên':'Đã xóa tên');};
 }
-function go(v){view=v;ls.set('bk:view',v==='fav'?'home':v);q='';render();}
+function go(v,fromPop){
+  view=v;ls.set('bk:view',v==='fav'?'home':v);q='';render();
+  if(fromPop) return;
+  try{if(v==='home'){if(history.state&&history.state.v)history.back();}else if(history.state&&history.state.v)history.replaceState({v},'');else history.pushState({v},'');}catch(e){}
+}
+addEventListener('popstate',e=>{go(e.state&&e.state.v?e.state.v:'home',true);});
 $('#nav').onclick=e=>{const b=e.target.closest('[data-v]');if(b)go(b.dataset.v);};
 $('#bFav').onclick=()=>go('fav');
 $('#bTheme').onclick=()=>{const t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;ls.set('bk:theme',t);};

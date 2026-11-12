@@ -1,0 +1,67 @@
+name: Build Fun APK
+
+on:
+  push:
+    branches: [ main, master, ccr-8521cb65-0efhvf ]
+    paths:
+      - 'fun-app/**'
+      - 'tools/BiKipTanGai.html'
+      - '.github/workflows/fun-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fun-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: fun-app/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Cai thu vien
+        run: npm ci
+
+      - name: Dong goi giao dien
+        run: npm run build
+
+      - name: Tao du an Android
+        run: |
+          npx cap add android
+          node patch-android.js
+          npx cap sync android
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+          cp app/build/outputs/apk/debug/app-debug.apk ../../Fun.apk
+
+      - name: Luu file APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fun-apk
+          path: Fun.apk
+
+      - name: Tao ban phat hanh
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: fun-v1.0.${{ github.run_number }}
+          name: Fun 1.0.${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          body: Tai file Fun.apk ben duoi ve dien thoai Android va cai dat.
+          files: Fun.apk
