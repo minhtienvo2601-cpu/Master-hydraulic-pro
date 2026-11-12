@@ -51,3 +51,6 @@ File `tools/GopPDF.html` — mở bằng Edge/Chrome (cần mạng lần đầu 
 - Lấy khoảng trang theo từng file (vd. `1-3, 7, 10-`); xoay / đảo thứ tự cả file
 - Tùy chọn đánh số trang `1 / N`, đặt ảnh vừa khổ A4
 - **Vẽ & ghi chú** trên từng trang (nút bút chì hoặc nhấp đúp vào trang): bút vẽ, tô sáng, thêm chữ tiếng Việt (đậm, nền trắng), khung, mũi tên, tẩy, chọn để di chuyển / sửa; bảng màu, cỡ nét / cỡ chữ, hoàn tác Ctrl+Z; nét vẽ được in vào file khi gộp (đúng cả với trang đã xoay)
+
+## Luyện tập C++
+File `tools/LuyenTapCpp.html` — 58 bài tập theo 8 chương (nhập xuất, rẽ nhánh, vòng lặp, mảng & chuỗi, hàm & đệ quy, con trỏ / struct / lớp, STL & thuật toán, quy hoạch động & đồ thị). Mỗi bài có đề, ví dụ vào/ra, gợi ý và lời giải mẫu (đã biên dịch và chạy kiểm tra bằng g++ -std=c++17). Tiến độ lưu trong trình duyệt, có sao lưu / khôi phục.
